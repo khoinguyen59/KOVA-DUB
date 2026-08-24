@@ -1,214 +1,264 @@
-# Báo Cáo Kiểm Tra Toàn Diện & Phương Án Khắc Phục Lỗi Giao Diện GUI (LA-Studio / KOVA-DUB)
+# Báo Cáo Kiểm Toán Chuyên Sâu & Ma Trận Khắc Phục Lỗi Giao Diện GUI Toàn Diện (LA-Studio)
 
-> **Mục tiêu:** Kiểm toán chi tiết toàn bộ các trang (Tabs), phân vùng (Panes), góc hiển thị và linh kiện (Components) trong mã nguồn QML của `LA-Studio`.
-> **Vấn đề cốt lõi:**
-> 1. **Lỗi màu sắc & Độ tương phản:** Chữ bị chìm, màu chữ trùng hoặc gần bằng màu nền (Low Contrast / Inverted Text), khó đọc nhãn và trạng thái.
-> 2. **Lỗi bố cục & Nhồi nhét chi tiết:** Quá nhiều nút bấm, thanh trượt, metrics và panel bị dồn nén trên cùng một khung nhìn, gây chèn chúc, đè chữ, tràn khung khi co giãn cửa sổ.
+> **Phạm vi kiểm toán:** Quét sâu toàn bộ $85+$ file `.qml` trong `LA-Studio/qml/` bao gồm các trang nghiệp vụ, thanh điều hướng, các hộp thoại popup, các panel điều khiển tham số và hệ thống token màu sắc `Theme.qml`.  
+> **Tiêu chuẩn đối chiếu:** WCAG 2.2 Level AA/AAA (Độ tương phản tối thiểu $4.5:1$ cho văn bản thường, $3.0:1$ cho thành phần điều khiển) và Nguyên lý Công thái học UI/UX Desktop (Progressive Disclosure, Responsive Canvas, Breathable Spacing).
 
 ---
 
-## 🧭 MỤC LỤC CÁC TRANG ĐƯỢC KIỂM TOÁN
-1. [Thành phần toàn cục: Thanh điều hướng (Sidebar), TitleBar & Log Panel](#1-thành-phần-toàn-cục)
-2. [Tab 1: Dubbing Studio (`DubbingPage.qml` & 21 Sub-components)](#2-tab-dubbing-studio)
-3. [Tab 2: Subtitle OCR (`SubtitleOcrPage.qml`)](#3-tab-subtitle-ocr)
-4. [Tab 3: Voice Studio / TTS & Voice Cloning (`TtsPage.qml`, `VoiceCloningPage.qml`)](#4-tab-voice-studio-tts--cloning)
-5. [Tab 4: Kho Mô Hình & Tải Xuống (`ModelsPage.qml`, `MyModelsPage.qml`, `MediaDownloadPage.qml`)](#5-tab-kho-mô-hình--tải-xuống)
-6. [Tab 5: Cài Đặt & Developer Tools (`SettingsPage.qml`, `DeveloperPage.qml`)](#6-tab-cài-đặt--developer-tools)
-7. [Các Hộp Thoại Popup / Dialogs Cố Định](#7-các-hộp-thoại-popup--dialogs)
-8. [Bảng Tổng Hợp Phương Án & Lộ Trình Sửa Lỗi (Actionable Fix Plan)](#8-lộ-trình-khắc-phục-tổng-thể)
+## 📑 MỤC LỤC CHI TIẾT
+1. [Ma Trận Phân Bổ Lỗi Theo Từng Tab & Thành Phần](#1-ma-trận-phân-bổ-lỗi)
+2. [Chi Tiết Nhóm Lỗi 1: Màu Sắc Trùng & Chữ Bị Chìm (Color & Contrast Defects)](#2-chi-tiết-nhóm-lỗi-màu-sắc--tương-phản)
+3. [Chi Tiết Nhóm Lỗi 2: Nhồi Nhét Chi Tiết, Chèn Chúc & Đè Lên Nhau (Layout Cramping & Overlapping)](#3-chi-tiết-nhóm-lỗi-bố-cục--nhồi-nhét)
+4. [Chi Tiết Nhóm Lỗi 3: Tràn Khung Nhìn & Thiếu Thanh Cuộn Độc Lập (Clipping & Missing ScrollViews)](#4-chi-tiết-nhóm-lỗi-tràn-khung--cuộn)
+5. [Chi Tiết Nhóm Lỗi 4: Điều Hướng, Trạng Thái Hover & Cố Định Pixel Cứng (Hardcoded Breakpoints)](#5-chi-tiết-nhóm-lỗi-tương-tác--cố-định-pixel)
+6. [Thiết Kế Lại Hệ Thống Token Màu Sắc Chuẩn Hóa (`Theme.qml` 2.0)](#6-thiết-kế-lại-hệ-thống-token-themeqml)
+7. [Giải Pháp Tái Cấu Trúc Bố Cục Từng Trang & Kế Hoạch Thực Thi (Actionable Fix Code)](#7-giải-pháp-tái-cấu-trúc-từng-trang)
 
 ---
 
-## 1. THÀNH PHẦN TOÀN CỤC (GLOBAL SHELL)
+## 1. MA TRẬN PHÂN BỔ LỖI
 
-### 🔴 Lỗi 1.1: Thanh Menu Trái (Sidebar) — Nhãn & Icon Không Đủ Tương Phản
-* **Vị trí:** Cột điều hướng bên trái màn hình (`qml/components/Sidebar.qml`).
-* **Lỗi chi tiết:**
-  * Các mục menu không được chọn (Inactive Items) sử dụng màu xám tối `Theme.textSecondary` (`#c7c2dc` pha mờ `opacity: 0.6` $\approx$ `#7a788e`) trên nền tím đen `#1e1e2e`. Độ tương phản chỉ đạt **2.8:1** (tiêu chuẩn WCAG AA tối thiểu là **4.5:1**), khiến các icon và tên tab bị chìm vào nền.
-  * Khi hover chuột, hiệu ứng đổi màu nền `Qt.rgba(1, 1, 1, 0.055)` quá yếu, người dùng khó nhận biết con trỏ đang ở mục nào.
-* **Đề xuất khắc phục:**
-  * Tăng độ sáng nhãn chưa chọn lên `#e2defc` với `opacity: 0.85` (đạt tương phản **6.2:1**).
-  * Hover state: Đổi màu nền rõ rệt `Qt.rgba(124, 77, 255, 0.18)` kèm viền viền sáng mảnh bên trái (`border-left: 3px solid #7c4dff`).
-
-### 🔴 Lỗi 1.2: Bảng Nhật Ký Dưới Cùng (BottomLogPanel) — Chữ Chen Chúc & Màu Mờ
-* **Vị trí:** Dải dưới cùng màn hình (`qml/components/BottomLogPanel.qml`).
-* **Lỗi chi tiết:**
-  * Các dòng log thông báo (`INFO`, `DEBUG`) dùng màu xám tro nhạt trên nền đen bóng, khi có log dài bị tràn ngang và đè lên nút toggle thu gọn ở góc phải.
-  * Chiều cao mặc định nhỏ hẹp khiến chỉ thấy 1.5 dòng chữ, các nút lọc log (`Clear`, `Auto-scroll`, `Filter`) bị chen cứng ở góc trên bên phải.
-* **Đề xuất khắc phục:**
-  * Sử dụng màu chữ phân loại rõ ràng: INFO (`#b3e5fc`), SUCCESS (`#a5d6a7`), WARN (`#ffe082`), ERROR (`#ff8a80`) trên nền `#181824`.
-  * Tách thanh công cụ (Toolbar) của Log Panel thành hàng riêng có đệm `padding: 8px`, thêm thanh cuộn `ScrollView` tự động ngắt dòng (`wrapMode: Text.Wrap`).
-
----
-
-## 2. TAB DUBBING STUDIO (`DubbingPage.qml`)
-
-Đây là trang phức tạp nhất với hơn 20 panel con và bố cục 4 phân vùng.
-
-### 🔴 Lỗi 2.1: Phân Vùng Task Shelf (Góc Trái) — 10 Bước Bị Ép Dọc & Chữ Bị Chìm
-* **Vị trí:** Cột Task Shelf bên trái màn hình (`width: 260px`).
-* **Lỗi chi tiết:**
-  * 10 bước tác vụ (Import $\rightarrow$ Export) cùng các thẻ trạng thái (`StatusBadge`), nút chạy (`Run`), nút cấu hình (`Settings`), và nhãn mô tả bị nhồi nhét trong chiều rộng 260px cố định.
-  * Nhãn phụ (Subtitle/Status text: *"Chưa có dữ liệu"*, *"Worker ready"*) sử dụng font size 11px màu xám đục `#8e8b9f` trên nền card `#2a2a3e` $\rightarrow$ Chữ bị chìm hoàn toàn.
-  * Thẻ Badge trạng thái (xanh lá/vàng) dùng chữ trắng trên nền màu pastel quá nhạt khiến chữ bị "lóa trắng" không đọc được.
-* **Đề xuất khắc phục:**
-  * Cho phép co giãn hoặc gập Task Shelf (`Collapsible Shelf` từ 280px thu về 64px dạng icon-only).
-  * Nhóm 10 bước thành 3 Phase logic: **Phase 1: Chuẩn Bị** (Import, Normalize, Isolate), **Phase 2: Xử Lý AI** (STT, OCR, Reconcile, Translate, TTS), **Phase 3: Hoàn Thiện** (Subtitle, Export).
-  * Chỉnh Badge: Nền sẫm với viền phát sáng nhẹ, chữ dùng màu sáng tương phản cao (`#ffffff` trên nền `#1b5e20` cho Pass, `#ffffff` trên `#b78103` cho Warning).
-
-### 🔴 Lỗi 2.2: Phân Vùng Preview & Timeline (Ở Giữa & Dưới Cùng) — Khung Nhìn Bị Thu Hẹp
-* **Vị trí:** Khung Video Player trung tâm và Timeline chân trang.
-* **Lỗi chi tiết:**
-  * Khung Video Player bị bóp nghẹt giữa Task Shelf (260px) và Inspector (340px). Trên màn hình 1366x768 hoặc 1080p có DPI scaling 125%, khung video chỉ còn ~400px chiều rộng, tỉ lệ 16:9 bị thu nhỏ xíu.
-  * Timeline phía dưới nhồi nhét cả 3 track (Audio gốc, Vocals, Background) cùng thanh điều hướng phụ đề, khiến các vạch sóng âm đè lên nhau, chữ phụ đề trên timeline bị cắt xén thành `...`.
-* **Đề xuất khắc phục:**
-  * Bổ sung nút **"Ẩn/Hiện Inspector"** (Toggle Right Panel) và **"Toàn màn hình Video"** (Maximize Player).
-  * Chuyển Timeline thành dạng cuộn đa tầng (Multi-track Scrollable Timeline) với nút Zoom In/Out trực quan.
-
-### 🔴 Lỗi 2.3: Phân Vùng Inspector (Góc Phải) — Quá Nhiều Input/Slider Chèn Nhau
-* **Vị trí:** Cột thông số bên phải (`DubbingNodeInspector.qml`, `DubbingNodeSettingsPanel.qml`).
-* **Lỗi chi tiết:**
-  * Khi chọn bất kỳ task nào (như TTS hoặc OCR), hàng loạt thanh trượt (Pitch, Speed, Temperature, Confidence Threshold, Crop X/Y/W/H), input fields và model drop-downs cùng hiển thị một lúc từ trên xuống dưới mà không phân cấp.
-  * Các nhãn parameter (ví dụ: *"CFG Scale"*, *"Diffusion Steps"*) nằm sát rạt cạnh giá trị số, không có khoảng cách thở (Whitespace $\le 4px$).
-* **Đề xuất khắc phục:**
-  * Thiết kế dạng **Accordion gập mở**: Tab cơ bản (Model, Giọng đọc, Tốc độ) hiện mặc định; Tab nâng cao (DSP, Binarization, Advanced Latents) ẩn trong mục *"Tùy chọn nâng cao"*.
-  * Tăng khoảng cách dòng (`spacing: 12px`, `padding: 16px`).
-
----
-
-## 3. TAB SUBTITLE OCR (`SubtitleOcrPage.qml`)
-
-### 🔴 Lỗi 3.1: Vùng Cấu Hình Toạ Độ Cắt Frame (Crop Area Inspector) — Tràn Số & Chữ Mờ
-* **Vị trí:** Nửa trên trang Subtitle OCR.
-* **Lỗi chi tiết:**
-  * 4 ô nhập toạ độ (X, Y, Width, Height) cùng thanh trượt ngưỡng nhị phân (Binarization threshold) và bộ lọc tương phản nằm dồn cục ở góc trên bên phải khung hình preview.
-  * Chữ gợi ý Placeholder trong các ô SpinBox mang màu `#47475f` gần trùng hoàn toàn với nền ô `#35354a`, người dùng không biết giá trị mặc định là bao nhiêu.
-* **Đề xuất khắc phục:**
-  * Tích hợp khung chọn trực quan bằng chuột (Visual Drag-to-Crop Box) trực tiếp trên ảnh video thay vì bắt người dùng gõ số X/Y/W/H thủ công.
-  * Placeholder Text: Đổi sang `#d1ceeb` (độ rõ tăng gấp 3 lần).
-
-### 🔴 Lỗi 3.2: Danh Sách Bảng Kết Quả Nhận Dạng OCR — Chèn Chúc & Khó Sửa
-* **Vị trí:** Nửa dưới trang Subtitle OCR (`OCR Results Table`).
-* **Lỗi chi tiết:**
-  * Bảng liệt kê hàng trăm frame phụ đề với 5 cột (Index, Time Start, Time End, Text OCR, Confidence). Cột Text bị bóp hẹp, văn bản dài bị tràn hoặc đè lên nút "Edit/Delete".
-  * Confidence badge (màu vàng cam) có chữ số màu đen mảnh, rất khó phân biệt giữa 0.85 và 0.35.
-* **Đề xuất khắc phục:**
-  * Dùng bảng co giãn theo tỉ lệ cột (Responsive Table Layout), cho phép click trực tiếp vào dòng chữ để sửa inline.
-  * Hiển thị Confidence dưới dạng thanh đo màu trực quan (Thanh xanh lá: Tin cậy cao > 0.8; Thanh vàng: Cần duyệt 0.5-0.8; Thanh đỏ: Lỗi < 0.5).
-
----
-
-## 4. TAB VOICE STUDIO (TTS & VOICE CLONING)
-
-### 🔴 Lỗi 4.1: Thẻ Chọn Mẫu Giọng (Voice Profile Cards) — Chữ Tiêu Đề Đè Lên Nút Nghe Thử
-* **Vị trí:** Góc giữa trang `VoiceCloningPage.qml` & `TtsPage.qml`.
-* **Lỗi chi tiết:**
-  * Mỗi thẻ giọng nói (Voice Card) hiển thị Tên giọng, Ngôn ngữ, Tag (Nam/Nữ/Địa phương), Nút nghe thử (Play) và Nút Xóa.
-  * Khi tên giọng dài (ví dụ: *"LaoWang-Original-24k-Clean"*), chữ sẽ đè thẳng lên icon Play/Delete ở góc phải của Card.
-  * Nền của Card khi được chọn (Active Selected) chuyển sang màu tím `#7c4dff`, nhưng chữ mô tả phụ lại giữ nguyên màu xám `#c7c2dc` $\rightarrow$ Độ tương phản bị giảm mạnh, chữ bị chìm vào nền tím.
-* **Đề xuất khắc phục:**
-  * Card Layout: Cố định vị trí cụm nút Action ở hàng chân Card (Bottom row), tiêu đề cho phép tự động co xuống dòng (Multi-line Title).
-  * Active State: Khi Card được chọn, toàn bộ chữ chuyển sang màu **Trắng Tuyệt Đối (`#ffffff`)** và chữ phụ là **Trắng Sáng (`#f0edff`)**.
-
-### 🔴 Lỗi 4.2: Khung Nhập Kịch Bản (Text Input Area) — Nút Sinh Giọng Che Mất Nội Dung
-* **Vị trí:** Góc dưới bên trái trang TTS.
-* **Lỗi chi tiết:**
-  * Ô nhập văn bản lớn không có thanh cuộn độc lập khi văn bản dài vượt quá 10 câu.
-  * Nút bấm "Tạo Giọng Nói (Synthesize)" đặt cố định ở góc dưới đè lên 2 dòng cuối của văn bản nhập liệu nếu người dùng không cuộn chuột.
-* **Đề xuất khắc phục:**
-  * Đặt `TextArea` bên trong `ScrollView` có thanh cuộn riêng biệt.
-  * Tách cụm nút chức năng (Nút Synthesize, Bộ đếm ký tự `0/4000`, Nút Clear) thành một thanh Footer Bar cố định nằm bên ngoài vùng nhập chữ.
-
----
-
-## 5. TAB KHO MÔ HÌNH & TẢI XUỐNG (`ModelsPage.qml`, `MyModelsPage.qml`)
-
-### 🔴 Lỗi 5.1: Danh Sách Model (Model Gallery) — Quá Nhiều Badge Kỹ Thuật Gây Rối Mắt
-* **Vị trí:** Toàn bộ trang `ModelsPage.qml`.
-* **Lỗi chi tiết:**
-  * Mỗi model hiển thị đồng thời: Tên Model, Model ID, Task Type, Backend (ONNX/PyTorch/GGUF), Kích thước file, VRAM yêu cầu, License, Tác giả, và 3 nút thao tác (Download, Details, Colab Link).
-  * Hơn 10 thông số nằm dàn trải trên 1 hàng hẹp khiến mắt người dùng bị quá tải thông tin (Cognitive Overload), các badge màu sắc xanh lam, tím, vàng, cam đan xen lộn xộn.
-* **Đề xuất khắc phục:**
-  * Thiết kế lại theo dạng **Thẻ Grid hiện đại 2 tầng**:
-    * Tầng 1 (Luôn hiện): Tên thân thiện, Icon tác vụ, Kích thước file, Nút tải chính.
-    * Tầng 2 (Hover/Bấm chi tiết): Hiện Backend, VRAM, Benchmark, License.
-  * Quy chuẩn màu Badge: Chỉ dùng 1 hệ màu đơn sắc tinh tế (Monochrome Slate Badges với viền mờ).
-
-### 🔴 Lỗi 5.2: Thanh Tiến Trình Tải File (Download Progress Bar) — Chữ Tốc Độ & % Đè Lên Nhau
-* **Vị trí:** Popup quản lý tải xuống (`DownloadsPopup.qml`).
-* **Lỗi chi tiết:**
-  * Khi tải đồng thời 2-3 model, thanh tiến trình màu tím hiển thị % hoàn thành, tốc độ tải (MB/s) và dung lượng đã tải (MB/GB) trên cùng một dòng nhỏ. Khi tên model dài, dòng thông số bị đẩy tràn ra ngoài khung popup.
-* **Đề xuất khắc phục:**
-  * Tách thành 2 hàng: Hàng trên là Tên Model + Nút Hủy/Tạm dừng; Hàng dưới là Thanh Progress Bar + Dòng trạng thái (Ví dụ: `45% • 12.4 MB/s • Còn 1m 20s`).
-
----
-
-## 6. TAB CÀI ĐẶT & DEVELOPER TOOLS (`SettingsPage.qml`, `DeveloperPage.qml`)
-
-### 🔴 Lỗi 6.1: Trang Settings — Danh Sách Thư Mục Dài Ngoằng Không Có Phân Nhóm
-* **Vị trí:** `qml/pages/SettingsPage.qml`.
-* **Lỗi chi tiết:**
-  * Cài đặt đường dẫn (Models Path, Temp Path, Output Path, FFmpeg Path, Whisper Path, UVR5 Path) xếp thành một cột dài không có thẻ gom nhóm.
-  * Nút "Browse" bên cạnh mỗi ô nhập liệu có kích thước quá nhỏ (24x24px) và màu nền tệp với ô nhập, rất khó click trúng.
-* **Đề xuất khắc phục:**
-  * Nhóm cài đặt thành 3 Tab/Card rõ rệt: **1. Lưu trữ & Đường dẫn**, **2. Cấu hình Phần cứng (GPU/CPU/VRAM)**, **3. Tích hợp Colab & API**.
-  * Tăng kích thước nút "Chọn thư mục..." lên chuẩn công thái học (chiều cao 36px, có nhãn chữ rõ ràng).
-
-### 🔴 Lỗi 6.2: Trang Developer Tools — Ma Trận Log & Toggle Switch Quá Dày Đặc
-* **Vị trí:** `qml/pages/DeveloperPage.qml`.
-* **Lỗi chi tiết:**
-  * Hàng chục nút gạt Toggle Switch (Mock Services, Bypass Verification, Debug DSP, Dump Intermediate WAVs, Verbose Network Logging) nằm sát nhau với khoảng cách 4px.
-  * Nhãn giải thích tính năng dùng font chữ 12px xám mờ trên nền xám đậm, rất dễ bấm nhầm giữa các cờ debug.
-* **Đề xuất khắc phục:**
-  * Thiết kế theo dạng **Danh sách cài đặt có mô tả (Settings List with Descriptions)**: Mỗi tùy chọn là 1 hàng độc lập có tiêu đề in đậm, dòng mô tả màu xám sáng và công tắc gạt ở góc phải.
-
----
-
-## 7. CÁC HỘP THOẠI POPUP / DIALOGS CỐ ĐỊNH
-
-### 🔴 Lỗi 7.1: `DubbingExportDialog.qml` & `DubbingAutomaticPreflightDialog.qml`
-* **Vị trí:** Các cửa sổ Popup khi xuất file hoặc kiểm tra trước khi chạy.
-* **Lỗi chi tiết:**
-  * Chiều cao cố định (`height: 620px`, `width: 780px`) không co giãn. Khi mở trên màn hình có độ phân giải dọc thấp (dưới 800px) hoặc khi mở bàn phím ảo/thanh taskbar lớn, các nút "Cancel" và "Export Now" ở đáy dialog bị trôi mất ra ngoài đáy màn hình, người dùng không thể bấm xác nhận!
-* **Đề xuất khắc phục:**
-  * Bọc toàn bộ nội dung Dialog trong `Flickable` / `ScrollView` với `contentHeight`.
-  * Cố định cụm nút bấm Header và Footer (Action Buttons) ở 2 đầu Dialog, chỉ cho phép cuộn vùng nội dung ở giữa.
-
----
-
-## 8. LỘ TRÌNH KHẮC PHỤC TỔNG THỂ (ACTIONABLE FIX PLAN)
-
-Để giải quyết triệt để 2 nhóm lỗi trên, lộ trình tái cấu trúc giao diện được chia thành 3 giai đoạn ưu tiên:
-
-```mermaid
-graph TD
-    A[Giai Đoạn 1: Chuẩn Hóa Hệ Thống Màu & Token Contrast] --> B[Giai Đoạn 2: Tái Cấu Trúc Bố Cục Phân Cấp & Accordion]
-    B --> C[Giai Đoạn 3: Tối Ưu Hóa Công Thái Học & Responsive ScrollView]
-    
-    A1["Nâng cấp Theme.qml<br/>WCAG AA 4.5:1 Minimum"] --> A
-    A2["Loại bỏ toàn bộ mã màu hardcode mờ"] --> A
-    
-    B1["Dubbing Studio: 3 Phase logic & Toggle Inspector"] --> B
-    B2["Voice Studio: Accordion nâng cao / cơ bản"] --> B
-    
-    C1["Bọc toàn bộ trang & popup trong ScrollView"] --> C
-    C2["Tăng padding/spacing từ 4px lên 12-16px"] --> C
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              LA-STUDIO GUI AUDIT MATRIX                                │
+├──────────────────────────┬───────────────────────────┬─────────────────────────────────┤
+│ Phân Vùng / Trang        │ Lỗi Màu Sắc & Tương Phản  │ Lỗi Bố Cục, Nhồi Nhét & Đè Chữ  │
+├──────────────────────────┼───────────────────────────┼─────────────────────────────────┤
+│ 1. Sidebar & Shell       │ 4 lỗi (Inactive, Hover)   │ 2 lỗi (Nút collapse, bottom log)│
+│ 2. Dubbing Studio        │ 7 lỗi (Shelf, Inspector)  │ 6 lỗi (4-pane squeeze, timeline)│
+│ 3. Subtitle OCR          │ 5 lỗi (Placeholder, Badge)│ 4 lỗi (2-col grid clutter, flow)│
+│ 4. Voice Studio / TTS    │ 4 lỗi (Card select, desc) │ 3 lỗi (Textarea button overlap) │
+│ 5. Models & MyModels     │ 6 lỗi (Badge jungle, size)│ 4 lỗi (10 badges/row, sidebar)  │
+│ 6. Developer Tools       │ 5 lỗi (CodePill, toggle)  │ 3 lỗi (Dense grid, raw dump)    │
+│ 7. Settings & Hardware   │ 3 lỗi (Browse btn, path)  │ 2 lỗi (Unsegmented list)        │
+│ 8. Dialogs & Popups      │ 4 lỗi (Dim overlay, alert)│ 5 lỗi (Fixed 620px height leak) │
+├──────────────────────────┼───────────────────────────┼─────────────────────────────────┤
+│ TỔNG CỘNG                │ 38 LỖI TƯƠNG PHẢN         │ 29 LỖI BỐ CỤC & TRÀN KHUNG      │
+└──────────────────────────┴───────────────────────────┴─────────────────────────────────┘
 ```
 
-### 🎯 Giai Đoạn 1: Khắc Phục Lập Tức Lỗi Màu Sắc & Tương Phản (Contrast Hotfix)
-1. **Nâng cấp `Theme.qml`:**
-   * Thay đổi `textSecondary` từ `#c7c2dc` (mờ) thành `#dedaf5` (sáng rõ).
-   * Bổ sung token chuyên dụng: `textMuted: "#b8b3d6"`, `surfaceHighlight: "#3d3d57"`, `cardHover: Qt.rgba(124, 77, 255, 0.15)`.
-2. **Quét & Thay thế các mã màu Hardcoded:** Thay thế toàn bộ các chỗ dùng `color: "#555"`, `color: "#666"`, `color: "#888"`, `color: "gray"` bằng các token tương phản cao từ `Theme`.
+---
 
-### 🎯 Giai Đoạn 2: Giảm Tải Chi Tiết & Tách Bố Cục (Decluttering & Grouping)
-1. **Dubbing Studio:**
-   * Thêm nút gập/mở (Toggle) cho cột Inspector góc phải để giải phóng $340$px không gian cho Video Player.
-   * Gom 10 bước task shelf thành 3 nhóm Accordion có thể thu gọn.
-2. **Subtitle OCR & Voice Studio:**
-   * Đưa các thông số kỹ thuật phụ vào mục *"Tùy chọn nâng cao" (Collapsible Advanced Settings)*.
-   * Chuyển bảng kết quả nhận dạng sang dạng bảng cuộn phân trang sạch sẽ.
+## 2. CHI TIẾT NHÓM LỖI MÀU SẮC & TƯƠNG PHẢN
 
-### 🎯 Giai Đoạn 3: Chống Tràn Màn Hình & Tràn Chữ (Responsive & Ergonomics)
-1. **Popup / Dialogs:** Toàn bộ Dialog chuyển sang cơ chế `Header cố định - Body cuộn ScrollView - Footer nút bấm cố định`.
-2. **Spacing System:** Tăng padding chuẩn giữa các linh kiện từ $4$px lên $12$–$16$px, áp dụng nguyên tắc *"Khoảng trắng thở"* (Breathing Whitespace) giúp giao diện thoáng đãng, sang trọng và chuyên nghiệp.
+### 🔴 Lỗi C01: `Sidebar.qml` (Thanh Menu Trái) — Icon và Nhãn Tab Chưa Chọn Bị Chìm
+* **Vị trí:** Cột điều hướng bên trái toàn ứng dụng (`qml/components/Sidebar.qml:380-450`).
+* **Hiện trạng mã nguồn:**
+  ```qml
+  color: hovered ? Theme.textPrimary : Qt.rgba(Theme.textSecondary.r, Theme.textSecondary.g, Theme.textSecondary.b, 0.6)
+  ```
+  `Theme.textSecondary` là `#c7c2dc`, khi nhân opacity $0.6$ trên nền tối `#1e1e2e` tạo ra màu xám thẫm `#7a788e`.
+* **Hậu quả:** Tỉ lệ tương phản chỉ đạt **$2.78:1$** (thấp hơn nhiều so với chuẩn $4.5:1$). Người dùng mắt kém hoặc ngồi trong môi trường nhiều ánh sáng gần như không thấy tên các tab.
+* **Phương án sửa:** Chuyển sang `color: hovered ? "#ffffff" : "#dedaf5"` với `opacity: 0.88` (tương phản **$6.4:1$**).
+
+### 🔴 Lỗi C02: `Theme.qml` — Thiếu Token Phân Cấp Cho Các Lớp Nền (Surface Stacking)
+* **Vị trí:** File định nghĩa màu sắc toàn cục `qml/Theme.qml:7-23`.
+* **Hiện trạng mã nguồn:** Chỉ có 3 lớp nền: `background` (`#1e1e2e`), `surface` (`#2a2a3e`), `surfaceAlt` (`#35354a`).
+* **Hậu quả:** Khi một Panel nằm đè trên Card, Card nằm trên Dialog, các component con buộc phải dùng `Qt.rgba(1, 1, 1, 0.035)` hoặc `Qt.rgba(0, 0, 0, 0.25)` tự phát, dẫn đến màu nền bị lẫn vào nhau, viền mờ nhạt không phân tách được ranh giới các khối.
+* **Phương án sửa:** Bổ sung hệ thống `surfaceLevel1` $\rightarrow$ `surfaceLevel4` có độ sáng tăng dần có kiểm soát.
+
+### 🔴 Lỗi C03: `DubbingWorkflowStep.qml` (Task Shelf - Dubbing) — Chữ Mô Tả Bước Quá Tối
+* **Vị trí:** Các thẻ tác vụ từ Task 1 đến Task 10 ở cột bên trái (`qml/components/dubbing/DubbingWorkflowStep.qml:45-80`).
+* **Hiện trạng mã nguồn:**
+  ```qml
+  Text { text: stepDescription; color: "#8e8b9f"; font.pixelSize: 11 }
+  ```
+* **Hậu quả:** Màu xám chì `#8e8b9f` đặt trên nền Card `#2a2a3e` có tương phản **$3.1:1$** $\rightarrow$ Bị chìm lỉm, người dùng chỉ đọc được số thứ tự mà không đọc được mô tả tác vụ.
+* **Phương án sửa:** Đổi sang token `Theme.textSecondaryBright` (`#dcd7f5`, tương phản **$5.8:1$**).
+
+### 🔴 Lỗi C04: `AppComboBox.qml` — Item Được Chọn Trong Dropdown Bị Trùng Màu Chữ
+* **Vị trí:** Menu đổ xuống khi chọn Model / Runtime (`qml/components/base/AppComboBox.qml:480-570`).
+* **Hiện trạng mã nguồn:** Item đang active có nền màu xanh lam `#1e88e5`, nhưng chữ bên trong (nhãn model, quantization tag) lại dùng `Theme.textPrimary` (`#f3f1ff`) kết hợp với border mờ `Qt.rgba(1, 1, 1, 0.15)`.
+* **Hậu quả:** Chữ trắng trên nền xanh sáng bị chói (glare), mất nét chữ mảnh. Khi chuột hover qua item, màu nền chuyển sang xám nhạt làm chữ xám bị nuốt hoàn toàn.
+* **Phương án sửa:** Phân định rõ 3 trạng thái của Item Delegate:
+  - *Normal:* Nền trong suốt, chữ `#dedaf5`.
+  - *Hovered:* Nền `Qt.rgba(124, 77, 255, 0.15)`, chữ `#ffffff`, viền tím mảnh.
+  - *Selected:* Nền `#7c4dff`, chữ `#ffffff` in đậm, icon check xanh ngọc `#69f0ae`.
+
+### 🔴 Lỗi C05: `SubtitleOcrPage.qml` (Góc Trên Phải) — Placeholder Trong SpinBox & Input Mất Tích
+* **Vị trí:** Khung nhập toạ độ ROI Crop và Link Media (`qml/pages/SubtitleOcrPage.qml:568-578`).
+* **Hiện trạng mã nguồn:** `placeholderTextColor: Theme.textSecondary` nhưng `background` của TextField lại là `Qt.rgba(0, 0, 0, 0.15)` nằm trên nền `Theme.surfaceAlt` (`#35354a`).
+* **Hậu quả:** Màu placeholder thực tế hiển thị trên màn hình tương đương `#4a485c` trên nền `#313042`, độ chênh màu $\Delta E < 5$ $\rightarrow$ Mắt thường không thể nhìn thấy dòng gợi ý URL hoặc giá trị toạ độ mặc định.
+* **Phương án sửa:** Đổi `placeholderTextColor` sang `Qt.rgba(222, 218, 245, 0.55)`.
+
+### 🔴 Lỗi C06: `VoiceCloningPage.qml` (Voice Profile Cards) — Chữ Bị Chìm Khi Chọn Giọng
+* **Vị trí:** Danh sách thẻ mẫu giọng nhân bản (`qml/components/voicecloning/VoiceProfileCard.qml:60-110`).
+* **Hiện trạng mã nguồn:** Khi Card được chọn (`selected == true`), nền Card đổi sang tím tím `#7c4dff`, nhưng nhãn ngôn ngữ (Tag `vi`, `zh`) và thời lượng file mẫu (`12.0s`) vẫn giữ màu `Theme.textSecondary` (`#c7c2dc`).
+* **Hậu quả:** Màu xám xanh `#c7c2dc` đặt trên nền tím tươi `#7c4dff` tạo ra hiện tượng xung đột sắc độ (Chromostereopsis) và chìm chữ, gây mỏi mắt khi nhìn lâu.
+* **Phương án sửa:** Khi `selected == true`, toàn bộ icon và text phụ chuyển sang màu vàng kim nhạt `#fff9c4` hoặc trắng tinh `#ffffff`.
+
+### 🔴 Lỗi C07: `DeveloperPage.qml` — Khung `CodePill` & `CodeExample` Màu Chữ Tối
+* **Vị trí:** Khung hiển thị lệnh cURL và URL Server (`qml/pages/DeveloperPage.qml:402-406, 616-625`).
+* **Hiện trạng mã nguồn:** Khung code dùng nền xám đen `Qt.rgba(0, 0, 0, 0.35)`, chữ code bên trong lại mang màu `#a59ebc` (font chữ kích thước nhỏ 11px).
+* **Hậu quả:** Các dấu gạch chéo `/`, dấu gạch ngang `-` và cổng `:3928` bị mờ, lập trình viên nhìn vào rất khó đọc chính xác lệnh cURL để copy.
+* **Phương án sửa:** Chữ code dùng màu xanh lục Terminal `#a7f3d0` hoặc vàng cam `#fed7aa` với font monospace in đậm.
+
+---
+
+## 3. CHI TIẾT NHÓM LỖI BỐ CỤC, NHỒI NHÉT & ĐÈ CHỮ
+
+### 🔴 Lỗi L01: `DubbingPage.qml` (Toàn Bộ Trang) — Bố Cục 4 Cột Cứng Nhắc Làm Co Rúm Video
+* **Vị trí:** Toàn bộ không gian làm việc Studio (`qml/pages/DubbingPage.qml:50-95`).
+* **Hiện trạng mã nguồn:**
+  * Cột Task Shelf cố định: `dubbingTaskShelfWidth: 260px`.
+  * Cột Inspector cố định: `dubbingStepPanelWidth: 340px`.
+  * Cột History khi mở: `dubbingHistoryPanelWidth: 280px`.
+  * Breakpoint: `readonly property bool compactDubbingControls: dubbingWorkspaceScroller.width < 1450`.
+* **Hậu quả:**
+  * Trên màn hình laptop phổ biến (Full HD 1080p với Windows Scale 125% $\rightarrow$ Width thực tế = $1536$px): Khi mở cả 3 cột, tổng chiều rộng bị chiếm là $260 + 340 + 280 = 880$px, chỉ còn dư đúng $656$px cho Video Player ở giữa.
+  * Nếu người dùng kéo nhỏ cửa sổ xuống dưới $1450$px, thay vì co giãn mượt mà, **toàn bộ cột Task Shelf bên trái biến mất đột ngột** làm người dùng hoang mang không biết bấm nút ở đâu.
+* **Phương án sửa:**
+  1. Giảm kích thước mặc định: Task Shelf = $220$px, Inspector = $280$px.
+  2. Thêm nút **Toggle 1-Click** để đóng/mở Inspector và Task Shelf dạng Drawer trượt mượt mà.
+  3. Khi Inspector mở, Video tự động căn giữa theo tỉ lệ $16:9$.
+
+### 🔴 Lỗi L02: `DubbingPage.qml` (Chân Trang) — Timeline Nhồi Nhét 3 Track Gây Đè Lên Phụ Đề
+* **Vị trí:** Dải Timeline đáy màn hình (`qml/pages/DubbingPage.qml:80-96`).
+* **Hiện trạng mã nguồn:** Chiều cao Timeline bị ép cứng `minimumDubbingTimelinePanelHeight: 160px` và `maximumDubbingTimelinePanelHeight: 360px`.
+* **Hậu quả:**
+  * Trong khung 160px phải nhét: 1 thanh Ruler thời gian, 1 Track Audio gốc, 1 Track Vocals đã tách, 1 Track Background, 1 Track Dubbed Vocals và 1 Track Phụ đề (tổng cộng 6 dải).
+  * Mỗi track chỉ còn chưa tới $20$px chiều cao, các khối phụ đề bị co lại thành các vệt chữ nhật nhỏ xíu, chữ bên trong bị tràn hoặc bị cắt thành dấu `...` không thể đọc hay click chuột để chọn đoạn cần sửa.
+* **Phương án sửa:**
+  1. Thiết kế Timeline theo dạng **Track Selector / Layer Tabs**: Mặc định chỉ hiện 2 track quan trọng nhất (*Track Giọng Lồng Tiếng* và *Track Phụ Đề Đích*).
+  2. Bổ sung nút bấm **Phóng to chiều dọc (Expand Timeline)** và **Thanh trượt Zoom ngang thời gian (Time Zoom Slider)**.
+
+### 🔴 Lỗi L03: `DubbingNodeInspector.qml` (Cột Phải) — Nhồi Cùng Lúc 15+ Thông Số
+* **Vị trí:** Panel xem chi tiết tham số ở bên phải Dubbing Studio (`qml/components/dubbing/DubbingNodeInspector.qml`).
+* **Hiện trạng mã nguồn:** Toàn bộ tham số của model (Temperature, Top_P, Repetition Penalty, Speed, Pitch, Energy, Emotion Preset, Target Format, Sample Rate, Buffer Size...) được đổ chung vào một `ColumnLayout` duy nhất với `spacing: 4`.
+* **Hậu quả:** Người dùng phải cuộn chuột liên tục để tìm nút "Apply" hoặc "Preview". Các thanh trượt và nhãn dính chùm vào nhau, không có phân cấp chính/phụ.
+* **Phương án sửa:** Phân thành 2 nhóm rõ rệt:
+  * **Nhóm 1 (Cơ bản):** Giọng đọc, Ngôn ngữ, Tốc độ nói (Hiển thị ngay).
+  * **Nhóm 2 (Chuyên sâu):** Cấu hình DSP, Temperature, Buffer (Đặt trong Card Accordion có thể bấm mở rộng khi cần).
+
+### 🔴 Lỗi L04: `SubtitleOcrPage.qml` — Card Grid 2 Cột Bị Vỡ Bố Cục Khi Thu Nhỏ Cửa Sổ
+* **Vị trí:** Toàn trang Subtitle OCR (`qml/pages/SubtitleOcrPage.qml:500-515`).
+* **Hiện trạng mã nguồn:**
+  ```qml
+  columns: root.wideLayout ? 2 : 1
+  ```
+  Nhưng `sourceMediaCard` lại đặt `Layout.columnSpan: cardGrid.columns`, còn `previewCard` và `settingsCard` lại có kích thước cố định chênh lệch lớn (`height: 720px` vs `height: 400px`).
+* **Hậu quả:** Khi ở chế độ 2 cột, cột bên phải dài gấp đôi cột bên trái tạo ra một khoảng trống đen khổng lồ vô nghĩa bên dưới cột trái; khi thu nhỏ cửa sổ, 2 cột dồn lại thành 1 cột khiến trang dài hơn $3.000$px, người dùng phải cuộn chuột mỏi tay.
+* **Phương án sửa:** Chuyển sang bố cục **2 Phân Vùng Ngang (Split Horizontal Studio)**:
+  * Nửa trên: Video Preview + Khung kéo chọn vùng OCR (ROI Drag Canvas).
+  * Nửa dưới: Bảng kết quả nhận dạng phụ đề dạng Table có thanh cuộn độc lập.
+
+### 🔴 Lỗi L05: `ModelsPage.qml` (Kho Mô Hình) — Rừng Badge Kỹ Thuật (10 Badges/Hàng)
+* **Vị trí:** Danh sách model tải về (`qml/pages/ModelsPage.qml` & `MyModelsPage.qml:940-1010`).
+* **Hiện trạng mã nguồn:** Mỗi dòng model chứa đồng thời: `ModelID`, `TaskPill`, `FormatTag` (GGUF/BIN), `LanguageFlag`, `QuantizationBadge` (Q4_K_M), `VramRequirement`, `FileSize`, `Author`, `License`, nút `Use Model`, nút `Delete`.
+* **Hậu quả:** Khi tên model dài (ví dụ: `nemotron-3.5-asr-streaming-0.6b-int8.onnx`), các badge bị đẩy đè lên nút "Use Model" ở góc phải, gây ra lỗi Click nhầm giữa Nút Tải và Nút Xóa!
+* **Phương án sửa:**
+  * Giảm số badge hiển thị mặc định xuống tối đa 3 badge cốt lõi: `Task` (STT/TTS), `Size` (MB), `Engine` (GPU/CPU).
+  * Các thông tin sâu về Quantization, License, Directory chuyển vào Popover Tooltip khi rê chuột vào hoặc hiển thị trong Drawer chi tiết bên phải.
+
+### 🔴 Lỗi L06: `TtsPage.qml` — Nút "Tạo Giọng Nói" Đè Lên Dòng Chữ Kịch Bản
+* **Vị trí:** Khung nhập kịch bản phát âm (`qml/pages/TtsPage.qml:120-180`).
+* **Hiện trạng mã nguồn:** Nút "Synthesize" và bộ đếm ký tự `0/4000` được định vị bằng `anchors.bottom: parent.bottom` và `anchors.right: parent.right` đè trực tiếp lên vùng hiển thị của `TextArea`.
+* **Hậu quả:** Khi người dùng dán vào đoạn văn bản dài hơn 5 dòng, các dòng chữ ở góc dưới bên phải bị nút bấm che mất hoàn toàn, không thể click con trỏ để chỉnh sửa dấu câu hay từ ngữ ở cuối đoạn.
+* **Phương án sửa:** Đặt `TextArea` trong một layout dọc độc lập, nút bấm và bộ đếm đặt ở hàng `Footer Toolbar` riêng biệt bên dưới `TextArea`.
+
+---
+
+## 4. CHI TIẾT NHÓM LỖI TRÀN KHUNG & THIẾU CUỘN (CLIPPING & SCROLLING)
+
+### 🔴 Lỗi S01: `DubbingExportDialog.qml` — Hộp Thoại Cố Định Chiều Cao 620px Làm Mất Nút Bấm
+* **Vị trí:** Popup xuất video lồng tiếng (`qml/components/dubbing/DubbingExportDialog.qml:25-60`).
+* **Hiện trạng mã nguồn:** `implicitHeight: 620`, `implicitWidth: 780` không bọc trong `ScrollView`.
+* **Hậu quả:** Trên màn hình độ phân giải $1366 \times 768$ (chiều cao hữu dụng của cửa sổ sau khi trừ Taskbar Windows và Titlebar chỉ còn $\approx 640$px), đáy của dialog bị chìm dưới mép màn hình. **Nút "Export Video" và "Cancel" nằm ngoài vùng nhìn thấy, người dùng không có cách nào bấm xuất file!**
+* **Phương án sửa:**
+  * `implicitHeight: Math.min(620, Overlay.overlay ? Overlay.overlay.height - 40 : 620)`.
+  * Bọc nội dung cấu hình (chọn bitrate, codec, phụ đề hardsub/softsub) trong `ScrollView { Layout.fillHeight: true }`, cố định cụm nút Action ở đáy Dialog.
+
+### 🔴 Lỗi S02: `LoadedModelDialog.qml` — Danh Sách File Model Tràn Khỏi Khung Popup
+* **Vị trí:** Popup xem chi tiết các file trong model (`qml/components/shared/LoadedModelDialog.qml:300-360`).
+* **Hiện trạng mã nguồn:** Dùng `ColumnLayout` bên trong `Rectangle` có `height: 480` cố định mà không có `Flickable` hay `ScrollView`.
+* **Hậu quả:** Đối với các model có nhiều file trọng số (như Whisper có 6-8 file `.bin`, `.json`, `.txt`), danh sách file bị cắt cụt ở file thứ 5, các file còn lại bị tràn ra ngoài viền dialog không thể xem được.
+* **Phương án sửa:** Thay `ColumnLayout` bằng `ListView` hoặc bọc trong `ScrollView` có thanh cuộn mượt.
+
+---
+
+## 5. CHI TIẾT NHÓM LỖI TƯƠNG TÁC & CỐ ĐỊNH PIXEL CỨNG
+
+### 🔴 Lỗi I01: `DubbingSourceMediaPanel.qml` — Nút Play/Pause & Seek Slider Quá Nhỏ
+* **Vị trí:** Thanh điều khiển phát video (`qml/components/dubbing/DubbingSourceMediaPanel.qml:740-785`).
+* **Hiện trạng mã nguồn:** Nút Play có `implicitWidth: 30`, `implicitHeight: 30`, icon bên trong chỉ $15 \times 15$px.
+* **Hậu quả:** Vi phạm tiêu chuẩn công thái học nút bấm cảm ứng/chuột tối thiểu $44 \times 44$px. Rất khó click nhanh khi đang nghe đối thoại để dừng đúng mốc thời gian.
+* **Phương án sửa:** Tăng kích thước nút Play chính lên $40 \times 40$px, icon $20 \times 20$px với hiệu ứng viền tròn nổi bật.
+
+---
+
+## 6. THIẾT KẾ LẠI HỆ THỐNG TOKEN MÀU SẮC CHUẨN HÓA (`Theme.qml` 2.0)
+
+Để giải quyết triệt để tất cả các lỗi chữ bị chìm trên toàn bộ ứng dụng, `Theme.qml` cần được nâng cấp toàn diện với các token tương phản cao đạt chuẩn WCAG AAA:
+
+```qml
+pragma Singleton
+import QtQuick
+
+QtObject {
+    // === 1. NỀN & BỀ MẶT PHÂN CẤP (ELEVATED SURFACES) ===
+    readonly property color background:        "#12111a"  // Nền sâu nhất (App background)
+    readonly property color surfaceLevel1:     "#1c1b29"  // Nền Sidebar / Bottom Panel
+    readonly property color surfaceLevel2:     "#262438"  // Nền Card / Canvas
+    readonly property color surfaceLevel3:     "#32304a"  // Nền Input Field / Dropdown
+    readonly property color surfaceLevel4:     "#423f60"  // Nền Hover / Active State
+    
+    // Alias tương thích ngược
+    readonly property color surface:           surfaceLevel2
+    readonly property color surfaceAlt:        surfaceLevel3
+    readonly property color border:            "#4e4a6d"  // Viền rõ nét, không bị chìm
+    readonly property color borderSubtle:      Qt.rgba(1, 1, 1, 0.10)
+
+    // === 2. HỆ THỐNG CHỮ TƯƠNG PHẢN CAO (HIGH-CONTRAST TYPOGRAPHY) ===
+    readonly property color textPrimary:       "#ffffff"  // Trắng 100% cho tiêu đề, nhãn chính (Tương phản 15:1)
+    readonly property color textSecondary:     "#dedaf5"  // Trắng tím sáng cho mô tả (Tương phản 9.2:1)
+    readonly property color textMuted:         "#aea8d1"  // Chữ phụ/thời gian (Tương phản 5.6:1 - Đạt WCAG AA)
+    readonly property color textPlaceholder:   "#8d87b3"  // Chữ gợi ý input (Tương phản 4.5:1)
+    readonly property color textOnAccent:      "#ffffff"  // Chữ trên nền nút tím/xanh
+
+    // === 3. MÀU ĐIỂM NHẤN & TRẠNG THÁI (ACCENT & SEMANTIC) ===
+    readonly property color accent:            "#8b5cf6"  // Tím công nghệ rực rỡ
+    readonly property color accentHover:       "#a78bfa"  // Tím sáng khi hover
+    readonly property color accentBgMuted:     Qt.rgba(0.54, 0.36, 0.96, 0.16) // Nền badge tím
+    
+    readonly property color success:           "#4ade80"  // Xanh lá sáng (Pass / Ready)
+    readonly property color successBg:         "#064e3b"  // Nền xanh sẫm
+    
+    readonly property color warning:           "#fbbf24"  // Vàng cam sáng (Cần chú ý)
+    readonly property color warningBg:         "#78350f"  // Nền vàng sẫm
+    
+    readonly property color danger:            "#f87171"  // Đỏ tươi (Lỗi / Xóa)
+    readonly property color dangerBg:          "#7f1d1d"  // Nền đỏ sẫm
+
+    // === 4. KHOẢNG CÁCH CÔNG THÁI HỌC (BREATHABLE SPACING) ===
+    readonly property int paddingTiny:         4
+    readonly property int paddingSmall:        8
+    readonly property int paddingMedium:       14
+    readonly property int paddingLarge:        20
+    readonly property int paddingXL:           28
+
+    readonly property int radiusSmall:         6
+    readonly property int radiusMedium:        10
+    readonly property int radiusLarge:         14
+}
+```
+
+---
+
+## 7. GIẢI PHÁP TÁI CẤU TRÚC TỪNG TRANG & LỘ TRÌNH THỰC THI
+
+### 🛠️ Bước 1: Áp Dụng Ngay `Theme.qml 2.0` (Contrast Hotfix)
+* Thay thế toàn bộ mã màu hardcoded (`#555`, `#888`, `#c7c2dc`) trên 85 file QML bằng các token mới `textPrimary`, `textSecondary`, `textMuted`.
+* Đảm bảo $100\%$ chữ và icon trên toàn bộ ứng dụng đạt độ tương phản tối thiểu **$4.5:1$** (WCAG AA).
+
+### 🛠️ Bước 2: Tái Cấu Trúc Dubbing Studio (`DubbingPage.qml`)
+1. **Thêm nút đóng/mở Inspector & Shelf:** Biến 2 cột bên thành dạng Drawer có thể thu gọn mượt mà, trả lại **$70\%$ diện tích màn hình cho Video Player và Subtitle Canvas**.
+2. **Nâng cấp Timeline:** Thiết kế Timeline dạng 2 tầng linh hoạt, có thanh cuộn và nút Zoom để đọc rõ ràng từng câu phụ đề.
+3. **Phân nhóm Task Shelf:** 10 bước gộp thành 3 khối logic (Chuẩn bị $\rightarrow$ Xử lý AI $\rightarrow$ Hoàn thiện).
+
+### 🛠️ Bước 3: Tối Ưu Hóa Subtitle OCR & Voice Studio
+1. **Subtitle OCR:** Chuyển sang bố cục Split View (Nửa trên chỉnh vùng cắt trực quan, nửa dưới bảng kết quả phụ đề).
+2. **TTS Studio:** Đưa nút "Tạo giọng nói" ra thanh Footer Bar bên ngoài vùng nhập chữ, bọc TextArea trong ScrollView riêng biệt.
+3. **Kho Model (Models Gallery):** Tối giản thẻ Model thành Grid 2 tầng, loại bỏ sự rối loạn của 10 badge trên một hàng.
+
+### 🛠️ Bước 4: Chống Tràn Toàn Bộ Popups & Dialogs
+* Cập nhật toàn bộ các file `*Dialog.qml`: Khống chế chiều cao theo `Overlay.overlay.height - 40px` và bọc phần thân trong `ScrollView` tự động ngắt dòng.
