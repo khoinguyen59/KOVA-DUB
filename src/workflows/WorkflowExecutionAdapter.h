@@ -1,0 +1,30 @@
+#pragma once
+
+#include <QObject>
+#include <QVariantMap>
+
+namespace LAStudio {
+
+// Capability boundary used by workflow node executors. Generic node code talks
+// to this adapter instead of depending on a product-specific job runner.
+class WorkflowExecutionAdapter : public QObject
+{
+    Q_OBJECT
+public:
+    explicit WorkflowExecutionAdapter(QObject *parent = nullptr) : QObject(parent) {}
+    ~WorkflowExecutionAdapter() override = default;
+
+    virtual void start(const QString &nodeType, const QVariantMap &inputs,
+                       const QVariantMap &parameters) = 0;
+    virtual void cancel() = 0;
+    virtual void resume(const QVariantMap &decision) = 0;
+
+signals:
+    // Percent is emitted only when the underlying stage supplies it. A zero
+    // marks a newly-started request whose provider has no measurable progress.
+    void progress(int percent, const QString &status);
+    void stageCompleted(const QString &nodeId, const QVariantMap &outputs);
+    void failed(const QString &message);
+};
+
+} // namespace LAStudio

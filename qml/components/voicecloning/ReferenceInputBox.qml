@@ -1,0 +1,482 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Dialogs
+import LAStudio
+import "../base"
+import "../shared"
+
+// Component for reference voice input with transcript
+ColumnLayout {
+    id: root
+
+    property string audioPath: ""
+    property string referenceText: ""
+    property bool isPlaying: false
+    property bool showTips: true
+    property bool showHeader: true
+    property bool locked: false
+    property bool requiresExactTranscript: false
+    property string transcriptHint: ""
+    property string familyId: ""
+    property var savedVoices: []
+    property int selectedSavedVoiceIndex: -1
+    // Keep the durable preset identity separate from its editable fields.
+    // This lets the Colab controller invalidate a temporary profile whenever
+    // the user switches a saved reference.
+    property string selectedSavedVoiceId: ""
+    // This name becomes the user-facing reusable voice name in TTS when a
+    // Direct Colab clone is created from a new reference.  It is intentionally
+    // placed next to the reference rather than hidden in the remote settings.
+    property string reusableVoiceName: ""
+    property bool loadingSavedVoice: false
+
+    signal audioCleared()
+    signal playClicked()
+    signal stopClicked()
+
+    onAudioPathChanged: {
+        if (!root.loadingSavedVoice)
+            root.selectedSavedVoiceId = ""
+        AppController.preview.requestWavSamples(root.audioPath)
+    }
+
+    onReferenceTextChanged: {
+        if (!root.loadingSavedVoice)
+            root.selectedSavedVoiceId = ""
+        if (refTextEdit.text !== root.referenceText)
+            refTextEdit.text = root.referenceText
+    }
+
+    onFamilyIdChanged: {
+        root.selectedSavedVoiceId = ""
+        reloadSavedVoices(true)
+    }
+    Component.onCompleted: reloadSavedVoices(true)
+
+    Connections {
+        target: AppController.voiceClonePresets
+        function onPresetsChanged(familyId) {
+            if (String(familyId || "").trim().toLowerCase()
+                    === root.familyId.trim().toLowerCase())
+                root.reloadSavedVoices(false)
+        }
+    }
+
+    function reloadSavedVoices(clearSelection) {
+        // A library update may be caused by another preset being saved or
+        // removed. Preserve the durable selection when that preset still
+        // exists; otherwise the next clone could silently lose its reference
+        // identity and create a duplicate profile.
+        var previousId = clearSelection === true ? "" : root.selectedSavedVoiceId
+        var voices = root.familyId !== "" ? AppController.voiceClonePresets.presetsForFamily(root.familyId) : []
+        root.savedVoices = voices
+        root.selectedSavedVoiceIndex = -1
+        root.selectedSavedVoiceId = ""
+        for (var i = 0; i < voices.length; ++i) {
+            if (voices[i].valid && voices[i].id === previousId) {
+                root.selectedSavedVoiceIndex = i
+                root.selectedSavedVoiceId = previousId
+                return
+            }
+        }
+    }
+
+    function defaultVoiceName() {
+        if (root.audioPath !== "")
+            return VoiceCloningUtils.fileNameFromPath(root.audioPath)
+        return "Reference voice"
+    }
+
+    function loadSavedVoice(index) {
+        if (root.locked || index < 0 || index >= root.savedVoices.length) return
+        var voice = root.savedVoices[index]
+        if (!voice.valid) return
+        root.loadingSavedVoice = true
+        root.selectedSavedVoiceIndex = index
+        root.selectedSavedVoiceId = voice.id || ""
+        root.reusableVoiceName = voice.name || ""
+        root.audioPath = voice.audioPath || ""
+        root.referenceText = voice.referenceText || ""
+        root.loadingSavedVoice = false
+    }
+
+    function saveCurrentVoice() {
+        if (root.locked || root.familyId === "" || root.audioPath === "") return
+        libraryDialog.initialMode = "reference"
+        libraryDialog.open()
+        Qt.callLater(libraryDialog.applyCurrentReference)
+    }
+
+    function manageVoices() {
+        if (root.familyId === "") return
+        libraryDialog.initialMode = "reference"
+        libraryDialog.open()
+    }
+    spacing: Theme.paddingLarge
+    Layout.fillHeight: false
+
+    // Header
+    Text {
+        visible: root.showHeader
+        text: "Reference Voice"
+        color: Theme.textPrimary
+        font.pixelSize: Theme.fontMedium
+        font.bold: true
+    }
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: Theme.paddingSmall
+        visible: root.familyId !== ""
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+
+            LineIcon {
+                name: "spark"
+                color: Theme.textSecondary
+                Layout.preferredWidth: 14
+                Layout.preferredHeight: 14
+            }
+
+            Text {
+                text: "Saved reference voices"
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontSmall
+                font.bold: true
+                Layout.fillWidth: true
+            }
+        }
+
+        AppComboBox {
+            id: savedVoiceCombo
+            Layout.fillWidth: true
+            model: root.savedVoices
+            textRole: "name"
+            secondaryTextRole: "originalAudioName"
+            currentIndex: root.selectedSavedVoiceIndex
+            enabled: !root.locked && root.savedVoices.length > 0
+            onActivated: function(index) { root.loadSavedVoice(index) }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+
+            PrimaryButton {
+                text: "Save reference"
+                quiet: true
+                implicitHeight: 34
+                implicitWidth: 120
+                enabled: !root.locked && root.audioPath !== ""
+                onClicked: root.saveCurrentVoice()
+            }
+
+            PrimaryButton {
+                text: "Manage"
+                iconName: "settings"
+                quiet: true
+                implicitHeight: 34
+                implicitWidth: 105
+                enabled: root.familyId !== ""
+                onClicked: root.manageVoices()
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Text {
+                text: "Voice name for TTS reuse"
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontSmall
+                font.bold: true
+            }
+
+            TextField {
+                id: reusableVoiceNameField
+                Layout.fillWidth: true
+                text: root.reusableVoiceName
+                placeholderText: "e.g. Hoài Vũ — Vietnamese"
+                enabled: !root.locked
+                color: Theme.textPrimary
+                placeholderTextColor: Theme.textSecondary
+                selectByMouse: true
+                onTextChanged: {
+                    if (root.reusableVoiceName !== text)
+                        root.reusableVoiceName = text
+                }
+                background: Rectangle {
+                    radius: Theme.radiusSmall
+                    color: Qt.rgba(1, 1, 1, 0.035)
+                    border.color: reusableVoiceNameField.activeFocus ? Theme.accent : Theme.surfaceAlt
+                    border.width: reusableVoiceNameField.activeFocus ? 2 : 1
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: "After a successful Direct Colab clone, this reference is saved locally under this name and appears in TTS."
+                color: Theme.textSecondary
+                font.pixelSize: 10
+                wrapMode: Text.WordWrap
+            }
+        }
+    }
+
+    // Input tabs box
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 160
+        color: Qt.rgba(1, 1, 1, 0.02)
+        radius: Theme.radiusSmall
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.width: 1
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: Theme.paddingLarge
+            spacing: Theme.paddingMedium
+            visible: root.audioPath === ""
+
+            InputSourceTabs {
+                id: inputTabs
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                enabled: !root.locked
+                recordingSampleRate: root.familyId === "vieneu-tts-v3-turbo" ? 48000 : 24000
+                recommendedAudioHint: root.familyId === "vieneu-tts-v3-turbo"
+                                      ? "48kHz mono WAV recommended for VieNeu v3 native cloning"
+                                      : "24kHz mono WAV recommended"
+
+                onAudioLoaded: (path) => {
+                    if (root.locked) return
+                    root.audioPath = path
+                }
+            }
+        }
+
+        // Display loaded audio
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: Theme.paddingMedium
+            visible: root.audioPath !== ""
+            spacing: Theme.paddingMedium
+
+            Text {
+                text: "Loaded: " + VoiceCloningUtils.fileNameFromPath(root.audioPath)
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontSmall
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            WaveformView {
+                id: refWaveform
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                samples: (root.audioPath !== "" && AppController.preview.wavSamplesSourcePath === root.audioPath) ? AppController.preview.wavSamples : []
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: Theme.paddingMedium
+
+                PrimaryButton {
+                    text: "Change / Record"
+                    quiet: true
+                    implicitHeight: 32
+                    enabled: !root.locked
+                    onClicked: {
+                        if (root.isPlaying)
+                            root.stopClicked()
+                        root.audioPath = ""
+                        root.audioCleared()
+                    }
+                }
+
+                PrimaryButton {
+                    text: root.isPlaying ? "Stop" : "Play"
+                    buttonColor: root.isPlaying ? Theme.danger : Theme.success
+                    implicitHeight: 32
+                    onClicked: {
+                        if (root.isPlaying) {
+                            root.stopClicked()
+                        } else {
+                            root.playClicked()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Reference Transcript
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: 6
+
+        RowLayout {
+            Layout.fillWidth: true
+            LineIcon {
+                name: "file"
+                color: Theme.textSecondary
+                Layout.preferredWidth: 14
+                Layout.preferredHeight: 14
+            }
+            Text {
+                text: root.requiresExactTranscript ? "Reference Transcript" : "Reference Transcript (optional)"
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontSmall
+                font.bold: true
+                Layout.fillWidth: true
+            }
+            Text {
+                visible: root.requiresExactTranscript
+                text: "*"
+                color: Theme.danger
+                font.pixelSize: Theme.fontMedium
+                font.bold: true
+            }
+            PrimaryButton {
+                text: "Import .txt"
+                iconName: "folder"
+                quiet: true
+                implicitHeight: 28
+                implicitWidth: 105
+                enabled: !root.locked
+                onClicked: txtFileDialogLoader.active = true
+            }
+        }
+
+        Text {
+            text: root.requiresExactTranscript
+                  ? "Required: type the exact words spoken in the reference audio."
+                  : (root.transcriptHint !== "" ? root.transcriptHint
+                                                : "Optional: improves voice similarity when provided.")
+            color: Theme.textSecondary
+            font.pixelSize: 11
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 100
+            color: Theme.surface
+            border.color: root.requiresExactTranscript && root.audioPath !== ""
+                          && root.referenceText.trim() === "" ? Theme.danger : Theme.surfaceAlt
+            border.width: 1
+            radius: Theme.radiusSmall
+
+            AppTextArea {
+                id: refTextEdit
+                anchors.fill: parent
+                anchors.margins: 4
+                placeholderText: "Type what is spoken in the reference audio here..."
+                font.pixelSize: Theme.fontSmall
+                background: Rectangle { color: "transparent" }
+                readOnly: root.locked
+
+                onTextChanged: root.referenceText = text
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            visible: root.requiresExactTranscript && root.audioPath !== ""
+                     && root.referenceText.trim() === ""
+            text: "Reference Transcript is required for this route/model."
+            color: Theme.danger
+            font.pixelSize: Theme.fontSmall
+            wrapMode: Text.WordWrap
+        }
+    }
+
+    // Tips
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: tipsCol.implicitHeight + Theme.paddingMedium * 2
+        color: Qt.rgba(0.49, 0.30, 1.0, 0.05)
+        radius: Theme.radiusSmall
+        border.color: Qt.rgba(0.49, 0.30, 1.0, 0.1)
+        border.width: 1
+        visible: root.showTips
+
+        ColumnLayout {
+            id: tipsCol
+            anchors.fill: parent
+            anchors.margins: Theme.paddingMedium
+            spacing: 4
+
+            RowLayout {
+                LineIcon {
+                    name: "info"
+                    color: Theme.accent
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+                }
+                Text {
+                    text: "Tips for better cloning"
+                    color: Theme.accent
+                    font.pixelSize: Theme.fontSmall
+                    font.bold: true
+                }
+            }
+
+            Text {
+                text: "• Clean audio without background noise\n• 5-15 seconds of clear speech\n• Natural tone and prosody"
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                lineHeight: 1.3
+                Layout.fillWidth: true
+            }
+        }
+    }
+
+    Item {
+        Layout.fillHeight: true
+    }
+
+    VoiceLibraryDialog {
+        id: libraryDialog
+        parent: Overlay.overlay
+        familyId: root.familyId
+        currentReferenceAudioPath: root.audioPath
+        currentReferenceText: root.referenceText
+        onReferenceVoiceSelected: function(audioPath, referenceText, name) {
+            if (root.locked) return
+            root.audioPath = audioPath
+            root.referenceText = referenceText
+        }
+    }
+    Loader {
+        id: txtFileDialogLoader
+        active: false
+        sourceComponent: txtFileDialogComponent
+    }
+
+    Component {
+        id: txtFileDialogComponent
+        FileDialog {
+            title: "Select Reference Transcript"
+            nameFilters: ["Text files (*.txt)", "All files (*)"]
+
+            Component.onCompleted: open()
+
+            onAccepted: {
+                if (root.locked) {
+                    txtFileDialogLoader.active = false
+                    return
+                }
+                var path = AppController.files.urlToLocalPath(selectedFile.toString())
+                var content = AppController.files.readTextFile(path)
+                refTextEdit.text = content
+                txtFileDialogLoader.active = false
+            }
+            onRejected: txtFileDialogLoader.active = false
+        }
+    }
+}

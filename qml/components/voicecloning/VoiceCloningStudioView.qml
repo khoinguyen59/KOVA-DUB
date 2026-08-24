@@ -1,0 +1,1066 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Dialogs
+import LAStudio
+import "../shared"
+import "../base"
+import "../tts"
+
+StudioShell {
+    id: root
+
+    family: null
+    families: []
+    capability: "voice-cloning"
+    selectedFamilyId: family ? family.id : ""
+    studioContext: null
+    studioReady: false
+    // Voice cloning's Colab worker is a complete execution route, so its
+    // setup cannot depend on a local model being loaded first.
+    settingsRequiresReady: false
+    isSettingsOpen: true
+    showLeftPanel: true
+    isLeftPanelOpen: true
+    modalSelectionMode: true
+    showSwitcher: false
+    modalSelectionTitle: qsTr("Model + Runtime")
+    modalSelectionValue: qsTr("Select model and runtime")
+    modalSelectionDetail: ""
+    backToolTip: qsTr("Change model and runtime")
+
+    property string referenceAudioPath: ""
+    property string playingType: "none"
+    readonly property var referenceIsolator: AppController.voiceCloneReferenceIsolator
+    readonly property var referenceIsolatorColab: AppController.colabVoiceCloneReferenceIsolator
+    readonly property var referenceIsolatorSession: AppController.colabVoiceCloneReferenceIsolatorSession
+    property bool referenceIsolatorSetupOpen: false
+    property string detectedLanguage: "en"
+    // Saved only after a successful clone.  This keeps a failed/cancelled
+    // remote request from creating a misleading reusable TTS voice.
+    property string pendingReusableVoiceName: ""
+    property string pendingReusableVoicePath: ""
+    property string pendingReusableVoiceText: ""
+    property string pendingReusableVoiceFamilyId: ""
+    readonly property bool remoteFirstMode: AppController.settings.remoteFirstMode
+    readonly property bool colabActive: AppController.colabVoiceClone && AppController.colabVoiceClone.colabActive
+    readonly property var activeClone: colabActive ? AppController.colabVoiceClone : null
+    // The gallery family may stay visible while another exact Direct Colab
+    // worker is active. Persist reusable voices under that worker's model.
+    readonly property string activeCloneModelId: activeClone && activeClone.model
+                                               ? activeClone.model.trim().toLowerCase() : ""
+    readonly property string activeCloneFamilyId: activeCloneModelId !== ""
+                                                ? activeCloneModelId
+                                                : (family && family.id ? family.id.trim().toLowerCase() : "")
+    property bool outputReady: colabActive
+                               ? activeClone.lastSampleCount > 0
+                               : (AppController.tts.lastSampleCount > 0 && AppController.tts.isCloneAction)
+    property string selectedLanguageCode: "en"
+    property real mainHorizontalInset: Theme.paddingXL
+    property real promptInset: Theme.paddingSmall
+
+    component ReferenceIsolatorColabField: TextField {
+        Layout.fillWidth: true
+        color: Theme.textPrimary
+        placeholderTextColor: Theme.textSecondary
+        selectByMouse: true
+        font.pixelSize: Theme.fontSmall
+        background: Rectangle {
+            radius: Theme.radiusSmall
+            color: Qt.rgba(1, 1, 1, 0.04)
+            border.color: parent.activeFocus ? Theme.accent : Qt.rgba(1, 1, 1, 0.12)
+        }
+    }
+    readonly property bool inputsLocked: AppController.tts.processing || (colabActive && activeClone.processing)
+    readonly property var nonVerbalTags: {
+        if (family && family.studio && family.studio[root.capability] && family.studio[root.capability].nonVerbalTags)
+            return family.studio[root.capability].nonVerbalTags
+        return []
+    }
+    readonly property var availableExamples: AppController.examples.examplesForTask("voice-cloning", root.family || ({}))
+
+    property var studioConfig: ({})
+    readonly property bool hasLanguageInput: studioConfig && studioConfig.inputs ? studioConfig.inputs.indexOf("language") !== -1 : true
+
+    function refreshCapabilityMetadata() {
+        root.studioConfig = AppController.tts.studioConfigForCapability("voice-cloning")
+    }
+
+    Component.onCompleted: refreshCapabilityMetadata()
+
+    Connections {
+        target: AppController.tts
+        function onFamilyConfigChanged() { root.refreshCapabilityMetadata() }
+        function onSchemaChanged() { root.refreshCapabilityMetadata() }
+    }
+
+    signal backToGallery()
+    signal reloadRequested()
+    signal ejectRequested()
+    signal modelSwitchRequested(string familyId)
+    signal runtimeSwitchRequested(string runtimeId)
+
+    onRequestBack: root.backToGallery()
+    onRequestConfigurationPicker: root.backToGallery()
+    onRequestReload: root.reloadRequested()
+    onRequestEject: root.ejectRequested()
+    onRequestModelSwitch: function(familyId) { root.modelSwitchRequested(familyId) }
+    onRequestRuntimeSwitch: function(runtimeId) { root.runtimeSwitchRequested(runtimeId) }
+
+    readonly property var defaultLanguages: [
+        { text: qsTr("English"), value: "en", detail: qsTr("Language code: en") },
+        { text: qsTr("Chinese"), value: "zh", detail: qsTr("Language code: zh") },
+        { text: qsTr("Japanese"), value: "ja", detail: qsTr("Language code: ja") },
+        { text: qsTr("Korean"), value: "ko", detail: qsTr("Language code: ko") },
+        { text: qsTr("French"), value: "fr", detail: qsTr("Language code: fr") },
+        { text: qsTr("Spanish"), value: "es", detail: qsTr("Language code: es") },
+        { text: qsTr("German"), value: "de", detail: qsTr("Language code: de") },
+        { text: qsTr("Vietnamese"), value: "vi", detail: qsTr("Language code: vi") }
+    ]
+
+    function normalizeLanguageItems(items) {
+        var result = []
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i] || {}
+            var code = item.value || item.code || ""
+            var label = item.text || item.name || code
+            if (item.name && item.code) {
+                label = item.name + " (" + item.code + ")"
+            }
+            result.push({
+                text: label,
+                value: code,
+                detail: item.detail || (code !== "" ? "Language code: " + code : "")
+            })
+        }
+        return result
+    }
+
+    function languageIndexFor(value) {
+        for (var i = 0; i < root.languageItems.length; ++i) {
+            if (root.languageItems[i].value === value) return i
+        }
+        return -1
+    }
+
+    readonly property var languageItems: {
+        if (family) {
+            if (family.supportedLanguageSetId) {
+                var list = AppController.catalog.languageSet(family.supportedLanguageSetId)
+                if (list && list.length > 0) {
+                    return normalizeLanguageItems(list)
+                }
+            }
+            if (family.supportedLanguages && family.supportedLanguages.length > 0) {
+                return normalizeLanguageItems(family.supportedLanguages)
+            }
+            if (family.featuredLanguages && family.featuredLanguages.length > 0) {
+                return normalizeLanguageItems(family.featuredLanguages)
+            }
+        }
+        return normalizeLanguageItems(defaultLanguages)
+    }
+
+    function outputDurationText() {
+        var clone = root.colabActive ? root.activeClone : AppController.tts
+        if (!root.outputReady || clone.sampleRate <= 0) return "--"
+        var seconds = clone.lastSampleCount / clone.sampleRate
+        if (seconds < 60) return seconds.toFixed(1) + "s"
+        var minutes = Math.floor(seconds / 60)
+        var remain = Math.floor(seconds % 60)
+        return minutes + ":" + (remain < 10 ? "0" + remain : remain)
+    }
+
+    function sampleCountText() {
+        var count = root.colabActive ? root.activeClone.lastSampleCount : AppController.tts.lastSampleCount
+        if (count >= 1000000) return (count / 1000000).toFixed(1) + "M samples"
+        if (count >= 1000) return (count / 1000).toFixed(1) + "k samples"
+        return count + " samples"
+    }
+
+    function cloneBlockReason() {
+        if (root.inputsLocked) return ""
+        if (root.remoteFirstMode && !root.colabActive)
+            return qsTr("Connect and Check the selected Direct Colab GPU worker in Cloning Settings before cloning.")
+        if (root.referenceIsolator && root.referenceIsolator.enabled && !root.referenceIsolator.resultReady) {
+            if (!root.referenceIsolator.routeReady)
+                return qsTr("Configure and Check the selected Isolator route before cleaning this reference audio.")
+            return root.referenceIsolator.processing
+                   ? qsTr("Wait for Isolator to finish creating a readable Vocals stem.")
+                   : qsTr("Run Isolator to create a Vocals-only reference before cloning.")
+        }
+        if (root.colabActive) {
+            if (inputText.text.trim().length === 0)
+                return qsTr("Target Prompt is required.")
+            if (root.referenceAudioPath === "")
+                return qsTr("Reference Voice audio is required.")
+            if (referenceBox.selectedSavedVoiceId === ""
+                    && referenceBox.reusableVoiceName.trim().length === 0)
+                return qsTr("Enter a Voice name for TTS reuse, or select a saved reference voice.")
+            if (!settingsPanel.colabConsent)
+                return qsTr("Confirm that you have permission to clone this voice.")
+            return ""
+        }
+        if (!(root.studioController ? root.studioController.canProcess : false)
+                || !AppController.tts.modelLoaded)
+            return qsTr("Load a Local CPU model/runtime, or select Direct Colab GPU in Cloning Settings.")
+        if (inputText.text.trim().length === 0)
+            return qsTr("Target Prompt is required.")
+        if (root.referenceAudioPath === "")
+            return qsTr("Reference Voice audio is required.")
+        var isQwen3 = root.family && root.family.id && root.family.id.indexOf("qwen3") !== -1
+        if (isQwen3 && referenceBox.referenceText.trim().length === 0)
+            return qsTr("This Local CPU model requires the Reference Transcript.")
+        return ""
+    }
+
+    function referenceTranscriptHint() {
+        if (!root.colabActive) return ""
+        var modelId = root.activeCloneFamilyId
+        if (modelId === "omnivoice")
+            return qsTr("Optional: OmniVoice transcribes the reference on Colab when this is blank.")
+        if (modelId.indexOf("qwen3") !== -1)
+            return qsTr("Optional: blank uses Qwen speaker-only cloning; a transcript can improve similarity.")
+        if (modelId === "voxcpm2")
+            return qsTr("Optional: blank uses reference-audio cloning; a transcript enables prompt-guided cloning.")
+        return qsTr("Optional for this Direct Colab voice-cloning model.")
+    }
+
+    function qmlSmokeVoiceCloneLayoutCheck() {
+        return !!settingsPanel && !!referenceBox
+            && settingsPanel.qmlSmokeConsentLayoutCheck
+            && settingsPanel.qmlSmokeConsentLayoutCheck()
+            && referenceBox.width > 0 && referenceBox.height > 0
+            && inputText.width > 0 && inputText.height > 0
+    }
+
+    function applyExample(example) {
+        if (!example || root.inputsLocked) return
+        var inputs = example.inputs || {}
+        var settings = example.settings || {}
+        if (inputs.text !== undefined) {
+            inputText.text = inputs.text
+        }
+        if (inputs.referenceText !== undefined) {
+            referenceBox.referenceText = inputs.referenceText
+        }
+        if (inputs.referenceAudioPath !== undefined && inputs.referenceAudioPath !== "") {
+            referenceBox.audioPath = inputs.referenceAudioPath
+        }
+        if (settings["lang"] !== undefined) {
+            root.selectedLanguageCode = settings["lang"]
+        }
+        settingsPanel.applyExampleSettings(settings)
+    }
+
+    Connections {
+        target: AppController.player
+        function onPlayingChanged() {
+            if (!AppController.player.playing) root.playingType = "none"
+        }
+    }
+
+    Connections {
+        target: AppController.tts
+        function onSynthesisFinished(pcm16, sampleRate) {
+            if (AppController.tts.lastGenerationMode !== "voice-cloning") return;
+            var text = inputText.text.trim()
+            var modelName = root.family ? root.family.title : "Cloned Voice"
+            var voiceName = "Clone"
+            AppController.history.addTtsHistoryItem(text, modelName, voiceName)
+        }
+    }
+
+    Connections {
+        target: AppController.colabVoiceClone
+        function onSynthesisFinished(pcm16, sampleRate) {
+            if (!root.colabActive || root.pendingReusableVoiceName === "")
+                return
+            var name = root.pendingReusableVoiceName
+            var path = root.pendingReusableVoicePath
+            var transcript = root.pendingReusableVoiceText
+            root.pendingReusableVoiceName = ""
+            root.pendingReusableVoicePath = ""
+            root.pendingReusableVoiceText = ""
+            var familyId = root.pendingReusableVoiceFamilyId
+            root.pendingReusableVoiceFamilyId = ""
+            if (familyId === "" || !AppController.voiceClonePresets.addPreset(familyId,
+                                                            name, path, transcript)) {
+                return
+            }
+        }
+
+        function onErrorOccurred(message) {
+            // Do not leave a stale pending save behind when the controller
+            // rejects or fails this clone. The original reference remains in
+            // the UI and may be retried deliberately.
+            root.pendingReusableVoiceName = ""
+            root.pendingReusableVoicePath = ""
+            root.pendingReusableVoiceText = ""
+            root.pendingReusableVoiceFamilyId = ""
+        }
+    }
+
+    Timer {
+        id: languageDetectTimer
+        interval: 250
+        repeat: false
+        onTriggered: root.detectedLanguage = VoiceCloningUtils.detectLanguageCode(inputText.text)
+    }
+
+    onDetectedLanguageChanged: {
+        var detectedIndex = root.languageIndexFor(root.detectedLanguage)
+        if (detectedIndex >= 0 && root.selectedLanguageCode !== root.detectedLanguage) {
+            root.selectedLanguageCode = root.detectedLanguage
+        }
+    }
+
+    leftPanelContent: [
+        TtsHistoryPanel {
+            id: historyPanel
+            anchors.fill: parent
+            onCloseRequested: root.isLeftPanelOpen = false
+            onLoadPromptRequested: function(text) {
+                if (root.inputsLocked) return
+                inputText.text = text
+            }
+        }
+    ]
+
+    mainContent: [
+        StackLayout {
+            anchors.fill: parent
+            currentIndex: 1
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: Math.max(320, Math.min(520, parent.width - Theme.paddingXL * 2))
+                    spacing: Theme.paddingLarge
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        radius: Theme.radiusSmall
+                        color: Theme.surface
+                        border.color: Qt.rgba(1, 1, 1, 0.07)
+                        border.width: 1
+                        implicitHeight: 180
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: Theme.paddingLarge
+                            spacing: Theme.paddingMedium
+
+                            LineIcon {
+                                name: "gallery"
+                                color: Theme.accent
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.preferredWidth: 24
+                                Layout.preferredHeight: 24
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                text: qsTr("Select a Voice Cloning model")
+                                color: Theme.textPrimary
+                                font.pixelSize: Theme.fontLarge
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                text: qsTr("The studio stays lightweight until you choose a compatible configuration.")
+                                color: Theme.textSecondary
+                                font.pixelSize: Theme.fontSmall
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: qsTr("Choose model and runtime")
+                        iconName: "gallery"
+                        onClicked: root.backToGallery()
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: root.mainHorizontalInset
+                Layout.rightMargin: root.mainHorizontalInset
+                Layout.topMargin: Theme.paddingLarge
+                Layout.bottomMargin: Theme.paddingLarge
+                spacing: Theme.paddingMedium
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: Theme.radiusSmall
+                    color: Theme.surface
+                    border.color: Qt.rgba(1, 1, 1, 0.07)
+                    border.width: 1
+                    clip: true
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: Theme.paddingLarge
+                        spacing: Theme.paddingLarge
+
+                        Rectangle {
+                            Layout.preferredWidth: 360
+                            Layout.fillHeight: true
+                            radius: Theme.radiusSmall
+                            color: Qt.rgba(1, 1, 1, 0.02)
+                            border.color: Qt.rgba(1, 1, 1, 0.07)
+                            border.width: 1
+                            clip: true
+
+                            ScrollView {
+                                anchors.fill: parent
+                                anchors.margins: Theme.paddingMedium
+                                clip: true
+                                contentWidth: availableWidth
+
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: Theme.paddingMedium
+
+                                ReferenceInputBox {
+                                    id: referenceBox
+                                    Layout.fillWidth: true
+                                    showTips: false
+                                    showHeader: true
+                                    locked: root.inputsLocked
+                                            || (root.referenceIsolator && root.referenceIsolator.processing)
+                                    familyId: root.activeCloneFamilyId
+                                    requiresExactTranscript: !root.colabActive && root.family && root.family.id
+                                                             && root.family.id.indexOf("qwen3") !== -1
+                                    transcriptHint: root.referenceTranscriptHint()
+                                    isPlaying: root.playingType === "reference"
+                                    onAudioPathChanged: {
+                                        root.referenceAudioPath = referenceBox.audioPath
+                                        if (root.referenceIsolator)
+                                            root.referenceIsolator.sourcePath = referenceBox.audioPath
+                                    }
+                                    onPlayClicked: {
+                                        root.playingType = AppController.player.playFile(root.referenceAudioPath)
+                                                           ? "reference" : "none"
+                                    }
+                                    onStopClicked: AppController.player.stop()
+                                }
+
+                                Rectangle {
+                                    id: referenceIsolationPanel
+                                    objectName: "voiceCloneReferenceIsolator"
+                                    Layout.fillWidth: true
+                                    implicitHeight: referenceIsolationLayout.implicitHeight + Theme.paddingMedium * 2
+                                    radius: Theme.radiusSmall
+                                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.07)
+                                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.30)
+                                    border.width: 1
+
+                                    ColumnLayout {
+                                        id: referenceIsolationLayout
+                                        anchors.fill: parent
+                                        anchors.margins: Theme.paddingMedium
+                                        spacing: Theme.paddingSmall
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            CheckBox {
+                                                id: cleanReferenceToggle
+                                                objectName: "cleanReferenceAudioWithIsolator"
+                                                text: qsTr("Clean reference audio with Isolator")
+                                                checked: root.referenceIsolator ? root.referenceIsolator.enabled : false
+                                                enabled: !root.inputsLocked
+                                                         && !(root.referenceIsolator && root.referenceIsolator.processing)
+                                                         && root.referenceIsolator !== null
+                                                onToggled: if (root.referenceIsolator) root.referenceIsolator.enabled = checked
+                                            }
+                                            Item { Layout.fillWidth: true }
+                                            Text {
+                                                text: root.referenceIsolator ? root.referenceIsolator.selectedRoute : ""
+                                                color: Theme.textSecondary
+                                                font.pixelSize: 10
+                                            }
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                            text: root.referenceIsolator
+                                                  ? qsTr("Isolator route: %1 · model: %2")
+                                                        .arg(root.referenceIsolator.selectedRoute)
+                                                        .arg(root.referenceIsolator.selectedModel || qsTr("not selected"))
+                                                  : ""
+                                            color: root.referenceIsolator && root.referenceIsolator.routeReady ? Theme.textSecondary : Theme.warning
+                                            font.pixelSize: 10
+                                            wrapMode: Text.WordWrap
+                                        }
+                                        ProgressBar {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.processing
+                                            from: 0
+                                            to: 100
+                                            value: root.referenceIsolator ? root.referenceIsolator.progress : 0
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                            text: root.referenceIsolator ? root.referenceIsolator.statusText : ""
+                                            color: root.referenceIsolator && root.referenceIsolator.lastError !== "" ? Theme.danger
+                                                  : (root.referenceIsolator && root.referenceIsolator.resultReady ? Theme.success : Theme.textSecondary)
+                                            font.pixelSize: 10
+                                            wrapMode: Text.WordWrap
+                                        }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                            PrimaryButton {
+                                                text: root.referenceIsolator && root.referenceIsolator.processing ? qsTr("Separating…")
+                                                                                                                    : qsTr("Run Isolator")
+                                                iconName: "waves"
+                                                quiet: true
+                                                enabled: root.referenceIsolator && !root.referenceIsolator.processing
+                                                         && root.referenceAudioPath !== "" && root.referenceIsolator.routeReady
+                                                onClicked: root.referenceIsolator.start()
+                                            }
+                                            PrimaryButton {
+                                                text: root.referenceIsolatorSetupOpen ? qsTr("Hide setup") : qsTr("Set up Colab here")
+                                                iconName: "settings"
+                                                quiet: true
+                                                enabled: !root.inputsLocked
+                                                onClicked: root.referenceIsolatorSetupOpen = !root.referenceIsolatorSetupOpen
+                                            }
+                                            PrimaryButton {
+                                                text: qsTr("Cancel")
+                                                iconName: "stop"
+                                                quiet: true
+                                                visible: root.referenceIsolator && root.referenceIsolator.processing
+                                                onClicked: root.referenceIsolator.cancel()
+                                            }
+                                            PrimaryButton {
+                                                text: qsTr("Retry")
+                                                iconName: "refresh"
+                                                quiet: true
+                                                visible: root.referenceIsolator && !root.referenceIsolator.processing
+                                                         && root.referenceIsolator.lastError !== ""
+                                                onClicked: root.referenceIsolator.retry()
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            id: referenceIsolatorColabSetup
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                                     && root.referenceIsolatorSetupOpen
+                                            spacing: Theme.paddingSmall
+
+                                            Rectangle {
+                                                Layout.fillWidth: true
+                                                implicitHeight: setupIntro.implicitHeight + Theme.paddingSmall * 2
+                                                radius: Theme.radiusSmall
+                                                color: Qt.rgba(1, 1, 1, 0.025)
+                                                border.color: Qt.rgba(1, 1, 1, 0.08)
+                                                border.width: 1
+                                                Text {
+                                                    id: setupIntro
+                                                    anchors.fill: parent
+                                                    anchors.margins: Theme.paddingSmall
+                                                    text: qsTr("Reference Isolator runs independently from the main Isolator tab. Run the exact Spleeter notebook below, then paste its URL and token here. The resulting Vocals WAV goes straight into this clone request; exporting it is optional.")
+                                                    color: Theme.textSecondary
+                                                    font.pixelSize: 10
+                                                    wrapMode: Text.WordWrap
+                                                }
+                                            }
+                                            ColabNotebookLink {
+                                                Layout.fillWidth: true
+                                                notebookFile: root.referenceIsolatorColab
+                                                              ? root.referenceIsolatorColab.colabNotebookFile : ""
+                                            }
+                                            Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: 10 }
+                                            ReferenceIsolatorColabField {
+                                                id: referenceIsolatorColabUrl
+                                                text: root.referenceIsolatorSession
+                                                      ? root.referenceIsolatorSession.workerUrl : ""
+                                                placeholderText: qsTr("https://…trycloudflare.com")
+                                                enabled: !root.inputsLocked
+                                            }
+                                            Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: 10 }
+                                            ReferenceIsolatorColabField {
+                                                id: referenceIsolatorColabToken
+                                                echoMode: TextInput.Password
+                                                placeholderText: root.referenceIsolatorColab && root.referenceIsolatorColab.colabConnected
+                                                                 ? qsTr("Connected — enter token to replace")
+                                                                 : qsTr("Temporary token from the Spleeter notebook")
+                                                enabled: !root.inputsLocked
+                                            }
+                                            ColabSessionStatus {
+                                                Layout.fillWidth: true
+                                                session: root.referenceIsolatorSession
+                                            }
+                                            PrimaryButton {
+                                                Layout.fillWidth: true
+                                                enabled: root.referenceIsolatorColab && !root.inputsLocked
+                                                         && root.referenceIsolatorColab.colabNotebookFile !== ""
+                                                         && !(root.referenceIsolatorSession && root.referenceIsolatorSession.checking)
+                                                text: root.referenceIsolatorSession && root.referenceIsolatorSession.checking
+                                                      ? qsTr("Verifying CUDA and Spleeter...")
+                                                      : (root.referenceIsolatorColab && root.referenceIsolatorColab.colabConnected
+                                                         ? qsTr("Use Direct Colab reference Isolator")
+                                                         : qsTr("Connect Direct Colab reference Isolator"))
+                                                iconName: "cloud"
+                                                onClicked: {
+                                                    if (!root.referenceIsolatorColab) return
+                                                    if (root.referenceIsolatorColab.colabConnected) {
+                                                        root.referenceIsolatorColab.useColab()
+                                                    } else if (root.referenceIsolatorColab.connectColab(
+                                                                   referenceIsolatorColabUrl.text.trim(),
+                                                                   referenceIsolatorColabToken.text)) {
+                                                        referenceIsolatorColabToken.text = ""
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                                     && root.referenceIsolator.resultReady
+                                            Text { text: qsTr("Preview:"); color: Theme.textSecondary; font.pixelSize: 10 }
+                                            PrimaryButton {
+                                                text: qsTr("Original")
+                                                quiet: true
+                                                enabled: root.referenceAudioPath !== ""
+                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceAudioPath) ? "reference" : "none" }
+                                            }
+                                            PrimaryButton {
+                                                text: qsTr("Vocals")
+                                                quiet: true
+                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceIsolator.vocalsPath) ? "reference-vocals" : "none" }
+                                            }
+                                            PrimaryButton {
+                                                text: qsTr("Background")
+                                                quiet: true
+                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceIsolator.backgroundPath) ? "reference-background" : "none" }
+                                            }
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                                     && root.referenceIsolator.resultReady
+                                            text: qsTr("Vocals is ready and will be passed directly to Voice Clone. No second file selection or upload is required.")
+                                            color: Theme.success
+                                            font.pixelSize: 10
+                                            wrapMode: Text.WordWrap
+                                        }
+                                    }
+                                }
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: Theme.paddingMedium
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                radius: Theme.radiusSmall
+                                color: Qt.rgba(1, 1, 1, 0.02)
+                                border.color: Qt.rgba(1, 1, 1, 0.07)
+                                border.width: 1
+                                clip: true
+
+                                ScrollView {
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.paddingMedium
+                                    clip: true
+                                    contentWidth: availableWidth
+
+                                    ColumnLayout {
+                                        width: parent.width
+                                        spacing: Theme.paddingMedium
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: Theme.paddingSmall
+                                            visible: root.hasLanguageInput
+
+                                            LineIcon {
+                                                name: "globe"
+                                                color: Theme.textSecondary
+                                                Layout.preferredWidth: 16
+                                                Layout.preferredHeight: 16
+                                            }
+
+                                            Text {
+                                                text: qsTr("Target Language")
+                                                color: Theme.textPrimary
+                                                font.pixelSize: Theme.fontSmall
+                                                font.bold: true
+                                                Layout.fillWidth: true
+                                            }
+
+                                            AppComboBox {
+                                                id: langCombo
+                                                Layout.preferredWidth: 220
+                                                model: root.languageItems
+                                                textRole: "text"
+                                                currentIndex: {
+                                                    var selectedIndex = root.languageIndexFor(root.selectedLanguageCode)
+                                                    if (selectedIndex >= 0) return selectedIndex
+                                                    var detectedIndex = root.languageIndexFor(root.detectedLanguage)
+                                                    if (detectedIndex >= 0) return detectedIndex
+                                                    return 0
+                                                }
+                                                searchable: model.length > 15
+                                                enabled: !root.inputsLocked
+                                                onActivated: function(index) {
+                                                    if (!model || index < 0 || index >= model.length) return
+                                                    var value = model[index].value
+                                                    if (root.selectedLanguageCode !== value) {
+                                                        root.selectedLanguageCode = value
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: Theme.paddingSmall
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: Theme.paddingSmall
+
+                                                LineIcon {
+                                                    name: "file"
+                                                    color: Theme.textSecondary
+                                                    Layout.preferredWidth: 16
+                                                    Layout.preferredHeight: 16
+                                                }
+
+                                                Text {
+                                                    text: qsTr("Target Prompt")
+                                                    color: Theme.textPrimary
+                                                    font.pixelSize: Theme.fontSmall
+                                                    font.bold: true
+                                                    Layout.fillWidth: true
+                                                }
+
+                                                Text {
+                                                    text: "*"
+                                                    color: Theme.danger
+                                                    font.pixelSize: Theme.fontMedium
+                                                    font.bold: true
+                                                }
+
+                                                PrimaryButton {
+                                                    id: examplesButton
+                                                    text: qsTr("Examples (%1)").arg(root.availableExamples.length)
+                                                    iconName: "file"
+                                                    quiet: true
+                                                    textColor: Theme.textPrimary
+                                                    Layout.preferredWidth: 140
+                                                    Layout.preferredHeight: 30
+                                                    visible: root.availableExamples.length > 0
+                                                    enabled: !root.inputsLocked && root.availableExamples.length > 0
+                                                    onClicked: examplePicker.open()
+                                                }
+
+                                                PrimaryButton {
+                                                    text: qsTr("Import .txt")
+                                                    iconName: "folder"
+                                                    quiet: true
+                                                    implicitHeight: 28
+                                                    implicitWidth: 105
+                                                    enabled: !root.inputsLocked
+                                                    onClicked: promptFileDialogLoader.active = true
+                                                }
+
+                                                Text {
+                                                    text: inputText.text.length + " chars"
+                                                    color: Theme.textSecondary
+                                                    font.pixelSize: Theme.fontSmall
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 420
+                                                color: Theme.surface
+                                                border.color: Theme.surfaceAlt
+                                                border.width: 1
+                                                radius: Theme.radiusSmall
+
+                                                ColumnLayout {
+                                                    anchors.fill: parent
+                                                    anchors.margins: Theme.paddingSmall
+                                                    spacing: Theme.paddingSmall
+
+                                                    ScrollView {
+                                                        id: promptTextScroll
+                                                        Layout.fillWidth: true
+                                                        Layout.fillHeight: true
+                                                        clip: true
+                                                        contentWidth: availableWidth
+                                                        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                                                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                                                    AppTextArea {
+                                                        id: inputText
+                                                            width: promptTextScroll.availableWidth
+                                                            height: Math.max(promptTextScroll.availableHeight, contentHeight + topPadding + bottomPadding)
+                                                            placeholderText: qsTr("Enter the text you want the cloned voice to say...")
+                                                            font.pixelSize: Theme.fontMedium
+                                                        background: Rectangle {
+                                                            color: "transparent"
+                                                            border.width: root.colabActive && inputText.text.trim().length === 0 ? 1 : 0
+                                                            border.color: Theme.danger
+                                                            radius: Theme.radiusSmall
+                                                        }
+                                                            readOnly: root.inputsLocked
+                                                            onTextChanged: languageDetectTimer.restart()
+                                                        }
+                                                    }
+
+                                                    PromptTagPicker {
+                                                        Layout.fillWidth: true
+                                                        tags: root.nonVerbalTags
+                                                        targetEditor: inputText
+                                                        locked: root.inputsLocked
+                                                        visible: root.nonVerbalTags.length > 0
+                                                    }
+
+                                                    Text {
+                                                        Layout.fillWidth: true
+                                                        text: qsTr("⚠️ VieNeu-TTS Turbo may be less stable with phrases under 5 words.")
+                                                        color: Theme.warning
+                                                        font.pixelSize: 11
+                                                        wrapMode: Text.WordWrap
+                                                        visible: {
+                                                            var words = inputText.text.trim().split(/\s+/).filter(function(w) { return w.length > 0; }).length;
+                                                            return words > 0 && words < 5 && root.family && root.family.id === "vieneu-tts-v2-turbo";
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        GeneratedAudioOutput {
+                                            Layout.fillWidth: true
+                                            outputReady: root.outputReady
+                                            samples: root.colabActive ? root.activeClone.lastSamplePreview : AppController.tts.lastSamplePreview
+                                            durationText: root.outputDurationText()
+                                            sampleRate: root.colabActive ? root.activeClone.sampleRate : AppController.tts.sampleRate
+                                            sampleCountText: root.sampleCountText()
+                                            isPlaying: root.playingType === "tts" && AppController.player.playing
+                                            isPaused: root.playingType === "tts" && AppController.player.paused
+                                            playbackPositionMs: root.playingType === "tts" ? AppController.player.playbackPositionMs : 0
+                                            playbackDurationMs: root.playingType === "tts" ? AppController.player.playbackDurationMs : 0
+                                            audioDurationMs: (root.colabActive ? root.activeClone.sampleRate : AppController.tts.sampleRate) > 0
+                                                             ? Math.round((root.colabActive ? root.activeClone.lastSampleCount : AppController.tts.lastSampleCount) * 1000 / (root.colabActive ? root.activeClone.sampleRate : AppController.tts.sampleRate)) : 0
+                                            processing: root.colabActive ? root.activeClone.processing : AppController.tts.processing
+                                            generationProgress: root.colabActive ? root.activeClone.progress : AppController.tts.generationProgress
+                                            progressEstimated: root.colabActive ? true : AppController.tts.generationProgressEstimated
+                                            progressLabel: root.colabActive ? root.activeClone.progressStage : AppController.tts.generationProgressLabel
+                                            onPlayClicked: {
+                                                root.playingType = "tts"
+                                                if (root.colabActive) root.activeClone.playOutput()
+                                                else AppController.preview.playLastTts()
+                                            }
+                                            onPauseClicked: AppController.player.pause()
+                                            onResumeClicked: AppController.player.resume()
+                                            onStopClicked: AppController.player.stop()
+                                            onSeekRequested: function(positionMs) {
+                                                root.playingType = "tts"
+                                                if (AppController.player.playing)
+                                                    AppController.player.seek(positionMs)
+                                                else if (root.colabActive)
+                                                    root.activeClone.playOutput(positionMs)
+                                                else
+                                                    AppController.preview.playLastTtsAtPosition(positionMs)
+                                            }
+                                            onSaveClicked: saveDialog.open()
+                                        }
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.paddingMedium
+
+                                PrimaryButton {
+                                    text: qsTr("Clone Voice")
+                                    iconName: "spark"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 42
+                                    visible: !root.inputsLocked
+                                    enabled: root.cloneBlockReason() === ""
+                                    onClicked: {
+                                        if (root.colabActive) {
+                                            root.pendingReusableVoiceName = referenceBox.selectedSavedVoiceId === ""
+                                                                            ? referenceBox.reusableVoiceName.trim() : ""
+                                            root.pendingReusableVoicePath = root.referenceIsolator.cloneReferencePath
+                                            root.pendingReusableVoiceText = referenceBox.referenceText
+                                            root.pendingReusableVoiceFamilyId = root.activeCloneFamilyId
+                                            root.activeClone.cloneVoice(VoiceCloningUtils.normalizeText(inputText.text), root.referenceIsolator.cloneReferencePath,
+                                                                        referenceBox.referenceText, root.selectedLanguageCode,
+                                                                        referenceBox.reusableVoiceName.trim(), settingsPanel.colabConsent,
+                                                                        referenceBox.selectedSavedVoiceId)
+                                        } else if (!root.remoteFirstMode) {
+                                            var settings = settingsPanel.getSettingsObject(root.selectedLanguageCode, inputText.text, referenceBox.referenceText)
+                                            AppController.tts.cloneVoice(VoiceCloningUtils.normalizeText(inputText.text), root.referenceIsolator.cloneReferencePath, settings)
+                                        }
+                                    }
+                                    AppToolTip {
+                                        text: root.cloneBlockReason()
+                                        visible: parent.hovered && !parent.enabled && text !== ""
+                                    }
+                                }
+
+                                PrimaryButton {
+                                    text: qsTr("Stop")
+                                    iconName: "stop"
+                                    buttonColor: Theme.danger
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 42
+                                    visible: root.inputsLocked
+                                    onClicked: {
+                                        if (root.colabActive) root.activeClone.cancelProcessing()
+                                        else AppController.tts.cancelProcessing()
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                visible: !root.inputsLocked && root.cloneBlockReason() !== ""
+                                text: root.cloneBlockReason()
+                                color: Theme.warning
+                                font.pixelSize: Theme.fontSmall
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+
+    settingsContent: [
+        StackLayout {
+            anchors.fill: parent
+            currentIndex: 1
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: Math.min(300, parent.width)
+                    spacing: Theme.paddingMedium
+
+                    LineIcon {
+                        name: "sliders"
+                        color: Theme.textSecondary
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: 22
+                        Layout.preferredHeight: 22
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Choose a model to unlock settings")
+                        color: Theme.textPrimary
+                        font.pixelSize: Theme.fontMedium
+                        font.bold: true
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Model parameters and audio controls appear after the configuration is loaded.")
+                        color: Theme.textSecondary
+                        font.pixelSize: Theme.fontSmall
+                        wrapMode: Text.WordWrap
+                    }
+
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: qsTr("Open model gallery")
+                        iconName: "gallery"
+                        quiet: true
+                        onClicked: root.backToGallery()
+                    }
+                }
+            }
+
+            VoiceSettingsPanel {
+                id: settingsPanel
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                family: root.family
+                locked: root.inputsLocked
+                onCloseRequested: root.isSettingsOpen = false
+            }
+        }
+    ]
+
+    FileDialog {
+        id: saveDialog
+        title: "Save Audio File"
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["WAV files (*.wav)"]
+        onAccepted: {
+            if (root.colabActive) root.activeClone.saveWav(selectedFile.toString())
+            else AppController.preview.saveWav(selectedFile.toString())
+        }
+    }
+
+    ExamplePickerDialog {
+        id: examplePicker
+        parent: Overlay.overlay
+        examples: root.availableExamples
+        taskTitle: qsTr("Voice Cloning Examples")
+        onExampleSelected: function(example) { root.applyExample(example) }
+    }
+
+    Loader {
+        id: promptFileDialogLoader
+        active: false
+        sourceComponent: promptFileDialogComponent
+    }
+
+    Component {
+        id: promptFileDialogComponent
+        FileDialog {
+            title: "Select Target Prompt"
+            nameFilters: ["Text files (*.txt)", "All files (*)"]
+
+            Component.onCompleted: open()
+
+            onAccepted: {
+                if (root.inputsLocked) {
+                    promptFileDialogLoader.active = false
+                    return
+                }
+                var path = AppController.files.urlToLocalPath(selectedFile.toString())
+                var content = AppController.files.readTextFile(path)
+                inputText.text = content
+                promptFileDialogLoader.active = false
+            }
+            onRejected: promptFileDialogLoader.active = false
+        }
+    }
+}
