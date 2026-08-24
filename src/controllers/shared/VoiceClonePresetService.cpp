@@ -205,10 +205,12 @@ void VoiceClonePresetService::removeStoredReferenceAudio(const QString &audioPat
 
 QVariantList VoiceClonePresetService::presetsForFamily(const QString &familyId)
 {
+    const QString targetFamily = familyId.trimmed().toLower();
     QVariantList filtered;
     for (const QVariant &val : loadAllPresets()) {
         const QVariantMap preset = val.toMap();
-        if (preset.value(QStringLiteral("familyId")).toString() == familyId) {
+        const QString itemFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+        if (itemFamily == targetFamily) {
             filtered.append(validatePreset(preset));
         }
     }

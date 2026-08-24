@@ -49,7 +49,9 @@ Dialog {
     Connections {
         target: AppController.voiceClonePresets
         function onPresetsChanged(famId) {
-            if (famId === root.familyId)
+            var norm1 = String(famId || "").trim().toLowerCase()
+            var norm2 = String(root.familyId || "").trim().toLowerCase()
+            if (norm1 === "" || norm2 === "" || norm1 === norm2)
                 root.refresh()
         }
     }
@@ -57,7 +59,9 @@ Dialog {
     Connections {
         target: AppController.voiceDesignPresets
         function onPresetsChanged(famId) {
-            if (famId === root.familyId)
+            var norm1 = String(famId || "").trim().toLowerCase()
+            var norm2 = String(root.familyId || "").trim().toLowerCase()
+            if (norm1 === "" || norm2 === "" || norm1 === norm2)
                 root.refresh()
         }
     }

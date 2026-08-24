@@ -99,11 +99,13 @@ bool VoiceDesignPresetService::saveAllPresets(const QVariantList &presets)
 
 QVariantList VoiceDesignPresetService::presetsForFamily(const QString &familyId)
 {
+    const QString targetFamily = familyId.trimmed().toLower();
     QVariantList all = loadAllPresets();
     QVariantList filtered;
     for (const QVariant &val : all) {
         QVariantMap preset = val.toMap();
-        if (preset.value(QStringLiteral("familyId")).toString() == familyId) {
+        const QString itemFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+        if (itemFamily == targetFamily) {
             filtered.append(preset);
         }
     }

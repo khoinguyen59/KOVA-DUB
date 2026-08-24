@@ -268,6 +268,27 @@ StudioShell {
             var modelName = root.family ? root.family.title : "Cloned Voice"
             var voiceName = "Clone"
             AppController.history.addTtsHistoryItem(text, modelName, voiceName)
+
+            if (root.pendingReusableVoiceName !== "") {
+                var name = root.pendingReusableVoiceName
+                var path = root.pendingReusableVoicePath
+                var transcript = root.pendingReusableVoiceText
+                var familyId = root.pendingReusableVoiceFamilyId
+                root.pendingReusableVoiceName = ""
+                root.pendingReusableVoicePath = ""
+                root.pendingReusableVoiceText = ""
+                root.pendingReusableVoiceFamilyId = ""
+                if (familyId !== "") {
+                    AppController.voiceClonePresets.addPreset(familyId, name, path, transcript)
+                }
+            }
+        }
+
+        function onErrorOccurred(message) {
+            root.pendingReusableVoiceName = ""
+            root.pendingReusableVoicePath = ""
+            root.pendingReusableVoiceText = ""
+            root.pendingReusableVoiceFamilyId = ""
         }
     }
 
@@ -917,6 +938,11 @@ StudioShell {
                                                                         referenceBox.reusableVoiceName.trim(), settingsPanel.colabConsent,
                                                                         referenceBox.selectedSavedVoiceId)
                                         } else if (!root.remoteFirstMode) {
+                                            root.pendingReusableVoiceName = referenceBox.selectedSavedVoiceId === ""
+                                                                            ? referenceBox.reusableVoiceName.trim() : ""
+                                            root.pendingReusableVoicePath = root.referenceIsolator.cloneReferencePath
+                                            root.pendingReusableVoiceText = referenceBox.referenceText
+                                            root.pendingReusableVoiceFamilyId = root.activeCloneFamilyId
                                             var settings = settingsPanel.getSettingsObject(root.selectedLanguageCode, inputText.text, referenceBox.referenceText)
                                             AppController.tts.cloneVoice(VoiceCloningUtils.normalizeText(inputText.text), root.referenceIsolator.cloneReferencePath, settings)
                                         }

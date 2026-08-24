@@ -168,7 +168,7 @@ ColumnLayout {
         target: AppController.voiceClonePresets
         function onPresetsChanged(familyId) {
             var normalizedFamilyId = String(familyId || "").trim().toLowerCase()
-            if (normalizedFamilyId !== "" && normalizedFamilyId === root.cloneVoiceModel)
+            if (normalizedFamilyId === "" || normalizedFamilyId === root.cloneVoiceModel)
                 root.refreshReusableCloneVoices()
         }
     }
