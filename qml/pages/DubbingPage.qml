@@ -157,16 +157,14 @@ Item {
     }
 
     function stepTitle(stepId) {
-        if (stepId === "import" || stepId === "media-input") return qsTr("Import/Download")
-        if (stepId === "ingest") return qsTr("Normalize")
-        if (stepId === "source-separate") return qsTr("Isolator")
-        if (stepId === "transcribe") return qsTr("Transcribe/STT")
-        if (stepId === "review-transcript") return qsTr("Transcribe/STT")
-        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return qsTr("Alignment/Subtitle")
-        if (stepId === "translate" || stepId === "review-translation") return qsTr("Translate")
-        if (stepId === "synthesize") return qsTr("TTS")
-        if (stepId === "mix") return qsTr("Export/Output")
-        if (stepId === "export") return qsTr("Export/Output")
+        if (stepId === "import" || stepId === "media-input") return qsTr("1. Import Media")
+        if (stepId === "ingest") return qsTr("2. Normalize Audio")
+        if (stepId === "source-separate") return qsTr("3. Vocal Isolation")
+        if (stepId === "transcribe" || stepId === "review-transcript") return qsTr("4. Transcribe (STT)")
+        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return qsTr("5. Alignment & Timing")
+        if (stepId === "translate" || stepId === "review-translation") return qsTr("6. Translation")
+        if (stepId === "synthesize") return qsTr("7. Voice Dubbing (TTS)")
+        if (stepId === "mix" || stepId === "export") return qsTr("8. Master & Export")
         return qsTr("Completed")
     }
 
