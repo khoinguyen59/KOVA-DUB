@@ -43,6 +43,35 @@ Popup {
         captionText.selectAll()
     }
 
+    function saveCurrent() {
+        if (root.segmentIndex < 0 || captionText.text.trim().length === 0)
+            return false
+        var patch = root.editingTargetText
+                ? { targetText: captionText.text.trim() }
+                : { sourceText: captionText.text.trim() }
+        root.dubbing.updateSegment(root.segmentIndex, patch)
+        return true
+    }
+
+    function saveAndClose() {
+        if (saveCurrent())
+            root.close()
+    }
+
+    function saveAndNext() {
+        saveCurrent()
+        if (root.segmentIndex + 1 < root.dubbing.segments.length)
+            openForSegment(root.segmentIndex + 1)
+        else
+            root.close()
+    }
+
+    function goToPrevious() {
+        saveCurrent()
+        if (root.segmentIndex - 1 >= 0)
+            openForSegment(root.segmentIndex - 1)
+    }
+
     background: Rectangle {
         color: Theme.surfaceAlt
         radius: Theme.radiusMedium
@@ -57,7 +86,6 @@ Popup {
         RowLayout {
             Layout.fillWidth: true
             Text {
-                Layout.fillWidth: true
                 text: qsTr("Edit subtitle")
                 color: Theme.textPrimary
                 font.pixelSize: Theme.fontMedium
@@ -65,15 +93,32 @@ Popup {
             }
             Text {
                 text: root.segmentIndex >= 0
-                      ? qsTr("Segment %1").arg(root.segmentIndex + 1) : ""
+                      ? qsTr("Segment %1 of %2").arg(root.segmentIndex + 1).arg(root.dubbing.segments.length) : ""
                 color: Theme.textSecondary
                 font.pixelSize: Theme.fontSmall
+            }
+            Item { Layout.fillWidth: true }
+            Button {
+                text: "◀"
+                implicitWidth: 30
+                implicitHeight: 26
+                enabled: root.segmentIndex > 0
+                onClicked: root.goToPrevious()
+                AppToolTip { text: qsTr("Previous segment") }
+            }
+            Button {
+                text: "▶"
+                implicitWidth: 30
+                implicitHeight: 26
+                enabled: root.segmentIndex >= 0 && root.segmentIndex < root.dubbing.segments.length - 1
+                onClicked: root.saveAndNext()
+                AppToolTip { text: qsTr("Next segment (Tab)") }
             }
         }
         Text {
             Layout.fillWidth: true
-            text: root.fieldLabel
-            color: Theme.textSecondary
+            text: root.fieldLabel + " — " + qsTr("Press Ctrl+Enter to save, Tab for next segment")
+            color: Theme.textMuted
             font.pixelSize: Theme.fontSmall
         }
         TextArea {
@@ -93,6 +138,16 @@ Popup {
                 border.color: captionText.activeFocus ? Theme.accent : Qt.rgba(1, 1, 1, 0.12)
                 border.width: captionText.activeFocus ? 2 : 1
             }
+            Keys.onReturnPressed: function(event) {
+                if (event.modifiers & Qt.ControlModifier || event.modifiers & Qt.ShiftModifier) {
+                    root.saveAndClose()
+                    event.accepted = true
+                }
+            }
+            Keys.onTabPressed: function(event) {
+                root.saveAndNext()
+                event.accepted = true
+            }
         }
         RowLayout {
             Layout.fillWidth: true
@@ -103,16 +158,11 @@ Popup {
             }
             PrimaryButton {
                 objectName: "dubbingInlineSubtitleSave"
-                text: qsTr("Save subtitle")
+                text: qsTr("Save (Ctrl+Enter)")
                 enabled: root.segmentIndex >= 0 && captionText.text.trim().length > 0
-                onClicked: {
-                    var patch = root.editingTargetText
-                            ? { targetText: captionText.text.trim() }
-                            : { sourceText: captionText.text.trim() }
-                    root.dubbing.updateSegment(root.segmentIndex, patch)
-                    root.close()
-                }
+                onClicked: root.saveAndClose()
             }
         }
     }
 }
+

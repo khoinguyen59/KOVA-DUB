@@ -49,31 +49,25 @@ Item {
     // Dubbing has its own three-pane workspace and therefore cannot inherit
     // StudioShell's generic resizers. Keep these widths local to this real
     // layout so users can resize History, Preview and the step workspace.
-    property int dubbingHistoryPanelWidth: 280
-    property int dubbingTaskShelfWidth: 260
+    property int dubbingHistoryPanelWidth: 260
+    property int dubbingTaskShelfWidth: 220
     // Prefer a large central canvas. Side panes keep bounded widths and the
     // preview yields only when the operator explicitly drags a separator.
     property int dubbingPreviewPanelWidth: 1040
-    property int dubbingTimelinePanelHeight: 300
-    property int dubbingStepPanelWidth: 340
+    property int dubbingTimelinePanelHeight: 280
+    property int dubbingStepPanelWidth: 280
     // The three rows of the editor share one vertical layout budget.  Keeping
     // these values explicit prevents the timeline splitter from ever painting
     // on top of the preview when a smaller desktop window is used.
     readonly property int minimumDubbingWorkspaceHeight: 240
     readonly property int minimumDubbingTimelinePanelHeight: 160
     readonly property int dubbingTimelineResizeHandleHeight: 28
-    // These breakpoints are derived from the actual non-overlapping minima:
-    // History 240 + handle 8 + task shelf 220 + handle 8 + preview 540 +
-    // handle 8 + review 280 + four layout gaps.  Hiding the task shelf before
-    // that sum is exceeded is what keeps a 1200--1440px editor from silently
-    // clipping the central canvas.  Its actual Run/Configure controls remain
-    // available in the right review pane while compact.
-    readonly property bool compactDubbingControls: dubbingWorkspaceScroller.width < 1450
-    // History is optional chrome.  It yields before its 240px minimum would
-    // force the compact Preview/Review pair below their usable width.  This is
-    // an explicit layout change, not an overlay; the header button remains
-    // available when the operator has enough width to reopen it.
-    readonly property bool compactDubbingHistory: dubbingWorkspaceScroller.width < 1080
+    // Relaxed responsive breakpoints to prevent abrupt hiding of task shelf
+    // on 1080p / scaled display environments.
+    readonly property bool compactDubbingControls: dubbingWorkspaceScroller.width < 960
+    // History yields before its minimum would force Preview below usable width.
+    readonly property bool compactDubbingHistory: dubbingWorkspaceScroller.width < 860
+
     // The timeline may be resized only inside the vertical editor budget.  Its
     // maximum is calculated from the same nested ColumnLayout that owns the
     // workspace, splitter and timeline, so a taller timeline always consumes

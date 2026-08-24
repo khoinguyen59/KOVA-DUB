@@ -809,6 +809,7 @@ Rectangle {
                     MouseArea {
                         id: seekArea
                         anchors.fill: parent
+                        hoverEnabled: true
                         property bool wasPlaying: false
                         function updatePosition(x) { if (mediaPlayer.duration > 0) root.seekAll(Math.max(0, Math.min(1, x / width)) * mediaPlayer.duration) }
                         onPressed: {
@@ -827,18 +828,32 @@ Rectangle {
                             controlsAutoHide.interactionActive = false
                             controlsAutoHide.noteInteraction()
                         }
+                        ToolTip.visible: containsMouse && mediaPlayer.duration > 0
+                        ToolTip.text: root.formatTime(Math.max(0, Math.min(1, mouseX / width)) * mediaPlayer.duration)
                     }
                 }
                 RowLayout {
                     anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
                     anchors.leftMargin: Theme.paddingMedium; anchors.rightMargin: Theme.paddingMedium
-                    height: 36
+                    height: 40
                     spacing: Theme.paddingMedium
                     Button {
                         id: previewPlayButton
-                        implicitWidth: 28; implicitHeight: 28
+                        implicitWidth: 34; implicitHeight: 34
                         flat: true
-                        contentItem: LineIcon { anchors.centerIn: parent; name: mediaPlayer.playbackState === MediaPlayer.PlayingState ? "pause" : "play"; color: Theme.textPrimary; width: 14; height: 14 }
+                        background: Rectangle {
+                            radius: 17
+                            color: previewPlayButton.hovered ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35) : Qt.rgba(1, 1, 1, 0.14)
+                            border.color: previewPlayButton.hovered ? Theme.accentLight : Qt.rgba(1, 1, 1, 0.25)
+                            border.width: 1
+                        }
+                        contentItem: LineIcon {
+                            anchors.centerIn: parent
+                            name: mediaPlayer.playbackState === MediaPlayer.PlayingState ? "pause" : "play"
+                            color: "#ffffff"
+                            width: 16
+                            height: 16
+                        }
                         onClicked: {
                             mediaPlayer.playbackState === MediaPlayer.PlayingState ? root.pauseAll() : root.playAll()
                             controlsAutoHide.noteInteraction()
@@ -846,14 +861,19 @@ Rectangle {
                     }
                     Button {
                         id: previewMuteButton
-                        implicitWidth: 28; implicitHeight: 28
+                        implicitWidth: 32; implicitHeight: 32
                         flat: true
-                        contentItem: LineIcon { anchors.centerIn: parent; name: "volume"; color: root.previewMuted ? Theme.textSecondary : Theme.textPrimary; width: 14; height: 14 }
+                        background: Rectangle {
+                            radius: 16
+                            color: previewMuteButton.hovered ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+                        }
+                        contentItem: LineIcon { anchors.centerIn: parent; name: "volume"; color: root.previewMuted ? Theme.textSecondary : Theme.textPrimary; width: 16; height: 16 }
                         onClicked: {
                             root.previewMuted = !root.previewMuted
                             controlsAutoHide.noteInteraction()
                         }
                     }
+
                     Item { Layout.fillWidth: true }
                     Text { text: "%1 / %2".arg(root.formatTime(mediaPlayer.position)).arg(root.formatTime(mediaPlayer.duration)); color: Theme.textSecondary; font.pixelSize: 11; font.family: "Monospace" }
                 }

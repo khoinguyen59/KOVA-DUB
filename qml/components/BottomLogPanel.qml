@@ -10,13 +10,13 @@ Rectangle {
     property bool isExpanded: false
     property bool isResizing: false
     property bool scrollAfterNextLoad: false
-    readonly property int collapsedHeight: 36
+    readonly property int collapsedHeight: 30
     readonly property int minExpandedHeight: 120
-    readonly property int expandedHeight: 220
+    readonly property int expandedHeight: 200
     readonly property int maxExpandedHeight: Math.max(expandedHeight, Math.floor((parent ? parent.height : 800) * 0.65))
     property int panelHeight: expandedHeight
 
-    color: Theme.surface
+    color: Theme.surfaceLevel1
     clip: true
 
     function clampPanelHeight(height) {
@@ -50,13 +50,14 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: Theme.surfaceAlt
+            color: Theme.borderSubtle
         }
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 35
-            color: Theme.surface
+            Layout.preferredHeight: 29
+            color: Theme.surfaceLevel1
+
 
             MouseArea {
                 anchors.fill: parent

@@ -115,8 +115,47 @@ Dialog {
                 Field { label: qsTr("Font file (optional)"); field: RowLayout { TextField { id: fontFileField; Layout.fillWidth: true; text: root.style.fontFile || ""; onEditingFinished: root.updateStyle() } Button { text: qsTr("Choose"); onClicked: fontFileDialog.open() } } }
                 Field { label: qsTr("Size"); field: SpinBox { id: fontSizeBox; from: 8; to: 180; value: root.number(root.style.fontSize, 42); onValueModified: root.updateStyle() } }
                 Field { label: qsTr("Weight"); field: SpinBox { id: fontWeightBox; from: 100; to: 900; stepSize: 100; value: root.number(root.style.fontWeight, 600); onValueModified: root.updateStyle() } }
-                Field { label: qsTr("Text color"); field: TextField { id: textColorField; text: root.style.textColor || "#FFFFFFFF"; onEditingFinished: root.updateStyle() } }
+                Field {
+                    label: qsTr("Text color")
+                    field: ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        RowLayout {
+                            Layout.fillWidth: true
+                            TextField { id: textColorField; Layout.fillWidth: true; text: root.style.textColor || "#FFFFFFFF"; onEditingFinished: root.updateStyle() }
+                        }
+                        RowLayout {
+                            spacing: 6
+                            Repeater {
+                                model: [
+                                    { color: "#FFFFFFFF", name: "White" },
+                                    { color: "#FFFFD700", name: "Gold" },
+                                    { color: "#FF00E676", name: "Neon Green" },
+                                    { color: "#FF40C4FF", name: "Cyan" },
+                                    { color: "#FFFF5252", name: "Coral" }
+                                ]
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    width: 18
+                                    height: 18
+                                    radius: 9
+                                    color: modelData.color
+                                    border.color: textColorField.text.toUpperCase() === modelData.color ? Theme.accentLight : Qt.rgba(0, 0, 0, 0.4)
+                                    border.width: textColorField.text.toUpperCase() === modelData.color ? 2 : 1
+                                    TapHandler {
+                                        onTapped: {
+                                            textColorField.text = modelData.color
+                                            root.updateStyle()
+                                        }
+                                    }
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                }
+                            }
+                        }
+                    }
+                }
                 Field { label: qsTr("Outline color / width"); field: RowLayout { TextField { id: outlineColorField; Layout.fillWidth: true; text: root.style.outlineColor || "#D9000000"; onEditingFinished: root.updateStyle() } SpinBox { id: outlineBox; from: 0; to: 16; value: root.number(root.style.outlineWidth, 2); onValueModified: root.updateStyle() } } }
+
                 Field { label: qsTr("Shadow color / offset"); field: RowLayout { TextField { id: shadowColorField; Layout.fillWidth: true; text: root.style.shadowColor || "#99000000"; onEditingFinished: root.updateStyle() } SpinBox { id: shadowBox; from: 0; to: 24; value: root.number(root.style.shadowOffset, 2); onValueModified: root.updateStyle() } } }
                 Field { label: qsTr("Background / opacity (0–100)"); field: RowLayout { TextField { id: backgroundColorField; Layout.fillWidth: true; text: root.style.backgroundColor || "#00000000"; onEditingFinished: root.updateStyle() } SpinBox { id: backgroundOpacityBox; from: 0; to: 100; value: Math.round(root.number(root.style.backgroundOpacity, 0) * 100); onValueModified: root.updateStyle() } } }
                 Field { label: qsTr("Alignment"); field: ComboBox { id: alignmentBox; model: [{value:"top", text:qsTr("Top")}, {value:"bottom", text:qsTr("Bottom")}, {value:"custom", text:qsTr("Custom normalized X/Y")}]; textRole: "text"; valueRole: "value"; Component.onCompleted: currentIndex = (root.style.alignment || "bottom") === "top" ? 0 : (root.style.alignment || "bottom") === "custom" ? 2 : 1; onActivated: root.updateStyle() } }
