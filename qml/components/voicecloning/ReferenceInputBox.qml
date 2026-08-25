@@ -64,16 +64,20 @@ ColumnLayout {
     }
 
     function reloadSavedVoices(clearSelection) {
-        // A library update may be caused by another preset being saved or
-        // removed. Preserve the durable selection when that preset still
-        // exists; otherwise the next clone could silently lose its reference
-        // identity and create a duplicate profile.
         var previousId = clearSelection === true ? "" : root.selectedSavedVoiceId
-        var voices = root.familyId !== "" ? AppController.voiceClonePresets.presetsForFamily(root.familyId) : []
-        root.savedVoices = voices
+        var voices = []
+        if (AppController.voiceClonePresets) {
+            voices = root.familyId !== ""
+                     ? AppController.voiceClonePresets.presetsForFamily(root.familyId)
+                     : AppController.voiceClonePresets.allPresets()
+            if ((!voices || voices.length === 0) && root.familyId !== "") {
+                voices = AppController.voiceClonePresets.allPresets()
+            }
+        }
+        root.savedVoices = voices || []
         root.selectedSavedVoiceIndex = -1
         root.selectedSavedVoiceId = ""
-        for (var i = 0; i < voices.length; ++i) {
+        for (var i = 0; i < (voices ? voices.length : 0); ++i) {
             if (voices[i].valid && voices[i].id === previousId) {
                 root.selectedSavedVoiceIndex = i
                 root.selectedSavedVoiceId = previousId
@@ -85,7 +89,7 @@ ColumnLayout {
     function defaultVoiceName() {
         if (root.audioPath !== "")
             return VoiceCloningUtils.fileNameFromPath(root.audioPath)
-        return "Reference voice"
+        return qsTr("Reference voice")
     }
 
     function loadSavedVoice(index) {
@@ -102,15 +106,16 @@ ColumnLayout {
     }
 
     function saveCurrentVoice() {
-        if (root.locked || root.familyId === "" || root.audioPath === "") return
+        if (root.locked || root.audioPath === "") return
         libraryDialog.initialMode = "reference"
+        libraryDialog.familyId = root.familyId
         libraryDialog.open()
         Qt.callLater(libraryDialog.applyCurrentReference)
     }
 
     function manageVoices() {
-        if (root.familyId === "") return
         libraryDialog.initialMode = "reference"
+        libraryDialog.familyId = root.familyId
         libraryDialog.open()
     }
     spacing: Theme.paddingLarge
@@ -119,7 +124,7 @@ ColumnLayout {
     // Header
     Text {
         visible: root.showHeader
-        text: "Reference Voice"
+        text: qsTr("Reference Voice")
         color: Theme.textPrimary
         font.pixelSize: Theme.fontMedium
         font.bold: true
@@ -128,7 +133,6 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.paddingSmall
-        visible: root.familyId !== ""
 
         RowLayout {
             Layout.fillWidth: true
@@ -136,13 +140,13 @@ ColumnLayout {
 
             LineIcon {
                 name: "spark"
-                color: Theme.textSecondary
+                color: Theme.accentLight
                 Layout.preferredWidth: 14
                 Layout.preferredHeight: 14
             }
 
             Text {
-                text: "Saved reference voices"
+                text: qsTr("Saved reference voices") + (root.savedVoices.length > 0 ? " (" + root.savedVoices.length + ")" : "")
                 color: Theme.textPrimary
                 font.pixelSize: Theme.fontSmall
                 font.bold: true
@@ -166,7 +170,7 @@ ColumnLayout {
             spacing: Theme.paddingSmall
 
             PrimaryButton {
-                text: "Save reference"
+                text: qsTr("Save reference")
                 quiet: true
                 implicitHeight: 34
                 implicitWidth: 120
@@ -175,12 +179,11 @@ ColumnLayout {
             }
 
             PrimaryButton {
-                text: "Manage"
+                text: qsTr("Manage")
                 iconName: "settings"
                 quiet: true
                 implicitHeight: 34
                 implicitWidth: 105
-                enabled: root.familyId !== ""
                 onClicked: root.manageVoices()
             }
         }
@@ -190,7 +193,7 @@ ColumnLayout {
             spacing: 4
 
             Text {
-                text: "Voice name for TTS reuse"
+                text: qsTr("Voice name for TTS reuse")
                 color: Theme.textPrimary
                 font.pixelSize: Theme.fontSmall
                 font.bold: true
@@ -200,7 +203,7 @@ ColumnLayout {
                 id: reusableVoiceNameField
                 Layout.fillWidth: true
                 text: root.reusableVoiceName
-                placeholderText: "e.g. Hoài Vũ — Vietnamese"
+                placeholderText: qsTr("e.g. Hoài Vũ — Vietnamese")
                 enabled: !root.locked
                 color: Theme.textPrimary
                 placeholderTextColor: Theme.textSecondary
@@ -219,7 +222,7 @@ ColumnLayout {
 
             Text {
                 Layout.fillWidth: true
-                text: "After a successful Direct Colab clone, this reference is saved locally under this name and appears in TTS."
+                text: qsTr("After a successful Direct Colab clone, this reference is saved locally under this name and appears in TTS.")
                 color: Theme.textSecondary
                 font.pixelSize: 10
                 wrapMode: Text.WordWrap

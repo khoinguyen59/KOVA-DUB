@@ -41,7 +41,7 @@ StudioShell {
     studioIconName: "chat"
     studioReady: chat.gatewayActive || chat.colabActive || (studioController ? studioController.studioReady : false)
     showLeftPanel: true
-    isLeftPanelOpen: true
+    isLeftPanelOpen: false
     showSettingsPanel: true
     isSettingsOpen: true
     settingsRequiresReady: false

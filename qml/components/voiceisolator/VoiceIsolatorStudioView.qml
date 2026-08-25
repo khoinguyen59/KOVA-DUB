@@ -21,7 +21,7 @@ StudioShell {
     studioIconName: "voice-isolator"
     showSettingsPanel: true
     showLeftPanel: true
-    isLeftPanelOpen: true
+    isLeftPanelOpen: false
     modalSelectionMode: true
     showSwitcher: false
     modalSelectionTitle: qsTr("Model + Runtime")

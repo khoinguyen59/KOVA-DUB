@@ -48,7 +48,7 @@ RowLayout {
                                                     : false
     
     property bool showLeftPanel: false
-    property bool isLeftPanelOpen: true
+    property bool isLeftPanelOpen: false
     property int leftPanelWidth: 332
     property int settingsPanelWidth: 332
     property bool resizingLeftPanel: false

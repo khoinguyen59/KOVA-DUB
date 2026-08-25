@@ -28,7 +28,7 @@ StudioShell {
     settingsRequiresReady: false
     isSettingsOpen: true
     showLeftPanel: true
-    isLeftPanelOpen: true
+    isLeftPanelOpen: false
     modalSelectionMode: true
     showSwitcher: false
     modalSelectionTitle: family ? family.title : qsTr("Model + Runtime")

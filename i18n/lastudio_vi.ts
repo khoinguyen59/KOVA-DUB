@@ -8817,4 +8817,39 @@ Path: %2</source>
         <translation>Tất cả tệp (*)</translation>
     </message>
 </context>
+<context>
+    <name>ReferenceInputBox</name>
+    <message>
+        <source>Reference Voice</source>
+        <translation>Giọng tham chiếu</translation>
+    </message>
+    <message>
+        <source>Reference voice</source>
+        <translation>Giọng tham chiếu</translation>
+    </message>
+    <message>
+        <source>Saved reference voices</source>
+        <translation>Giọng tham chiếu đã lưu</translation>
+    </message>
+    <message>
+        <source>Save reference</source>
+        <translation>Lưu giọng mẫu</translation>
+    </message>
+    <message>
+        <source>Manage</source>
+        <translation>Quản lý</translation>
+    </message>
+    <message>
+        <source>Voice name for TTS reuse</source>
+        <translation>Tên giọng để tái sử dụng trong TTS</translation>
+    </message>
+    <message>
+        <source>e.g. Hoài Vũ — Vietnamese</source>
+        <translation>Ví dụ: Hoài Vũ — Tiếng Việt</translation>
+    </message>
+    <message>
+        <source>After a successful Direct Colab clone, this reference is saved locally under this name and appears in TTS.</source>
+        <translation>Sau khi clone thành công, giọng mẫu này sẽ được lưu cục bộ dưới tên này và xuất hiện trong TTS.</translation>
+    </message>
+</context>
 </TS>

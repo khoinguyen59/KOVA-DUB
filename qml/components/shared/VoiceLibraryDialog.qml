@@ -67,8 +67,16 @@ Dialog {
     }
 
     function refresh() {
-        referenceVoices = familyId !== "" ? AppController.voiceClonePresets.presetsForFamily(familyId) : []
-        designVoices = familyId !== "" ? AppController.voiceDesignPresets.presetsForFamily(familyId) : []
+        if (AppController.voiceClonePresets) {
+            var refList = familyId !== "" ? AppController.voiceClonePresets.presetsForFamily(familyId) : []
+            if (!refList || refList.length === 0) {
+                refList = AppController.voiceClonePresets.allPresets()
+            }
+            referenceVoices = refList || []
+        } else {
+            referenceVoices = []
+        }
+        designVoices = (familyId !== "" && AppController.voiceDesignPresets) ? AppController.voiceDesignPresets.presetsForFamily(familyId) : []
     }
 
     function resetEditor() {
@@ -106,7 +114,8 @@ Dialog {
         if (editingKind === "reference" && editingId !== "") {
             AppController.voiceClonePresets.updatePreset(editingId, name, audioPath, refTextField.text)
         } else {
-            AppController.voiceClonePresets.addPreset(familyId, name, audioPath, refTextField.text)
+            var effectiveFamily = familyId !== "" ? familyId : "general"
+            AppController.voiceClonePresets.addPreset(effectiveFamily, name, audioPath, refTextField.text)
         }
         resetEditor()
     }
