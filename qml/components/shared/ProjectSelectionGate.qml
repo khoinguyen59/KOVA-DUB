@@ -97,11 +97,13 @@ Dialog {
             spacing: Theme.paddingMedium
 
             Rectangle {
-                Layout.preferredWidth: 42
-                Layout.preferredHeight: 42
-                radius: Theme.radiusSmall
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                radius: Theme.radiusMedium
                 color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
-                LineIcon { anchors.centerIn: parent; name: "folder"; color: Theme.accentLight; width: 21; height: 21 }
+                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.30)
+                border.width: 1
+                LineIcon { anchors.centerIn: parent; name: "folder"; color: Theme.accentLight; width: 22; height: 22 }
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -114,7 +116,7 @@ Dialog {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: qsTr("%1 sẽ sẵn sàng sau khi bạn chọn hoặc tạo một dự án làm việc.").arg(root.requestedFeatureLabel)
+                    text: qsTr("%1 will be ready once you select or create a working project.").arg(root.requestedFeatureLabel)
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
                     wrapMode: Text.WordWrap
@@ -131,20 +133,28 @@ Dialog {
             Layout.margins: Theme.paddingLarge
             spacing: Theme.paddingMedium
 
-            // Quick Create Bar
+            // Quick Create Card
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 70
+                Layout.preferredHeight: 68
                 radius: Theme.radiusSmall
                 color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10)
-                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.40)
+                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35)
+                border.width: 1
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: Theme.paddingMedium
+                    anchors.leftMargin: Theme.paddingMedium
+                    anchors.rightMargin: Theme.paddingMedium
                     spacing: Theme.paddingMedium
 
-                    LineIcon { name: "plus-circle"; color: Theme.accentLight; width: 24; height: 24 }
+                    Rectangle {
+                        Layout.preferredWidth: 36
+                        Layout.preferredHeight: 36
+                        radius: 18
+                        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.20)
+                        LineIcon { anchors.centerIn: parent; name: "plus-circle"; color: Theme.accentLight; width: 20; height: 20 }
+                    }
 
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -156,9 +166,11 @@ Dialog {
                             font.pixelSize: Theme.fontMedium
                         }
                         Text {
-                            text: qsTr("Lưu tự động vào thư mục projects/ của ứng dụng mà không cần chọn đường dẫn.")
+                            Layout.fillWidth: true
+                            text: qsTr("Automatically saves to the application projects folder without choosing a path.")
                             color: Theme.textSecondary
                             font.pixelSize: Theme.fontXSmall
+                            elide: Text.ElideRight
                         }
                     }
 
@@ -166,7 +178,7 @@ Dialog {
                         objectName: "globalProjectCreateButton"
                         text: qsTr("Create new project")
                         iconName: "plus"
-                        Layout.preferredWidth: 160
+                        Layout.preferredWidth: 165
                         onClicked: root.createAutoProject("")
                     }
                 }
@@ -177,18 +189,19 @@ Dialog {
                 Layout.fillWidth: true
                 spacing: Theme.paddingSmall
 
-                LineIcon { name: "clock"; color: Theme.textSecondary; width: 16; height: 16 }
+                LineIcon { name: "clock"; color: Theme.accentLight; width: 16; height: 16 }
                 Text {
-                    text: qsTr("Open existing project") + " (" + (AppController.dubbing && AppController.dubbing.history ? AppController.dubbing.history.length : 0) + ")"
+                    text: qsTr("Open existing project (%1)").arg(AppController.dubbing && AppController.dubbing.history ? AppController.dubbing.history.length : 0)
                     color: Theme.textPrimary
                     font.bold: true
                     font.pixelSize: Theme.fontMedium
                 }
                 Item { Layout.fillWidth: true }
                 PrimaryButton {
-                    text: qsTr("Làm Mới")
+                    text: qsTr("Refresh")
                     iconName: "refresh-cw"
                     quiet: true
+                    Layout.preferredWidth: 95
                     onClicked: if (AppController.dubbing) AppController.dubbing.refreshHistory()
                 }
             }
@@ -212,10 +225,11 @@ Dialog {
                     delegate: Rectangle {
                         id: itemDelegate
                         width: historyList.width
-                        height: 58
+                        height: 60
                         radius: Theme.radiusSmall
-                        color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Qt.rgba(1, 1, 1, 0.03)
-                        border.color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.50) : Qt.rgba(1, 1, 1, 0.06)
+                        color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16) : Qt.rgba(1, 1, 1, 0.03)
+                        border.color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45) : Qt.rgba(1, 1, 1, 0.06)
+                        border.width: 1
 
                         MouseArea {
                             id: itemMouse
@@ -235,8 +249,8 @@ Dialog {
                             spacing: Theme.paddingMedium
 
                             Rectangle {
-                                Layout.preferredWidth: 34
-                                Layout.preferredHeight: 34
+                                Layout.preferredWidth: 36
+                                Layout.preferredHeight: 36
                                 radius: Theme.radiusSmall
                                 color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15)
                                 LineIcon { anchors.centerIn: parent; name: "file-text"; color: Theme.accentLight; width: 18; height: 18 }
@@ -244,16 +258,19 @@ Dialog {
 
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 2
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 3
 
                                 RowLayout {
+                                    Layout.fillWidth: true
                                     spacing: Theme.paddingSmall
                                     Text {
-                                        text: modelData.projectName || modelData.fileName || qsTr("Dự án không tên")
+                                        text: modelData.projectName || modelData.fileName || qsTr("Untitled Project")
                                         color: Theme.textPrimary
                                         font.bold: true
                                         font.pixelSize: Theme.fontMedium
                                         elide: Text.ElideRight
+                                        Layout.maximumWidth: 340
                                     }
                                     Rectangle {
                                         visible: !!modelData.segmentCount && modelData.segmentCount > 0
@@ -264,14 +281,17 @@ Dialog {
                                         Text {
                                             id: segText
                                             anchors.centerIn: parent
-                                            text: qsTr("%1 câu thoại").arg(modelData.segmentCount || 0)
+                                            text: qsTr("%1 cues").arg(modelData.segmentCount || 0)
                                             color: Theme.accentLight
                                             font.pixelSize: 10
+                                            font.bold: true
                                         }
                                     }
+                                    Item { Layout.fillWidth: true }
                                 }
 
                                 RowLayout {
+                                    Layout.fillWidth: true
                                     spacing: Theme.paddingMedium
                                     Text {
                                         text: modelData.timestamp || modelData.lastOpened || ""
@@ -284,28 +304,35 @@ Dialog {
                                         color: Theme.textSecondary
                                         font.pixelSize: Theme.fontXSmall
                                         elide: Text.ElideRight
+                                        Layout.maximumWidth: 260
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                spacing: Theme.paddingSmall
+
+                                PrimaryButton {
+                                    text: qsTr("Open")
+                                    iconName: "play"
+                                    Layout.preferredWidth: 80
+                                    onClicked: {
+                                        var path = modelData.projectPath || modelData.path || modelData.id
+                                        if (path) root.openProject(path)
                                     }
                                 }
-                            }
 
-                            PrimaryButton {
-                                text: qsTr("Mở")
-                                iconName: "play"
-                                Layout.preferredWidth: 80
-                                onClicked: {
-                                    var path = modelData.projectPath || modelData.path || modelData.id
-                                    if (path) root.openProject(path)
-                                }
-                            }
-
-                            PrimaryButton {
-                                text: qsTr("Xóa")
-                                iconName: "trash"
-                                quiet: true
-                                Layout.preferredWidth: 70
-                                onClicked: {
-                                    var id = modelData.id || modelData.projectPath || modelData.path
-                                    if (id && AppController.dubbing) AppController.dubbing.deleteHistoryItem(id)
+                                PrimaryButton {
+                                    text: qsTr("Delete")
+                                    iconName: "trash"
+                                    quiet: true
+                                    Layout.preferredWidth: 72
+                                    onClicked: {
+                                        var id = modelData.id || modelData.projectPath || modelData.path
+                                        if (id && AppController.dubbing) AppController.dubbing.deleteHistoryItem(id)
+                                    }
                                 }
                             }
                         }
@@ -319,13 +346,13 @@ Dialog {
                         LineIcon { Layout.alignment: Qt.AlignHCenter; name: "folder"; color: Theme.textMuted; width: 36; height: 36 }
                         Text {
                             Layout.alignment: Qt.AlignHCenter
-                            text: qsTr("Chưa có dự án nào được tạo trước đó.")
+                            text: qsTr("No recent projects found.")
                             color: Theme.textSecondary
                             font.pixelSize: Theme.fontMedium
                         }
                         Text {
                             Layout.alignment: Qt.AlignHCenter
-                            text: qsTr("Nhấn 'Tạo Mới Ngay' ở trên để bắt đầu dự án đầu tiên của bạn.")
+                            text: qsTr("Click 'Create new project' above to start your first project.")
                             color: Theme.textMuted
                             font.pixelSize: Theme.fontSmall
                         }
@@ -350,9 +377,10 @@ Dialog {
 
                 PrimaryButton {
                     objectName: "globalProjectBrowseButton"
-                    text: qsTr("Mở file từ vị trí khác...")
+                    text: qsTr("Open file from other location...")
                     iconName: "folder"
                     quiet: true
+                    Layout.preferredWidth: 200
                     onClicked: openProjectFileDialog.open()
                 }
 
@@ -360,9 +388,10 @@ Dialog {
 
                 PrimaryButton {
                     objectName: "globalProjectLeaveButton"
-                    text: qsTr("Về Trang Chủ")
+                    text: qsTr("Back to Home")
                     iconName: "arrow-left"
                     quiet: true
+                    Layout.preferredWidth: 140
                     onClicked: {
                         root.close()
                         root.leaveRequested()

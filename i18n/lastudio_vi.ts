@@ -8726,4 +8726,95 @@ Path: %2</source>
         <translation>Thiết lập luồng xử lý</translation>
     </message>
 </context>
+<context>
+    <name>ProjectSelectionGate</name>
+    <message>
+        <source>this feature</source>
+        <translation>Tính năng này</translation>
+    </message>
+    <message>
+        <source>Dubbing engine is initializing.</source>
+        <translation>Bộ máy lồng tiếng đang khởi tạo.</translation>
+    </message>
+    <message>
+        <source>LA Studio could not create the project.</source>
+        <translation>LA Studio không thể tạo dự án.</translation>
+    </message>
+    <message>
+        <source>LA Studio could not open the project.</source>
+        <translation>LA Studio không thể mở dự án.</translation>
+    </message>
+    <message>
+        <source>Choose an LA Studio project first</source>
+        <translation>Chọn dự án LA Studio</translation>
+    </message>
+    <message>
+        <source>%1 will be ready once you select or create a working project.</source>
+        <translation>%1 sẽ sẵn sàng sau khi bạn chọn hoặc tạo một dự án làm việc.</translation>
+    </message>
+    <message>
+        <source>Create new project</source>
+        <translation>Tạo dự án mới</translation>
+    </message>
+    <message>
+        <source>Automatically saves to the application projects folder without choosing a path.</source>
+        <translation>Lưu tự động vào thư mục projects/ của ứng dụng mà không cần chọn đường dẫn.</translation>
+    </message>
+    <message>
+        <source>Open existing project (%1)</source>
+        <translation>Mở dự án hiện có (%1)</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Làm mới</translation>
+    </message>
+    <message>
+        <source>Untitled Project</source>
+        <translation>Dự án chưa đặt tên</translation>
+    </message>
+    <message>
+        <source>%1 cues</source>
+        <translation>%1 câu thoại</translation>
+    </message>
+    <message>
+        <source>Video: %1</source>
+        <translation>Video: %1</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Mở</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>No recent projects found.</source>
+        <translation>Chưa có dự án nào được tạo trước đó.</translation>
+    </message>
+    <message>
+        <source>Click &apos;Create new project&apos; above to start your first project.</source>
+        <translation>Nhấn &apos;Tạo dự án mới&apos; ở trên để bắt đầu dự án đầu tiên của bạn.</translation>
+    </message>
+    <message>
+        <source>Open file from other location...</source>
+        <translation>Mở file từ vị trí khác...</translation>
+    </message>
+    <message>
+        <source>Back to Home</source>
+        <translation>Về Trang Chủ</translation>
+    </message>
+    <message>
+        <source>Open LA Studio project</source>
+        <translation>Mở dự án LA Studio</translation>
+    </message>
+    <message>
+        <source>LA Studio project (*.ladub.json)</source>
+        <translation>Dự án LA Studio (*.ladub.json)</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>Tất cả tệp (*)</translation>
+    </message>
+</context>
 </TS>
