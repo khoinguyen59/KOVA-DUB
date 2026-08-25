@@ -1,6 +1,6 @@
 #include "controllers/app/AppController.h"
-#include "core/PathUtils.h"
-#include "remote/ColabSession.h"
+#include "core/storage/PathUtils.h"
+#include "remote/colab/ColabSession.h"
 
 namespace LAStudio {
 

@@ -2,7 +2,7 @@
 
 #include "controllers/separation/ColabVoiceIsolatorController.h"
 #include "controllers/separation/VoiceIsolatorController.h"
-#include "core/PathUtils.h"
+#include "core/storage/PathUtils.h"
 
 #include <QCryptographicHash>
 #include <QDir>

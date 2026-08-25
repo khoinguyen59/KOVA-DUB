@@ -1,7 +1,7 @@
 #include "RemoteModelCatalogController.h"
 
-#include "core/Settings.h"
-#include "remote/ColabSession.h"
+#include "core/storage/Settings.h"
+#include "remote/colab/ColabSession.h"
 
 #include <QtConcurrent>
 

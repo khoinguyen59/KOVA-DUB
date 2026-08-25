@@ -2,7 +2,7 @@
 #include "WhisperSttBackend.h"
 #include "QwenSttBackend.h"
 #include "NemotronSttBackend.h"
-#include "runtimehost/HostedWhisperBackend.h"
+#include "runtimehost/hosted_backends/HostedWhisperBackend.h"
 
 #include <QByteArray>
 

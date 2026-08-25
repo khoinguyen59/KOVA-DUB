@@ -1,10 +1,10 @@
 #include "LlmChatController.h"
 #include "llm/ColabChatRunner.h"
 #include "llm/LlmChatEngine.h"
-#include "core/Settings.h"
-#include "core/PathUtils.h"
-#include "core/Logger.h"
-#include "remote/ColabSession.h"
+#include "core/storage/Settings.h"
+#include "core/storage/PathUtils.h"
+#include "core/utils/Logger.h"
+#include "remote/colab/ColabSession.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QDateTime>

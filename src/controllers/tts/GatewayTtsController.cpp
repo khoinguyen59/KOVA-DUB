@@ -1,13 +1,13 @@
 #include "GatewayTtsController.h"
 
-#include "audio/AudioPlayer.h"
-#include "audio/WaveformProvider.h"
-#include "audio/WavIO.h"
+#include "audio/player/AudioPlayer.h"
+#include "audio/io/WaveformProvider.h"
+#include "audio/io/WavIO.h"
 #include "controllers/shared/HistoryService.h"
-#include "core/PathUtils.h"
-#include "core/Settings.h"
-#include "remote/ExecutionProvider.h"
-#include "tts/GatewayTtsRunner.h"
+#include "core/storage/PathUtils.h"
+#include "core/storage/Settings.h"
+#include "remote/gateway/ExecutionProvider.h"
+#include "tts/runners/GatewayTtsRunner.h"
 
 #include <QMetaObject>
 

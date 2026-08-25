@@ -32,7 +32,7 @@ QtObject {
 
     // === 3. HIGH-CONTRAST TYPOGRAPHY (CHỮ TƯƠNG PHẢN CAO WCAG AAA) ===
     readonly property color textPrimary:         "#ffffff"  // Trắng tinh (15:1)
-    readonly property color textSecondary:       "#dedaf5"  // Trắng tím sáng (9.2:1)
+    readonly property color textSecondary:       "#c7c2dc"  // Trắng tím sáng (9.2:1)
     readonly property color textSecondaryBright: "#f3f1ff"  // Trắng sáng nổi bật (13:1)
     readonly property color textMuted:           "#aea8d1"  // Chữ phụ (5.6:1 - WCAG AA)
     readonly property color textPlaceholder:     "#8d87b3"  // Chữ gợi ý input (4.5:1)
@@ -48,6 +48,7 @@ QtObject {
     readonly property int paddingLarge:  16
     readonly property int paddingXL:     24
 
+    readonly property int fontXSmall: 11
     readonly property int fontSmall:  12
     readonly property int fontMedium: 14
     readonly property int fontLarge:  18

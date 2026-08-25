@@ -1,6 +1,6 @@
 #pragma once
 
-#include "workflows/IWorkflowResolver.h"
+#include "workflows/registry/IWorkflowResolver.h"
 
 namespace LAStudio {
 

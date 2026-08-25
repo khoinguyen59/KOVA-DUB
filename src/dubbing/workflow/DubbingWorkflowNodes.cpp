@@ -2,7 +2,7 @@
 
 #include "controllers/dubbing/DubbingJobRunner.h"
 #include "dubbing/workflow/DubbingWorkflowAdapter.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 #include <QPointer>
 #include <QUuid>
 

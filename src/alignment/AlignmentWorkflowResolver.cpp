@@ -1,7 +1,7 @@
 #include "alignment/AlignmentWorkflowResolver.h"
 
-#include "core/ModelManager.h"
-#include "core/RuntimeManager.h"
+#include "core/models/ModelManager.h"
+#include "core/models/RuntimeManager.h"
 
 #include <QCryptographicHash>
 #include <QDirIterator>

@@ -14,9 +14,9 @@
 #include <QtQml/qqml.h>
 #include <memory>
 
-#include "dubbing/DubbingProject.h"
-#include "workflows/NodeRegistry.h"
-#include "workflows/WorkflowGraphRunner.h"
+#include "dubbing/project/DubbingProject.h"
+#include "workflows/registry/NodeRegistry.h"
+#include "workflows/graph/WorkflowGraphRunner.h"
 
 namespace LAStudio {
 
@@ -37,6 +37,7 @@ class SubtitleOcrController;
 class DubbingController : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     QML_UNCREATABLE("DubbingController is managed by AppController")
 
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY projectChanged)
@@ -256,6 +257,9 @@ public:
     void setDubbingQuality(const QString &value);
 
     Q_INVOKABLE bool newProject(const QString &path = QString());
+    Q_INVOKABLE bool createAutoProject(const QString &customName = QString());
+    Q_INVOKABLE QString defaultProjectsDirectory() const;
+    Q_INVOKABLE void refreshHistory();
     Q_INVOKABLE bool openProject(const QString &path);
     Q_INVOKABLE bool saveProject();
     Q_INVOKABLE bool saveProjectAs(const QString &path);

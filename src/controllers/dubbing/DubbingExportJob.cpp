@@ -1,7 +1,7 @@
 #include "controllers/dubbing/DubbingExportJob.h"
 
-#include "dubbing/AudioTimelineMixer.h"
-#include "dubbing/DubbingSubtitleService.h"
+#include "dubbing/audio/AudioTimelineMixer.h"
+#include "dubbing/exporters/DubbingSubtitleService.h"
 #include "dubbing/media/AtomicMediaCommit.h"
 #include "dubbing/media/MediaToolService.h"
 

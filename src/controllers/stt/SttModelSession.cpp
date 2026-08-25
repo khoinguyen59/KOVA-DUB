@@ -1,7 +1,7 @@
 #include "SttModelSession.h"
-#include "stt/SttEngine.h"
+#include "stt/engine/SttEngine.h"
 #include "controllers/models/StudioConfigurationResolver.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 #include <QFileInfo>
 
 namespace LAStudio {

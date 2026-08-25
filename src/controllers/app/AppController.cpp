@@ -1,21 +1,21 @@
 #include "controllers/app/AppController.h"
 
-#include "core/Settings.h"
+#include "core/storage/Settings.h"
 #include "controllers/models/ModelSessionRegistry.h"
-#include "core/StudioSelectionRepository.h"
+#include "core/storage/StudioSelectionRepository.h"
 #include "controllers/app/WorkflowActivityManager.h"
 #include "controllers/translation/TranslationModelSession.h"
 #include "controllers/llm/LlmChatModelSession.h"
-#include "core/HFHubClient.h"
-#include "core/DownloadManager.h"
-#include "core/ModelManager.h"
-#include "core/RegistryManager.h"
-#include "core/PathUtils.h"
-#include "stt/SttEngine.h"
-#include "tts/TtsEngine.h"
-#include "audio/AudioRecorder.h"
-#include "audio/AudioPlayer.h"
-#include "audio/WaveformProvider.h"
+#include "core/models/HFHubClient.h"
+#include "core/models/DownloadManager.h"
+#include "core/models/ModelManager.h"
+#include "core/models/RegistryManager.h"
+#include "core/storage/PathUtils.h"
+#include "stt/engine/SttEngine.h"
+#include "tts/engine/TtsEngine.h"
+#include "audio/player/AudioRecorder.h"
+#include "audio/player/AudioPlayer.h"
+#include "audio/io/WaveformProvider.h"
 #include "controllers/shared/AppUpdateService.h"
 #include "api/ApiServerService.h"
 #include <QCoreApplication>
@@ -29,7 +29,7 @@
 #include <QSaveFile>
 #include <QSysInfo>
 #include <QTextStream>
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 #include <QTimer>
 #include <QUrl>
 

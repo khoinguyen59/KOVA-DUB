@@ -2,7 +2,7 @@ namespace LAStudio {
 class WasapiLoopbackThread {};
 }
 
-#include "audio/AudioRecorder.h"
+#include "audio/player/AudioRecorder.h"
 #include <algorithm>
 
 namespace LAStudio {

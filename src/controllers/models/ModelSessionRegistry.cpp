@@ -4,11 +4,11 @@
 #include "TtsSharedModelSession.h"
 #include "VoiceIsolatorModelSession.h"
 #include "TranslationModelSession.h"
-#include "translation/TranslationEngine.h"
+#include "translation/engine/TranslationEngine.h"
 #include "llm/LlmChatEngine.h"
 #include "controllers/llm/LlmChatModelSession.h"
-#include "core/StudioCapabilityRegistry.h"
-#include "core/Logger.h"
+#include "core/services/StudioCapabilityRegistry.h"
+#include "core/utils/Logger.h"
 
 #include <QFileInfo>
 

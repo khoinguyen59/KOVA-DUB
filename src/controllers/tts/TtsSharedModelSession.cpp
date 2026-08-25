@@ -1,7 +1,7 @@
 #include "TtsSharedModelSession.h"
-#include "tts/TtsEngine.h"
+#include "tts/engine/TtsEngine.h"
 #include "controllers/models/StudioConfigurationResolver.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 #include <QFileInfo>
 
 namespace LAStudio {

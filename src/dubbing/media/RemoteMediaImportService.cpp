@@ -1,7 +1,7 @@
 #include "dubbing/media/RemoteMediaImportService.h"
 
-#include "core/PathUtils.h"
-#include "core/MediaRuntimeLocator.h"
+#include "core/storage/PathUtils.h"
+#include "core/services/MediaRuntimeLocator.h"
 #include "dubbing/media/DouyinBrowserSessionService.h"
 
 #include <QDir>

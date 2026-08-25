@@ -1,6 +1,6 @@
 #include "dubbing/media/DouyinBrowserSessionService.h"
 
-#include "core/PathUtils.h"
+#include "core/storage/PathUtils.h"
 
 #include <QCoreApplication>
 #include <QDir>

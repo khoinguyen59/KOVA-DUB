@@ -3,11 +3,11 @@
 #include "SttSessionController.h"
 #include "alignment/ColabAlignmentRunner.h"
 #include "controllers/dubbing/DubbingColabModelRoutes.h"
-#include "core/Logger.h"
-#include "dubbing/AlignmentRefinementService.h"
-#include "dubbing/DubbingSegmentNormalizer.h"
-#include "remote/ColabSession.h"
-#include "remote/ExecutionProvider.h"
+#include "core/utils/Logger.h"
+#include "dubbing/fusion/AlignmentRefinementService.h"
+#include "dubbing/fusion/DubbingSegmentNormalizer.h"
+#include "remote/colab/ColabSession.h"
+#include "remote/gateway/ExecutionProvider.h"
 
 #include <QFileInfo>
 #include <QMetaObject>

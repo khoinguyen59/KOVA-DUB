@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
-#include "core/StudioSelectionRepository.h"
+#include "core/storage/StudioSelectionRepository.h"
 
 namespace LAStudio {
 

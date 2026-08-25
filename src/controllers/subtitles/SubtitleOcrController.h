@@ -14,7 +14,7 @@
 #include <QVariantMap>
 #include <QtQml/qqml.h>
 
-#include "subtitles/SubtitleOcrPipeline.h"
+#include "subtitles/ocr/SubtitleOcrPipeline.h"
 
 namespace LAStudio {
 
@@ -28,9 +28,10 @@ struct MediaRuntimePaths;
 // Asynchronous, offline hard-subtitle OCR controller. FFmpeg, FFprobe and
 // Tesseract are always invoked with QProcess argument lists. A managed runtime
 // may be installed only through the separate explicit user action service.
-class SubtitleOcrController final : public QObject
+class SubtitleOcrController : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     QML_UNCREATABLE("SubtitleOcrController is managed by AppController")
 
     Q_PROPERTY(QString sourcePath READ sourcePath NOTIFY sourceChanged)

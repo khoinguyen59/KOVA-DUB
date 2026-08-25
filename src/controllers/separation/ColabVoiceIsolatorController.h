@@ -6,7 +6,7 @@
 #include <QVariantList>
 #include <QtQml/qqml.h>
 
-#include "separation/ColabSeparationRunner.h"
+#include "separation/runners/ColabSeparationRunner.h"
 
 #include <atomic>
 #include <memory>
@@ -16,9 +16,10 @@ namespace LAStudio {
 class ColabSession;
 class Settings;
 
-class ColabVoiceIsolatorController final : public QObject
+class ColabVoiceIsolatorController : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     QML_UNCREATABLE("ColabVoiceIsolatorController is managed by AppController")
     Q_PROPERTY(bool colabActive READ colabActive NOTIFY colabStateChanged)
     Q_PROPERTY(bool colabConnected READ colabConnected NOTIFY colabStateChanged)

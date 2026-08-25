@@ -1,6 +1,6 @@
 #include "ColabChatRunner.h"
 
-#include "remote/ColabWorkerClient.h"
+#include "remote/colab/ColabWorkerClient.h"
 
 #include <atomic>
 #include <memory>

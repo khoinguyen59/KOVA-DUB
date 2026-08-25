@@ -6,7 +6,7 @@
 #include "VibevoiceBackend.h"
 #include "VieneuTtsBackend.h"
 #include "OmnivoiceBackend.h"
-#include "runtimehost/HostedOmnivoiceBackend.h"
+#include "runtimehost/hosted_backends/HostedOmnivoiceBackend.h"
 
 namespace LAStudio {
 

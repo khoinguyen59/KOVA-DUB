@@ -5,10 +5,9 @@ import QtQuick.Layouts
 import LAStudio
 import "../base"
 
-// Project selection is deliberately global application chrome rather than a
-// Dubbing-page step.  Every production studio shares this gate, so an operator
-// cannot configure a model, media route or worker and only afterwards discover
-// that there is nowhere durable to save the work.
+// Project selection is global application chrome.
+// Automatically manages projects in a dedicated default workspace folder
+// and presents interactive recent projects list for instant opening.
 Dialog {
     id: root
 
@@ -20,11 +19,35 @@ Dialog {
     function openFor(featureLabel) {
         requestedFeatureLabel = featureLabel || qsTr("this feature")
         actionError = ""
+        if (AppController.dubbing)
+            AppController.dubbing.refreshHistory()
         open()
     }
 
-    function createProject(url) {
+    function createAutoProject(name) {
         actionError = ""
+        if (!AppController.dubbing) {
+            actionError = qsTr("Dubbing engine is initializing.")
+            return
+        }
+        if (!AppController.dubbing.createAutoProject(name || "")) {
+            actionError = AppController.dubbing.lastError || qsTr("LA Studio could not create the project.")
+            return
+        }
+        close()
+        projectReady()
+    }
+
+    function createProject(url) {
+        if (!url || url.toString() === "") {
+            createAutoProject("")
+            return
+        }
+        actionError = ""
+        if (!AppController.dubbing) {
+            actionError = qsTr("Dubbing engine is initializing.")
+            return
+        }
         if (!AppController.dubbing.newProject(url.toString())) {
             actionError = AppController.dubbing.lastError || qsTr("LA Studio could not create the project.")
             return
@@ -33,9 +56,13 @@ Dialog {
         projectReady()
     }
 
-    function openProject(url) {
+    function openProject(urlOrPath) {
         actionError = ""
-        if (!AppController.dubbing.openProject(url.toString())) {
+        if (!AppController.dubbing) {
+            actionError = qsTr("Dubbing engine is initializing.")
+            return
+        }
+        if (!AppController.dubbing.openProject(urlOrPath.toString())) {
             actionError = AppController.dubbing.lastError || qsTr("LA Studio could not open the project.")
             return
         }
@@ -50,7 +77,8 @@ Dialog {
     focus: true
     padding: 0
     closePolicy: Popup.NoAutoClose
-    width: Math.min(700, Math.max(520, parent ? parent.width - Theme.paddingXL * 2 : 700))
+    width: Math.min(760, Math.max(560, parent ? parent.width - Theme.paddingXL * 2 : 760))
+    height: Math.min(620, Math.max(480, parent ? parent.height - Theme.paddingXL * 2 : 620))
 
     background: Rectangle {
         color: Theme.surface
@@ -62,6 +90,7 @@ Dialog {
     contentItem: ColumnLayout {
         spacing: 0
 
+        // Header
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: Theme.paddingLarge
@@ -85,7 +114,7 @@ Dialog {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: qsTr("%1 is available after you create a new project or open an existing .ladub.json project.").arg(root.requestedFeatureLabel)
+                    text: qsTr("%1 sẽ sẵn sàng sau khi bạn chọn hoặc tạo một dự án làm việc.").arg(root.requestedFeatureLabel)
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
                     wrapMode: Text.WordWrap
@@ -95,73 +124,216 @@ Dialog {
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
 
+        // Main content area
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.fillHeight: true
             Layout.margins: Theme.paddingLarge
             spacing: Theme.paddingMedium
 
-            Text {
+            // Quick Create Bar
+            Rectangle {
                 Layout.fillWidth: true
-                text: qsTr("A project saves the source media, selected routes and model choices, staged outputs and review state. Nothing in a studio starts before this choice.")
-                color: Theme.textSecondary
-                font.pixelSize: Theme.fontSmall
-                wrapMode: Text.WordWrap
+                Layout.preferredHeight: 70
+                radius: Theme.radiusSmall
+                color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10)
+                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.40)
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: Theme.paddingMedium
+                    spacing: Theme.paddingMedium
+
+                    LineIcon { name: "plus-circle"; color: Theme.accentLight; width: 24; height: 24 }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Text {
+                            text: qsTr("Create new project")
+                            color: Theme.textPrimary
+                            font.bold: true
+                            font.pixelSize: Theme.fontMedium
+                        }
+                        Text {
+                            text: qsTr("Lưu tự động vào thư mục projects/ của ứng dụng mà không cần chọn đường dẫn.")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontXSmall
+                        }
+                    }
+
+                    PrimaryButton {
+                        objectName: "globalProjectCreateButton"
+                        text: qsTr("Create new project")
+                        iconName: "plus"
+                        Layout.preferredWidth: 160
+                        onClicked: root.createAutoProject("")
+                    }
+                }
             }
 
+            // Recent Projects Header
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Theme.paddingMedium
+                spacing: Theme.paddingSmall
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: createProjectColumn.implicitHeight + Theme.paddingLarge * 2
-                    radius: Theme.radiusSmall
-                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
-                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.48)
+                LineIcon { name: "clock"; color: Theme.textSecondary; width: 16; height: 16 }
+                Text {
+                    text: qsTr("Open existing project") + " (" + (AppController.dubbing && AppController.dubbing.history ? AppController.dubbing.history.length : 0) + ")"
+                    color: Theme.textPrimary
+                    font.bold: true
+                    font.pixelSize: Theme.fontMedium
+                }
+                Item { Layout.fillWidth: true }
+                PrimaryButton {
+                    text: qsTr("Làm Mới")
+                    iconName: "refresh-cw"
+                    quiet: true
+                    onClicked: if (AppController.dubbing) AppController.dubbing.refreshHistory()
+                }
+            }
 
-                    ColumnLayout {
-                        id: createProjectColumn
-                        anchors.fill: parent
-                        anchors.margins: Theme.paddingLarge
-                        spacing: Theme.paddingSmall
-                        Text { text: qsTr("Create new project"); color: Theme.textPrimary; font.bold: true; font.pixelSize: Theme.fontLarge }
-                        Text { Layout.fillWidth: true; text: qsTr("Choose a name and folder for a new reusable workspace."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                        PrimaryButton {
-                            objectName: "globalProjectCreateButton"
-                            text: qsTr("Create new project")
-                            iconName: "plus"
-                            Layout.fillWidth: true
-                            onClicked: newProjectFileDialog.open()
+            // Recent Projects List
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Theme.radiusSmall
+                color: Qt.rgba(0, 0, 0, 0.25)
+                border.color: Qt.rgba(1, 1, 1, 0.10)
+                clip: true
+
+                ListView {
+                    id: historyList
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    spacing: 4
+                    model: AppController.dubbing && AppController.dubbing.history ? AppController.dubbing.history : []
+
+                    delegate: Rectangle {
+                        id: itemDelegate
+                        width: historyList.width
+                        height: 58
+                        radius: Theme.radiusSmall
+                        color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Qt.rgba(1, 1, 1, 0.03)
+                        border.color: itemMouse.containsMouse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.50) : Qt.rgba(1, 1, 1, 0.06)
+
+                        MouseArea {
+                            id: itemMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var path = modelData.projectPath || modelData.path || modelData.id
+                                if (path) root.openProject(path)
+                            }
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: Theme.paddingMedium
+                            anchors.rightMargin: Theme.paddingMedium
+                            spacing: Theme.paddingMedium
+
+                            Rectangle {
+                                Layout.preferredWidth: 34
+                                Layout.preferredHeight: 34
+                                radius: Theme.radiusSmall
+                                color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15)
+                                LineIcon { anchors.centerIn: parent; name: "file-text"; color: Theme.accentLight; width: 18; height: 18 }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    spacing: Theme.paddingSmall
+                                    Text {
+                                        text: modelData.projectName || modelData.fileName || qsTr("Dự án không tên")
+                                        color: Theme.textPrimary
+                                        font.bold: true
+                                        font.pixelSize: Theme.fontMedium
+                                        elide: Text.ElideRight
+                                    }
+                                    Rectangle {
+                                        visible: !!modelData.segmentCount && modelData.segmentCount > 0
+                                        Layout.preferredHeight: 18
+                                        implicitWidth: segText.implicitWidth + 8
+                                        radius: 3
+                                        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.20)
+                                        Text {
+                                            id: segText
+                                            anchors.centerIn: parent
+                                            text: qsTr("%1 câu thoại").arg(modelData.segmentCount || 0)
+                                            color: Theme.accentLight
+                                            font.pixelSize: 10
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    spacing: Theme.paddingMedium
+                                    Text {
+                                        text: modelData.timestamp || modelData.lastOpened || ""
+                                        color: Theme.textMuted
+                                        font.pixelSize: Theme.fontXSmall
+                                    }
+                                    Text {
+                                        visible: !!modelData.sourceName && modelData.sourceName !== ""
+                                        text: qsTr("Video: %1").arg(modelData.sourceName || "")
+                                        color: Theme.textSecondary
+                                        font.pixelSize: Theme.fontXSmall
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+
+                            PrimaryButton {
+                                text: qsTr("Mở")
+                                iconName: "play"
+                                Layout.preferredWidth: 80
+                                onClicked: {
+                                    var path = modelData.projectPath || modelData.path || modelData.id
+                                    if (path) root.openProject(path)
+                                }
+                            }
+
+                            PrimaryButton {
+                                text: qsTr("Xóa")
+                                iconName: "trash"
+                                quiet: true
+                                Layout.preferredWidth: 70
+                                onClicked: {
+                                    var id = modelData.id || modelData.projectPath || modelData.path
+                                    if (id && AppController.dubbing) AppController.dubbing.deleteHistoryItem(id)
+                                }
+                            }
                         }
                     }
-                }
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: openProjectColumn.implicitHeight + Theme.paddingLarge * 2
-                    radius: Theme.radiusSmall
-                    color: Qt.rgba(1, 1, 1, 0.025)
-                    border.color: Qt.rgba(1, 1, 1, 0.12)
-
+                    // Empty state
                     ColumnLayout {
-                        id: openProjectColumn
-                        anchors.fill: parent
-                        anchors.margins: Theme.paddingLarge
+                        anchors.centerIn: parent
+                        visible: historyList.count === 0
                         spacing: Theme.paddingSmall
-                        Text { text: qsTr("Open existing project"); color: Theme.textPrimary; font.bold: true; font.pixelSize: Theme.fontLarge }
-                        Text { Layout.fillWidth: true; text: qsTr("Resume saved media, model choices and completed steps."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                        PrimaryButton {
-                            objectName: "globalProjectOpenButton"
-                            text: qsTr("Open existing project")
-                            iconName: "folder"
-                            quiet: true
-                            Layout.fillWidth: true
-                            onClicked: openProjectFileDialog.open()
+                        LineIcon { Layout.alignment: Qt.AlignHCenter; name: "folder"; color: Theme.textMuted; width: 36; height: 36 }
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: qsTr("Chưa có dự án nào được tạo trước đó.")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontMedium
+                        }
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: qsTr("Nhấn 'Tạo Mới Ngay' ở trên để bắt đầu dự án đầu tiên của bạn.")
+                            color: Theme.textMuted
+                            font.pixelSize: Theme.fontSmall
                         }
                     }
                 }
             }
 
+            // Error display
             Text {
                 visible: root.actionError !== ""
                 Layout.fillWidth: true
@@ -171,12 +343,24 @@ Dialog {
                 wrapMode: Text.WordWrap
             }
 
+            // Bottom Action Bar
             RowLayout {
                 Layout.fillWidth: true
+                spacing: Theme.paddingMedium
+
+                PrimaryButton {
+                    objectName: "globalProjectBrowseButton"
+                    text: qsTr("Mở file từ vị trí khác...")
+                    iconName: "folder"
+                    quiet: true
+                    onClicked: openProjectFileDialog.open()
+                }
+
                 Item { Layout.fillWidth: true }
+
                 PrimaryButton {
                     objectName: "globalProjectLeaveButton"
-                    text: qsTr("Back to Home")
+                    text: qsTr("Về Trang Chủ")
                     iconName: "arrow-left"
                     quiet: true
                     onClicked: {
@@ -186,16 +370,6 @@ Dialog {
                 }
             }
         }
-    }
-
-    FileDialog {
-        id: newProjectFileDialog
-        objectName: "globalProjectNewFileDialog"
-        title: qsTr("Create LA Studio project")
-        fileMode: FileDialog.SaveFile
-        defaultSuffix: "ladub.json"
-        nameFilters: [qsTr("LA Studio project (*.ladub.json)"), qsTr("All files (*)")]
-        onAccepted: root.createProject(selectedFile)
     }
 
     FileDialog {

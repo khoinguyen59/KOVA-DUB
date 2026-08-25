@@ -5,7 +5,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "subtitles/TimedTextCue.h"
+#include "subtitles/cues/TimedTextCue.h"
 
 namespace LAStudio {
 

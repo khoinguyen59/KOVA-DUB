@@ -1,4 +1,4 @@
-#include "core/HFHubClient.h"
+#include "core/models/HFHubClient.h"
 
 namespace LAStudio {
 

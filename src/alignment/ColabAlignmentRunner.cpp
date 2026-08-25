@@ -1,6 +1,6 @@
 #include "ColabAlignmentRunner.h"
 
-#include "remote/ColabWorkerClient.h"
+#include "remote/colab/ColabWorkerClient.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>

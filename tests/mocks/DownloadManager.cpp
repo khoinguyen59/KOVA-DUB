@@ -1,4 +1,4 @@
-#include "core/DownloadManager.h"
+#include "core/models/DownloadManager.h"
 
 namespace LAStudio {
 

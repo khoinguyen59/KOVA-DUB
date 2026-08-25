@@ -9,7 +9,7 @@
 #include <QVector>
 
 #include "CrispCommon.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>

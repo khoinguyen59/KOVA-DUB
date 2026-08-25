@@ -1,6 +1,6 @@
 #pragma once
 
-#include "separation/SeparationTypes.h"
+#include "separation/io/SeparationTypes.h"
 
 #include <QString>
 #include <QVariantMap>

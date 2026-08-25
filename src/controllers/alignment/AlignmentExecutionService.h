@@ -8,7 +8,7 @@
 #include <QAtomicInteger>
 #include <QtQml/qqml.h>
 #include "alignment/AlignmentWorkflowResolver.h"
-#include "workflows/WorkflowSession.h"
+#include "workflows/session/WorkflowSession.h"
 
 namespace LAStudio {
 

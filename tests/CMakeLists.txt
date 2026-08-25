@@ -3,54 +3,54 @@ find_package(CURL CONFIG REQUIRED)
 
 set(TEST_SOURCES
     main.cpp
-    OcrE2ERunner.cpp
-    OcrE2ERunner.h
-    LiveRealWorkflowRunner.cpp
-    LiveRealWorkflowRunner.h
-    test_FileAccessService.cpp
-    test_ModelsPathMigration.cpp
-    test_History.cpp
-    test_DownloadInstallService.cpp
-    test_AudioPreviewService.cpp
-    test_ModelsAndRuntimes.cpp
-    test_SttSession.cpp
-    test_GatewayTtsRunner.cpp
-    test_GatewayTtsRunner.h
-    test_ColabTtsRunner.cpp
-    test_ColabTtsRunner.h
-    test_ColabVoiceCloneRunner.cpp
-    test_ColabVoiceCloneRunner.h
-    test_ColabVoiceDesignRunner.cpp
-    test_ColabVoiceDesignRunner.h
-    test_ColabAlignmentRunner.cpp
-    test_ColabAlignmentRunner.h
-    test_ColabSeparationRunner.cpp
-    test_ColabSeparationRunner.h
-    test_ColabTranslationRunner.cpp
-    test_ColabTranslationRunner.h
-    test_ColabSubtitleOcrRunner.cpp
-    test_ColabSubtitleOcrRunner.h
-    test_ColabChatRunner.cpp
-    test_ColabChatRunner.h
-    test_SubtitleVoice.cpp
-    test_SubtitleOcrPipeline.cpp
-    test_SubtitleOcrController.cpp
-    test_SubtitleOcrRuntimeService.cpp
-    test_TtsTextPreprocessor.cpp
-    test_TtsRequestValidator.cpp
-    test_LlmChatEngine.cpp
-    test_RemoteExecution.cpp
-    test_StudioCapabilities.cpp
-    test_AlignmentTranscriptMatcher.cpp
-    test_AlignmentWorkflow.cpp
-    test_DubbingProject.cpp
-    test_TranslationProject.cpp
-    test_WorkflowGraph.cpp
-    test_SourceSeparation.cpp
-    test_RuntimeHostProtocol.cpp
-    test_MediaIngestService.cpp
-    test_MediaToolService.cpp
-    test_HardwareManager.cpp
+    subtitles/OcrE2ERunner.cpp
+    subtitles/OcrE2ERunner.h
+    dubbing/LiveRealWorkflowRunner.cpp
+    dubbing/LiveRealWorkflowRunner.h
+    core/test_FileAccessService.cpp
+    core/test_ModelsPathMigration.cpp
+    core/test_History.cpp
+    core/test_DownloadInstallService.cpp
+    core/test_AudioPreviewService.cpp
+    core/test_ModelsAndRuntimes.cpp
+    core/test_SttSession.cpp
+    tts/test_GatewayTtsRunner.cpp
+    tts/test_GatewayTtsRunner.h
+    colab/test_ColabTtsRunner.cpp
+    colab/test_ColabTtsRunner.h
+    colab/test_ColabVoiceCloneRunner.cpp
+    colab/test_ColabVoiceCloneRunner.h
+    colab/test_ColabVoiceDesignRunner.cpp
+    colab/test_ColabVoiceDesignRunner.h
+    colab/test_ColabAlignmentRunner.cpp
+    colab/test_ColabAlignmentRunner.h
+    colab/test_ColabSeparationRunner.cpp
+    colab/test_ColabSeparationRunner.h
+    colab/test_ColabTranslationRunner.cpp
+    colab/test_ColabTranslationRunner.h
+    colab/test_ColabSubtitleOcrRunner.cpp
+    colab/test_ColabSubtitleOcrRunner.h
+    colab/test_ColabChatRunner.cpp
+    colab/test_ColabChatRunner.h
+    tts/test_SubtitleVoice.cpp
+    subtitles/test_SubtitleOcrPipeline.cpp
+    subtitles/test_SubtitleOcrController.cpp
+    subtitles/test_SubtitleOcrRuntimeService.cpp
+    tts/test_TtsTextPreprocessor.cpp
+    tts/test_TtsRequestValidator.cpp
+    core/test_LlmChatEngine.cpp
+    core/test_RemoteExecution.cpp
+    core/test_StudioCapabilities.cpp
+    dubbing/test_AlignmentTranscriptMatcher.cpp
+    dubbing/test_AlignmentWorkflow.cpp
+    dubbing/test_DubbingProject.cpp
+    dubbing/test_TranslationProject.cpp
+    dubbing/test_WorkflowGraph.cpp
+    core/test_SourceSeparation.cpp
+    core/test_RuntimeHostProtocol.cpp
+    core/test_MediaIngestService.cpp
+    core/test_MediaToolService.cpp
+    core/test_HardwareManager.cpp
     mocks/SttEngine.cpp
     mocks/SttEngineInstance.cpp
     mocks/TtsEngine.cpp
@@ -60,10 +60,10 @@ set(TEST_SOURCES
     mocks/HFHubClient.cpp
     mocks/DownloadManager.cpp
     mocks/AppController.cpp
-    test_SubtitleVoice.h
-    test_SubtitleOcrPipeline.h
-    test_SubtitleOcrController.h
-    test_SubtitleOcrRuntimeService.h
+    tts/test_SubtitleVoice.h
+    subtitles/test_SubtitleOcrPipeline.h
+    subtitles/test_SubtitleOcrController.h
+    subtitles/test_SubtitleOcrRuntimeService.h
 
     ../src/api/ApiServerService.cpp
 
@@ -76,12 +76,12 @@ set(TEST_SOURCES
     ../src/controllers/alignment/ColabAlignmentController.cpp
     ../src/controllers/separation/ColabVoiceIsolatorController.cpp
     ../src/controllers/separation/VoiceCloneReferenceIsolatorController.cpp
-    ../src/dubbing/AlignmentRefinementService.cpp
-    ../src/dubbing/DubbingSegmentNormalizer.cpp
+    ../src/dubbing/fusion/AlignmentRefinementService.cpp
+    ../src/dubbing/fusion/DubbingSegmentNormalizer.cpp
     ../src/controllers/alignment/AlignmentTranscriptMatcher.cpp
     ../src/alignment/CrispAlignmentInterface.cpp
-    ../src/translation/CrispTranslationInterface.cpp
-    ../src/translation/LlamaTranslationInterface.cpp
+    ../src/translation/interfaces/CrispTranslationInterface.cpp
+    ../src/translation/interfaces/LlamaTranslationInterface.cpp
     ../src/llm/LlmChatEngine.cpp
     ../src/llm/ColabChatRunner.cpp
     ../src/controllers/llm/LlmChatModelSession.cpp
@@ -96,17 +96,17 @@ set(TEST_SOURCES
     ../src/controllers/shared/VoiceDesignPresetService.cpp
     ../src/controllers/alignment/AlignmentModelSession.cpp
     ../src/controllers/translation/TranslationModelSession.cpp
-    ../src/translation/TranslationProject.cpp
-    ../src/translation/TranslationEngine.cpp
-    ../src/translation/TranslationEngineInstance.cpp
-    ../src/translation/TranslationWorker.cpp
-    ../src/translation/GatewayTranslationRunner.cpp
-    ../src/translation/ColabTranslationRunner.cpp
-    ../src/subtitles/ColabSubtitleOcrRunner.cpp
+    ../src/translation/services/TranslationProject.cpp
+    ../src/translation/engine/TranslationEngine.cpp
+    ../src/translation/engine/TranslationEngineInstance.cpp
+    ../src/translation/engine/TranslationWorker.cpp
+    ../src/translation/runners/GatewayTranslationRunner.cpp
+    ../src/translation/runners/ColabTranslationRunner.cpp
+    ../src/subtitles/ocr/ColabSubtitleOcrRunner.cpp
     ../src/translation/backends/TranslationBackendFactory.cpp
-    ../src/translation/backends/CrispTranslationBackend.cpp
-    ../src/translation/backends/LlamaTranslationBackend.cpp
-    ../src/translation/TranslationService.cpp
+    ../src/translation/backends/crisp/CrispTranslationBackend.cpp
+    ../src/translation/backends/llama/LlamaTranslationBackend.cpp
+    ../src/translation/services/TranslationService.cpp
     ../src/controllers/translation/TranslationController.cpp
     ../src/controllers/separation/VoiceIsolatorModelSession.cpp
     ../src/controllers/models/ModelLifecycleController.cpp
@@ -122,30 +122,30 @@ set(TEST_SOURCES
     ../src/controllers/tts/ColabVoiceDesignController.cpp
     ../src/controllers/tts/SubtitleVoiceController.cpp
     ../src/controllers/subtitles/SubtitleOcrController.cpp
-    ../src/subtitles/SrtTimelineParser.cpp
-    ../src/subtitles/SubtitleOcrPipeline.cpp
-    ../src/subtitles/SubtitleOcrRuntimeLocator.cpp
-    ../src/subtitles/PaddleOcrRuntimeLocator.cpp
-    ../src/subtitles/SubtitleOcrRuntimeService.cpp
-    ../src/tts/SubtitleSmartFitPlanner.cpp
-    ../src/tts/TextNormalizationPolicy.cpp
-    ../src/tts/TtsTextPreprocessor.cpp
-    ../src/tts/TtsRequestValidator.cpp
-    ../src/tts/TimedSpeechPipeline.cpp
+    ../src/subtitles/cues/SrtTimelineParser.cpp
+    ../src/subtitles/ocr/SubtitleOcrPipeline.cpp
+    ../src/subtitles/locators/SubtitleOcrRuntimeLocator.cpp
+    ../src/subtitles/locators/PaddleOcrRuntimeLocator.cpp
+    ../src/subtitles/ocr/SubtitleOcrRuntimeService.cpp
+    ../src/tts/pipeline/SubtitleSmartFitPlanner.cpp
+    ../src/tts/processing/TextNormalizationPolicy.cpp
+    ../src/tts/processing/TtsTextPreprocessor.cpp
+    ../src/tts/processing/TtsRequestValidator.cpp
+    ../src/tts/pipeline/TimedSpeechPipeline.cpp
     ../src/audio/AudioTimelineRenderer.cpp
     ../src/controllers/stt/SttAudioDecoder.cpp
-    ../src/dubbing/DubbingProject.cpp
-    ../src/dubbing/DubbingTranscriptFusionService.cpp
-    ../src/dubbing/DubbingSubtitleService.cpp
-    ../src/dubbing/CapCutDraftExporter.cpp
-    ../src/dubbing/EspeakNgPhonemizer.cpp
-    ../src/dubbing/DubbingDuration.cpp
-    ../src/dubbing/DubbingVoiceReferenceSelector.cpp
-    ../src/dubbing/DubbingVoiceReferenceSelector.h
-    ../src/dubbing/DubbingTimingProfile.cpp
-    ../src/dubbing/DubbingTimingService.cpp
+    ../src/dubbing/project/DubbingProject.cpp
+    ../src/dubbing/fusion/DubbingTranscriptFusionService.cpp
+    ../src/dubbing/exporters/DubbingSubtitleService.cpp
+    ../src/dubbing/exporters/CapCutDraftExporter.cpp
+    ../src/dubbing/timing/EspeakNgPhonemizer.cpp
+    ../src/dubbing/timing/DubbingDuration.cpp
+    ../src/dubbing/audio/DubbingVoiceReferenceSelector.cpp
+    ../src/dubbing/audio/DubbingVoiceReferenceSelector.h
+    ../src/dubbing/timing/DubbingTimingProfile.cpp
+    ../src/dubbing/timing/DubbingTimingService.cpp
     ../src/controllers/dubbing/DubbingController.cpp
-    ../src/dubbing/AudioTimelineMixer.cpp
+    ../src/dubbing/audio/AudioTimelineMixer.cpp
     ../src/controllers/dubbing/DubbingJobRunner.cpp
     ../src/controllers/dubbing/DubbingRunCoordinator.cpp
     ../src/controllers/dubbing/SourceSeparationConfigurationResolver.cpp
@@ -154,107 +154,107 @@ set(TEST_SOURCES
     ../src/controllers/dubbing/DubbingExportJob.cpp
     ../src/controllers/dubbing/DubbingTranslationJob.cpp
     ../src/controllers/dubbing/DubbingTranslationFixService.cpp
-    ../src/dubbing/DubbingTranslationService.cpp
+    ../src/dubbing/audio/DubbingTranslationService.cpp
     ../src/dubbing/media/MediaToolService.cpp
     ../src/dubbing/media/AtomicMediaCommit.cpp
     ../src/dubbing/media/MediaIngestService.cpp
     ../src/dubbing/media/DouyinBrowserSessionService.cpp
     ../src/dubbing/media/RemoteMediaImportService.cpp
-    ../src/separation/SeparationAudioIO.cpp
-    ../src/separation/SourceSeparationService.cpp
-    ../src/separation/SeparationWorker.cpp
+    ../src/separation/io/SeparationAudioIO.cpp
+    ../src/separation/engine/SourceSeparationService.cpp
+    ../src/separation/engine/SeparationWorker.cpp
     ../src/separation/backends/SeparationBackendFactory.cpp
     ../src/separation/backends/sherpa/SherpaOnnxRuntime.cpp
     ../src/separation/backends/sherpa/SherpaOnnxSeparationBackend.cpp
     ../src/controllers/separation/VoiceIsolatorController.cpp
     ../src/controllers/app/WorkflowActivityManager.cpp
-    ../src/workflows/WorkflowTypes.cpp
-    ../src/workflows/WorkflowSession.cpp
-    ../src/workflows/WorkflowGraph.cpp
+    ../src/workflows/registry/WorkflowTypes.cpp
+    ../src/workflows/session/WorkflowSession.cpp
+    ../src/workflows/graph/WorkflowGraph.cpp
     ../src/dubbing/workflow/DubbingWorkflowDefinition.cpp
-    ../src/workflows/WorkflowArtifact.cpp
-    ../src/workflows/WorkflowRun.cpp
-    ../src/workflows/WorkflowRunJournal.cpp
-    ../src/workflows/WorkflowTranscript.cpp
+    ../src/workflows/session/WorkflowArtifact.cpp
+    ../src/workflows/session/WorkflowRun.cpp
+    ../src/workflows/graph/WorkflowRunJournal.cpp
+    ../src/workflows/session/WorkflowTranscript.cpp
     ../src/dubbing/workflow/DubbingWorkflowNodes.cpp
     ../src/dubbing/workflow/DubbingWorkflowAdapter.cpp
-    ../src/workflows/NodeRegistry.cpp
-    ../src/workflows/WorkflowGraphRunner.cpp
+    ../src/workflows/registry/NodeRegistry.cpp
+    ../src/workflows/graph/WorkflowGraphRunner.cpp
     ../src/alignment/AlignmentWorkflowResolver.cpp
-    ../src/core/LogViewService.cpp
-    ../src/core/CacheLifecycleService.cpp
-    ../src/core/PathUtils.cpp
-    ../src/core/MediaRuntimeLocator.cpp
-    ../src/core/Logger.cpp
-    ../src/core/InferenceThreadPolicy.cpp
+    ../src/core/utils/LogViewService.cpp
+    ../src/core/storage/CacheLifecycleService.cpp
+    ../src/core/storage/PathUtils.cpp
+    ../src/core/services/MediaRuntimeLocator.cpp
+    ../src/core/utils/Logger.cpp
+    ../src/core/hardware/InferenceThreadPolicy.cpp
     ../src/inference/WorkerThreadHost.cpp
-    ../src/core/CapabilityFamilyModel.cpp
-    ../src/core/HardwareManager.cpp
-    ../src/core/StudioCapabilityRegistry.cpp
-    ../src/core/StudioSelectionRepository.cpp
-    ../src/core/Settings.cpp
-    ../src/core/SecureCredentialStore.cpp
-    ../src/remote/ExecutionProvider.cpp
-    ../src/remote/ColabSession.cpp
-    ../src/remote/GatewayClient.cpp
-    ../src/remote/ColabWorkerClient.cpp
-    ../src/remote/GatewayModelCatalog.cpp
-    ../src/remote/ColabCapabilityCatalog.cpp
-    ../src/stt/ColabSttRunner.cpp
-    ../src/stt/GatewaySttRunner.cpp
-    ../src/tts/GatewayTtsRunner.cpp
-    ../src/tts/ColabTtsRunner.cpp
-    ../src/tts/ColabVoiceCloneRunner.cpp
-    ../src/tts/ColabVoiceDesignRunner.cpp
+    ../src/core/models/CapabilityFamilyModel.cpp
+    ../src/core/hardware/HardwareManager.cpp
+    ../src/core/services/StudioCapabilityRegistry.cpp
+    ../src/core/storage/StudioSelectionRepository.cpp
+    ../src/core/storage/Settings.cpp
+    ../src/core/storage/SecureCredentialStore.cpp
+    ../src/remote/gateway/ExecutionProvider.cpp
+    ../src/remote/colab/ColabSession.cpp
+    ../src/remote/gateway/GatewayClient.cpp
+    ../src/remote/colab/ColabWorkerClient.cpp
+    ../src/remote/gateway/GatewayModelCatalog.cpp
+    ../src/remote/colab/ColabCapabilityCatalog.cpp
+    ../src/stt/runners/ColabSttRunner.cpp
+    ../src/stt/runners/GatewaySttRunner.cpp
+    ../src/tts/runners/GatewayTtsRunner.cpp
+    ../src/tts/runners/ColabTtsRunner.cpp
+    ../src/tts/runners/ColabVoiceCloneRunner.cpp
+    ../src/tts/runners/ColabVoiceDesignRunner.cpp
     ../src/alignment/ColabAlignmentRunner.cpp
-    ../src/separation/ColabSeparationRunner.cpp
-    ../src/core/LocalizationManager.cpp
-    ../src/core/ModelManager.cpp
-    ../src/core/CatalogManager.cpp
-    ../src/core/RegistryManager.cpp
-    ../src/core/RuntimeManager.cpp
-    ../src/core/QmlLogger.cpp
-    ../src/audio/WavIO.cpp
-    ../src/audio/AudioFileDecoder.cpp
-    ../src/runtimehost/RuntimeHostProtocol.cpp
-    ../src/runtimehost/RuntimeHostClient.cpp
-    ../src/runtimehost/RuntimeHostSharedBuffer.cpp
-    ../src/runtimehost/RuntimeHostManager.cpp
-    ../src/runtimehost/HostedWhisperBackend.cpp
-    ../src/runtimehost/HostedLlamaTranslationBackend.cpp
-    ../src/audio/WaveformProvider.cpp
+    ../src/separation/runners/ColabSeparationRunner.cpp
+    ../src/core/services/LocalizationManager.cpp
+    ../src/core/models/ModelManager.cpp
+    ../src/core/models/CatalogManager.cpp
+    ../src/core/models/RegistryManager.cpp
+    ../src/core/models/RuntimeManager.cpp
+    ../src/core/utils/QmlLogger.cpp
+    ../src/audio/io/WavIO.cpp
+    ../src/audio/io/AudioFileDecoder.cpp
+    ../src/runtimehost/protocol/RuntimeHostProtocol.cpp
+    ../src/runtimehost/service/RuntimeHostClient.cpp
+    ../src/runtimehost/protocol/RuntimeHostSharedBuffer.cpp
+    ../src/runtimehost/service/RuntimeHostManager.cpp
+    ../src/runtimehost/hosted_backends/HostedWhisperBackend.cpp
+    ../src/runtimehost/hosted_backends/HostedLlamaTranslationBackend.cpp
+    ../src/audio/io/WaveformProvider.cpp
 
-    ../src/core/DownloadManager.h
-    ../src/dubbing/DubbingSubtitleService.h
-    ../src/core/MediaRuntimeLocator.h
-    ../src/subtitles/SubtitleOcrPipeline.h
-    ../src/subtitles/SubtitleOcrRuntimeLocator.h
-    ../src/subtitles/PaddleOcrRuntimeLocator.h
-    ../src/subtitles/SubtitleOcrRuntimeService.h
+    ../src/core/models/DownloadManager.h
+    ../src/dubbing/exporters/DubbingSubtitleService.h
+    ../src/core/services/MediaRuntimeLocator.h
+    ../src/subtitles/ocr/SubtitleOcrPipeline.h
+    ../src/subtitles/locators/SubtitleOcrRuntimeLocator.h
+    ../src/subtitles/locators/PaddleOcrRuntimeLocator.h
+    ../src/subtitles/ocr/SubtitleOcrRuntimeService.h
     ../src/controllers/subtitles/SubtitleOcrController.h
     ../src/api/ApiServerService.h
-    ../src/stt/SttEngine.h
-    ../src/stt/SttEngineInstance.h
-    ../src/tts/TtsEngine.h
-    ../src/tts/TtsEngineInstance.h
-    ../src/tts/TtsRequestValidator.h
-    ../src/audio/AudioRecorder.h
-    ../src/audio/AudioPlayer.h
-    ../src/audio/AudioFileDecoder.h
-    ../src/runtimehost/RuntimeHostProtocol.h
-    ../src/core/HFHubClient.h
-    ../src/remote/GatewayClient.h
-    ../src/remote/ColabWorkerClient.h
-    ../src/remote/GatewayModelCatalog.h
-    ../src/remote/ColabCapabilityCatalog.h
-    ../src/stt/ColabSttRunner.h
-    ../src/stt/GatewaySttRunner.h
-    ../src/tts/GatewayTtsRunner.h
-    ../src/tts/ColabTtsRunner.h
-    ../src/tts/ColabVoiceCloneRunner.h
-    ../src/tts/ColabVoiceDesignRunner.h
+    ../src/stt/engine/SttEngine.h
+    ../src/stt/engine/SttEngineInstance.h
+    ../src/tts/engine/TtsEngine.h
+    ../src/tts/engine/TtsEngineInstance.h
+    ../src/tts/processing/TtsRequestValidator.h
+    ../src/audio/player/AudioRecorder.h
+    ../src/audio/player/AudioPlayer.h
+    ../src/audio/io/AudioFileDecoder.h
+    ../src/runtimehost/protocol/RuntimeHostProtocol.h
+    ../src/core/models/HFHubClient.h
+    ../src/remote/gateway/GatewayClient.h
+    ../src/remote/colab/ColabWorkerClient.h
+    ../src/remote/gateway/GatewayModelCatalog.h
+    ../src/remote/colab/ColabCapabilityCatalog.h
+    ../src/stt/runners/ColabSttRunner.h
+    ../src/stt/runners/GatewaySttRunner.h
+    ../src/tts/runners/GatewayTtsRunner.h
+    ../src/tts/runners/ColabTtsRunner.h
+    ../src/tts/runners/ColabVoiceCloneRunner.h
+    ../src/tts/runners/ColabVoiceDesignRunner.h
     ../src/alignment/ColabAlignmentRunner.h
-    ../src/separation/ColabSeparationRunner.h
+    ../src/separation/runners/ColabSeparationRunner.h
     ../src/controllers/tts/GatewayTtsController.h
     ../src/controllers/tts/ColabTtsController.h
     ../src/controllers/tts/ColabVoiceCloneController.h
@@ -275,18 +275,18 @@ set(TEST_SOURCES
     ../src/controllers/tts/TtsSharedModelSession.h
     ../src/controllers/alignment/AlignmentModelSession.h
     ../src/controllers/translation/TranslationModelSession.h
-    ../src/translation/TranslationProject.h
-    ../src/translation/TranslationEngine.h
-    ../src/translation/TranslationEngineInstance.h
-    ../src/translation/TranslationWorker.h
-    ../src/translation/GatewayTranslationRunner.h
-    ../src/translation/ColabTranslationRunner.h
-    ../src/subtitles/ColabSubtitleOcrRunner.h
+    ../src/translation/services/TranslationProject.h
+    ../src/translation/engine/TranslationEngine.h
+    ../src/translation/engine/TranslationEngineInstance.h
+    ../src/translation/engine/TranslationWorker.h
+    ../src/translation/runners/GatewayTranslationRunner.h
+    ../src/translation/runners/ColabTranslationRunner.h
+    ../src/subtitles/ocr/ColabSubtitleOcrRunner.h
     ../src/translation/backends/TranslationBackend.h
     ../src/translation/backends/TranslationBackendFactory.h
-    ../src/translation/backends/CrispTranslationBackend.h
-    ../src/translation/backends/LlamaTranslationBackend.h
-    ../src/translation/TranslationService.h
+    ../src/translation/backends/crisp/CrispTranslationBackend.h
+    ../src/translation/backends/llama/LlamaTranslationBackend.h
+    ../src/translation/services/TranslationService.h
     ../src/controllers/translation/TranslationController.h
     ../src/controllers/separation/VoiceIsolatorModelSession.h
     ../src/controllers/models/ModelSessionRegistry.h
@@ -295,38 +295,38 @@ set(TEST_SOURCES
     ../src/controllers/llm/LlmChatModelSession.h
     ../src/controllers/llm/LlmChatController.h
     ../src/controllers/app/WorkflowActivityManager.h
-    ../src/workflows/WorkflowTypes.h
-    ../src/workflows/IWorkflowResolver.h
-    ../src/workflows/WorkflowSession.h
-    ../src/workflows/WorkflowGraph.h
+    ../src/workflows/registry/WorkflowTypes.h
+    ../src/workflows/registry/IWorkflowResolver.h
+    ../src/workflows/session/WorkflowSession.h
+    ../src/workflows/graph/WorkflowGraph.h
     ../src/dubbing/workflow/DubbingWorkflowDefinition.h
-    ../src/workflows/WorkflowArtifact.h
-    ../src/workflows/WorkflowRun.h
-    ../src/workflows/WorkflowRunJournal.h
-    ../src/workflows/WorkflowTranscript.h
+    ../src/workflows/session/WorkflowArtifact.h
+    ../src/workflows/session/WorkflowRun.h
+    ../src/workflows/graph/WorkflowRunJournal.h
+    ../src/workflows/session/WorkflowTranscript.h
     ../src/dubbing/workflow/DubbingWorkflowNodes.h
-    ../src/workflows/WorkflowExecutionAdapter.h
+    ../src/workflows/registry/WorkflowExecutionAdapter.h
     ../src/dubbing/workflow/DubbingWorkflowAdapter.h
-    ../src/workflows/NodeRegistry.h
-    ../src/workflows/WorkflowGraphRunner.h
+    ../src/workflows/registry/NodeRegistry.h
+    ../src/workflows/graph/WorkflowGraphRunner.h
     ../src/alignment/AlignmentWorkflowResolver.h
     ../include/runtimes/CrispTranslationInterface.h
-    ../src/separation/SeparationTypes.h
-    ../src/separation/SeparationAudioIO.h
-    ../src/separation/SourceSeparationService.h
-    ../src/separation/SeparationWorker.h
+    ../src/separation/io/SeparationTypes.h
+    ../src/separation/io/SeparationAudioIO.h
+    ../src/separation/engine/SourceSeparationService.h
+    ../src/separation/engine/SeparationWorker.h
     ../src/separation/backends/SeparationBackend.h
     ../src/separation/backends/SeparationBackendFactory.h
     ../src/separation/backends/sherpa/SherpaOnnxRuntime.h
     ../src/separation/backends/sherpa/SherpaOnnxSeparationBackend.h
-    test_SourceSeparation.h
-    test_RuntimeHostProtocol.h
-    test_MediaIngestService.h
-    test_MediaToolService.h
-    test_LlmChatEngine.h
-    test_RemoteExecution.h
-    test_HardwareManager.h
-    test_TranslationProject.h
+    core/test_SourceSeparation.h
+    core/test_RuntimeHostProtocol.h
+    core/test_MediaIngestService.h
+    core/test_MediaToolService.h
+    core/test_LlmChatEngine.h
+    core/test_RemoteExecution.h
+    core/test_HardwareManager.h
+    dubbing/test_TranslationProject.h
     ../src/controllers/separation/VoiceIsolatorController.h
 )
 
@@ -349,24 +349,108 @@ target_compile_definitions(LAStudioUnitTests PRIVATE
 target_include_directories(LAStudioUnitTests PRIVATE
     ${LASTUDIO_GENERATED_DIR}
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/core
-    ${CMAKE_SOURCE_DIR}/src/audio
-    ${CMAKE_SOURCE_DIR}/src/controllers
-    ${CMAKE_SOURCE_DIR}/src/controllers/app
-    ${CMAKE_SOURCE_DIR}/src/controllers/alignment
-    ${CMAKE_SOURCE_DIR}/src/controllers/dubbing
-    ${CMAKE_SOURCE_DIR}/src/controllers/stt
-    ${CMAKE_SOURCE_DIR}/src/controllers/tts
-    ${CMAKE_SOURCE_DIR}/src/controllers/translation
-    ${CMAKE_SOURCE_DIR}/src/controllers/separation
-    ${CMAKE_SOURCE_DIR}/src/controllers/models
-    ${CMAKE_SOURCE_DIR}/src/controllers/shared
-    ${CMAKE_SOURCE_DIR}/src/dubbing
-    ${CMAKE_SOURCE_DIR}/src/dubbing/media
-    ${CMAKE_SOURCE_DIR}/src/dubbing/workflow
     ${CMAKE_SOURCE_DIR}/src/alignment
+    ${CMAKE_SOURCE_DIR}/src/api
+    ${CMAKE_SOURCE_DIR}/src/api/parts
+    ${CMAKE_SOURCE_DIR}/src/audio
+    ${CMAKE_SOURCE_DIR}/src/audio/io
+    ${CMAKE_SOURCE_DIR}/src/audio/player
+    ${CMAKE_SOURCE_DIR}/src/controllers
+    ${CMAKE_SOURCE_DIR}/src/controllers/alignment
+    ${CMAKE_SOURCE_DIR}/src/controllers/app
+    ${CMAKE_SOURCE_DIR}/src/controllers/dubbing
+    ${CMAKE_SOURCE_DIR}/src/controllers/dubbing/parts
+    ${CMAKE_SOURCE_DIR}/src/controllers/dubbing/services
+    ${CMAKE_SOURCE_DIR}/src/controllers/llm
+    ${CMAKE_SOURCE_DIR}/src/controllers/models
+    ${CMAKE_SOURCE_DIR}/src/controllers/models/parts
+    ${CMAKE_SOURCE_DIR}/src/controllers/models/services
+    ${CMAKE_SOURCE_DIR}/src/controllers/separation
+    ${CMAKE_SOURCE_DIR}/src/controllers/shared
+    ${CMAKE_SOURCE_DIR}/src/controllers/stt
+    ${CMAKE_SOURCE_DIR}/src/controllers/subtitles
+    ${CMAKE_SOURCE_DIR}/src/controllers/subtitles/parts
+    ${CMAKE_SOURCE_DIR}/src/controllers/subtitles/services
+    ${CMAKE_SOURCE_DIR}/src/controllers/translation
+    ${CMAKE_SOURCE_DIR}/src/controllers/tts
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/core/hardware
+    ${CMAKE_SOURCE_DIR}/src/core/models
+    ${CMAKE_SOURCE_DIR}/src/core/parts
+    ${CMAKE_SOURCE_DIR}/src/core/services
+    ${CMAKE_SOURCE_DIR}/src/core/storage
+    ${CMAKE_SOURCE_DIR}/src/core/utils
+    ${CMAKE_SOURCE_DIR}/src/dubbing
+    ${CMAKE_SOURCE_DIR}/src/dubbing/audio
+    ${CMAKE_SOURCE_DIR}/src/dubbing/exporters
+    ${CMAKE_SOURCE_DIR}/src/dubbing/fusion
+    ${CMAKE_SOURCE_DIR}/src/dubbing/media
+    ${CMAKE_SOURCE_DIR}/src/dubbing/project
+    ${CMAKE_SOURCE_DIR}/src/dubbing/timing
+    ${CMAKE_SOURCE_DIR}/src/dubbing/workflow
+    ${CMAKE_SOURCE_DIR}/src/inference
+    ${CMAKE_SOURCE_DIR}/src/llm
+    ${CMAKE_SOURCE_DIR}/src/remote
+    ${CMAKE_SOURCE_DIR}/src/remote/colab
+    ${CMAKE_SOURCE_DIR}/src/remote/gateway
+    ${CMAKE_SOURCE_DIR}/src/runtimehost
+    ${CMAKE_SOURCE_DIR}/src/runtimehost/hosted_backends
+    ${CMAKE_SOURCE_DIR}/src/runtimehost/protocol
+    ${CMAKE_SOURCE_DIR}/src/runtimehost/service
     ${CMAKE_SOURCE_DIR}/src/separation
+    ${CMAKE_SOURCE_DIR}/src/separation/backends
+    ${CMAKE_SOURCE_DIR}/src/separation/backends/sherpa
+    ${CMAKE_SOURCE_DIR}/src/separation/engine
+    ${CMAKE_SOURCE_DIR}/src/separation/io
+    ${CMAKE_SOURCE_DIR}/src/separation/runners
+    ${CMAKE_SOURCE_DIR}/src/stt
+    ${CMAKE_SOURCE_DIR}/src/stt/backends
+    ${CMAKE_SOURCE_DIR}/src/stt/backends/nemotron
+    ${CMAKE_SOURCE_DIR}/src/stt/backends/qwen
+    ${CMAKE_SOURCE_DIR}/src/stt/backends/whisper
+    ${CMAKE_SOURCE_DIR}/src/stt/engine
+    ${CMAKE_SOURCE_DIR}/src/stt/runners
+    ${CMAKE_SOURCE_DIR}/src/subtitles
+    ${CMAKE_SOURCE_DIR}/src/subtitles/cues
+    ${CMAKE_SOURCE_DIR}/src/subtitles/locators
+    ${CMAKE_SOURCE_DIR}/src/subtitles/ocr
+    ${CMAKE_SOURCE_DIR}/src/textnorm
+    ${CMAKE_SOURCE_DIR}/src/textnorm/data
+    ${CMAKE_SOURCE_DIR}/src/textnorm/include
+    ${CMAKE_SOURCE_DIR}/src/textnorm/include/vietnorm
+    ${CMAKE_SOURCE_DIR}/src/textnorm/src
+    ${CMAKE_SOURCE_DIR}/src/textnorm/tests
+    ${CMAKE_SOURCE_DIR}/src/translation
+    ${CMAKE_SOURCE_DIR}/src/translation/backends
+    ${CMAKE_SOURCE_DIR}/src/translation/backends/crisp
+    ${CMAKE_SOURCE_DIR}/src/translation/backends/llama
+    ${CMAKE_SOURCE_DIR}/src/translation/engine
+    ${CMAKE_SOURCE_DIR}/src/translation/interfaces
+    ${CMAKE_SOURCE_DIR}/src/translation/runners
+    ${CMAKE_SOURCE_DIR}/src/translation/services
+    ${CMAKE_SOURCE_DIR}/src/tts
+    ${CMAKE_SOURCE_DIR}/src/tts/backends
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/kokoro
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/omnivoice
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/qwen
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/vibevoice
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/vieneu
+    ${CMAKE_SOURCE_DIR}/src/tts/backends/voxcpm
+    ${CMAKE_SOURCE_DIR}/src/tts/engine
+    ${CMAKE_SOURCE_DIR}/src/tts/pipeline
+    ${CMAKE_SOURCE_DIR}/src/tts/processing
+    ${CMAKE_SOURCE_DIR}/src/tts/runners
+    ${CMAKE_SOURCE_DIR}/src/workflows
+    ${CMAKE_SOURCE_DIR}/src/workflows/graph
+    ${CMAKE_SOURCE_DIR}/src/workflows/registry
+    ${CMAKE_SOURCE_DIR}/src/workflows/session
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/colab
+    ${CMAKE_CURRENT_SOURCE_DIR}/dubbing
+    ${CMAKE_CURRENT_SOURCE_DIR}/subtitles
+    ${CMAKE_CURRENT_SOURCE_DIR}/tts
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/mocks
     ${LLAMA_CPP_SOURCE_DIR}/include
     ${LLAMA_CPP_SOURCE_DIR}/ggml/include
@@ -450,7 +534,7 @@ if(WIN32)
     if(POWERSHELL_EXECUTABLE)
         add_test(NAME PrepareSubtitleOcrFrameRuntime
             COMMAND "${POWERSHELL_EXECUTABLE}" -NoProfile -ExecutionPolicy Bypass
-                -File "${CMAKE_CURRENT_SOURCE_DIR}/prepare_subtitle_ocr_frame_runtime.ps1"
+                -File "${CMAKE_CURRENT_SOURCE_DIR}/subtitles/prepare_subtitle_ocr_frame_runtime.ps1"
                 -RepositoryRoot "${CMAKE_SOURCE_DIR}"
                 -DeployRoot "${CMAKE_BINARY_DIR}/subtitle-ocr-frame-runtime")
         set_tests_properties(PrepareSubtitleOcrFrameRuntime PROPERTIES
@@ -462,7 +546,8 @@ if(WIN32)
 
         add_test(NAME RemoteLivePreflightContract
             COMMAND "${POWERSHELL_EXECUTABLE}" -NoProfile -ExecutionPolicy Bypass
-                -File "${CMAKE_CURRENT_SOURCE_DIR}/test_RemoteLivePreflightContract.ps1")
+                -File "${CMAKE_CURRENT_SOURCE_DIR}/core/test_RemoteLivePreflightContract.ps1"
+                -RepositoryRoot "${CMAKE_SOURCE_DIR}")
         set_tests_properties(RemoteLivePreflightContract PROPERTIES
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             TIMEOUT 30)

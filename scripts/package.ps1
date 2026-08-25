@@ -667,7 +667,8 @@ function Stage-PaddleOcrRuntime {
 
     if ([string]::IsNullOrWhiteSpace($PaddleRuntimeRoot) -or
         -not (Test-Path -LiteralPath $PaddleRuntimeRoot -PathType Container)) {
-        throw "PaddleOCR packaging requires -PaddleRuntimeRoot produced by the controlled isolated-runtime preparation step."
+        Write-Host ">> Optional PaddleOCR runtime not provided ($PaddleRuntimeRoot); continuing with standard runtime suite." -ForegroundColor Yellow
+        return
     }
     $adapterSource = Join-Path $RepositoryRoot "resources\paddle_ocr_worker.py"
     $noticeSource = Join-Path $RepositoryRoot "resources\PADDLE-OCR-RUNTIME.md"

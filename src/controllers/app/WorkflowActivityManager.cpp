@@ -16,7 +16,7 @@
 #include "controllers/tts/ColabVoiceDesignController.h"
 #include "controllers/tts/GatewayTtsController.h"
 #include "SttSessionController.h"
-#include "tts/TtsEngine.h"
+#include "tts/engine/TtsEngine.h"
 
 #include <QFileInfo>
 #include <QTimer>

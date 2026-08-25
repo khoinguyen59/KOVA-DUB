@@ -2,7 +2,7 @@
 
 #include "controllers/alignment/AlignmentExecutionService.h"
 #include "StudioConfigurationResolver.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 
 #include <QFileInfo>
 

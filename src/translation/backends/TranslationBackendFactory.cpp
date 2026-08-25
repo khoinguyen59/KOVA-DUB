@@ -2,7 +2,7 @@
 
 #include "CrispTranslationBackend.h"
 #include "LlamaTranslationBackend.h"
-#include "runtimehost/HostedLlamaTranslationBackend.h"
+#include "runtimehost/hosted_backends/HostedLlamaTranslationBackend.h"
 
 #include <QByteArray>
 

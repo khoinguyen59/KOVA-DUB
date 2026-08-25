@@ -1,6 +1,6 @@
 #pragma once
 
-#include "workflows/NodeRegistry.h"
+#include "workflows/registry/NodeRegistry.h"
 
 namespace LAStudio {
 

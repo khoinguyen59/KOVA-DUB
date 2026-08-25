@@ -1,4 +1,4 @@
-#include "stt/SttEngineInstance.h"
+#include "stt/engine/SttEngineInstance.h"
 
 namespace LAStudio {
 

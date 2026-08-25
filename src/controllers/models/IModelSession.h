@@ -5,7 +5,7 @@
 #include <QStringList>
 #include <QVariantMap>
 #include <optional>
-#include "core/StudioSelectionRepository.h"
+#include "core/storage/StudioSelectionRepository.h"
 #include "inference/InferenceTypes.h"
 
 namespace LAStudio {

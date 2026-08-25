@@ -1,8 +1,8 @@
 #include "SttAudioDecoder.h"
-#include "audio/AudioFileDecoder.h"
-#include "audio/WavIO.h"
-#include "core/PathUtils.h"
-#include "core/Logger.h"
+#include "audio/io/AudioFileDecoder.h"
+#include "audio/io/WavIO.h"
+#include "core/storage/PathUtils.h"
+#include "core/utils/Logger.h"
 #include <QFileInfo>
 #include <QtConcurrent>
 #include <QFutureWatcher>

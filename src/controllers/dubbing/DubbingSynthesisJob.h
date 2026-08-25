@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "dubbing/DubbingVoiceReferenceSelector.h"
+#include "dubbing/audio/DubbingVoiceReferenceSelector.h"
 
 namespace LAStudio {
 

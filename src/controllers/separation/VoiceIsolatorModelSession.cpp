@@ -2,8 +2,8 @@
 
 #include "StudioConfigurationResolver.h"
 #include "VoiceIsolatorController.h"
-#include "core/Logger.h"
-#include "separation/SeparationTypes.h"
+#include "core/utils/Logger.h"
+#include "separation/io/SeparationTypes.h"
 
 #include <QFileInfo>
 

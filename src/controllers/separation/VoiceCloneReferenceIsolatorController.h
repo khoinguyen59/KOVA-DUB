@@ -12,9 +12,10 @@ class ColabVoiceIsolatorController;
 // Coordinates the existing Isolator controllers for Voice Cloning.  It owns
 // no inference backend: Local work stays in VoiceIsolatorController and
 // Direct Colab work stays in ColabVoiceIsolatorController.
-class VoiceCloneReferenceIsolatorController final : public QObject
+class VoiceCloneReferenceIsolatorController : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     QML_UNCREATABLE("VoiceCloneReferenceIsolatorController is managed by AppController")
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY stateChanged)
     Q_PROPERTY(QString sourcePath READ sourcePath WRITE setSourcePath NOTIFY stateChanged)

@@ -105,7 +105,7 @@ ApplicationWindow {
         workflowsPopup.close()
         downloadsPopup.close()
         communityDialog.close()
-        if (!routeRequiresProject(routeId) || AppController.dubbing.hasProject) {
+        if (!routeRequiresProject(routeId) || (AppController.dubbing && AppController.dubbing.hasProject)) {
             activateStudioRoute(routeId, familyId || "")
             return
         }
@@ -290,7 +290,7 @@ ApplicationWindow {
         // controller no longer creates an untitled project implicitly, so the
         // smoke must establish its isolated .ladub.json workspace before it
         // can cross the production file-picker boundary later in the route.
-        if (!AppController.dubbing.hasProject) {
+        if (!AppController.dubbing || !AppController.dubbing.hasProject) {
             if (qmlSmokeProjectUrl === "") {
                 console.warn("QML smoke has no isolated project fixture URL")
                 qmlSmokeFailed = true
@@ -447,7 +447,11 @@ ApplicationWindow {
                     waitTicks = 1
                     return
                 }
-                if (!AppController.dubbing.hasProject || globalProjectGate.visible) {
+                if (globalProjectGate.visible && waitTicks < 5) {
+                    waitTicks++
+                    return
+                }
+                if (!AppController.dubbing || !AppController.dubbing.hasProject || globalProjectGate.visible) {
                     console.warn("Global project gate did not create the isolated smoke project")
                     root.qmlSmokeFailed = true
                     running = false

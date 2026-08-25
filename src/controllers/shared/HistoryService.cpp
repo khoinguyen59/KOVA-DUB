@@ -1,10 +1,10 @@
 #include "HistoryService.h"
 #include "HistoryRepository.h"
 
-#include "core/PathUtils.h"
-#include "tts/TtsEngine.h"
-#include "audio/AudioRecorder.h"
-#include "core/Logger.h"
+#include "core/storage/PathUtils.h"
+#include "tts/engine/TtsEngine.h"
+#include "audio/player/AudioRecorder.h"
+#include "core/utils/Logger.h"
 
 #include <QMetaObject>
 #include <QPointer>

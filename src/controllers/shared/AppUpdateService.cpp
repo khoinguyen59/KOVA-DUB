@@ -1,8 +1,8 @@
 #include "AppUpdateService.h"
 
-#include "core/DownloadManager.h"
-#include "core/Logger.h"
-#include "core/PathUtils.h"
+#include "core/models/DownloadManager.h"
+#include "core/utils/Logger.h"
+#include "core/storage/PathUtils.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>

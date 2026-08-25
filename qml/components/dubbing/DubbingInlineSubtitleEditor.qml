@@ -158,7 +158,7 @@ Popup {
             }
             PrimaryButton {
                 objectName: "dubbingInlineSubtitleSave"
-                text: qsTr("Save (Ctrl+Enter)")
+                text: qsTr("Save subtitle")
                 enabled: root.segmentIndex >= 0 && captionText.text.trim().length > 0
                 onClicked: root.saveAndClose()
             }

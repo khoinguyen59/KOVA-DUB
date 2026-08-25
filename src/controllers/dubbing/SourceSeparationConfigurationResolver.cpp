@@ -1,8 +1,8 @@
 #include "controllers/dubbing/SourceSeparationConfigurationResolver.h"
 
 #include "controllers/models/StudioConfigurationResolver.h"
-#include "core/ModelManager.h"
-#include "core/RuntimeManager.h"
+#include "core/models/ModelManager.h"
+#include "core/models/RuntimeManager.h"
 
 #include <QFileInfo>
 

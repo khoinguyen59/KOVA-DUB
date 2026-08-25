@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backends/SeparationBackend.h"
+#include "separation/backends/SeparationBackend.h"
 
 namespace LAStudio {
 

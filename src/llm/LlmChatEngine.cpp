@@ -1,8 +1,8 @@
 #include "LlmChatEngine.h"
 #include "runtimes/LlamaTranslationInterface.h"
-#include "runtimehost/RuntimeHostClient.h"
-#include "runtimehost/RuntimeHostManager.h"
-#include "remote/GatewayClient.h"
+#include "runtimehost/service/RuntimeHostClient.h"
+#include "runtimehost/service/RuntimeHostManager.h"
+#include "remote/gateway/GatewayClient.h"
 
 #include <QCoreApplication>
 #include <QDir>

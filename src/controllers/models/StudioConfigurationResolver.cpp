@@ -1,11 +1,11 @@
 #include "StudioConfigurationResolver.h"
 #include "controllers/app/AppController.h"
-#include "core/StudioCapabilityRegistry.h"
-#include "core/RegistryManager.h"
-#include "core/RuntimeManager.h"
-#include "core/ModelManager.h"
-#include "core/Settings.h"
-#include "core/Logger.h"
+#include "core/services/StudioCapabilityRegistry.h"
+#include "core/models/RegistryManager.h"
+#include "core/models/RuntimeManager.h"
+#include "core/models/ModelManager.h"
+#include "core/storage/Settings.h"
+#include "core/utils/Logger.h"
 #include <QVariantList>
 #include <QDir>
 #include <QFileInfo>

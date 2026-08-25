@@ -1,6 +1,6 @@
 #include "AudioTimelineRenderer.h"
 
-#include "audio/WavIO.h"
+#include "audio/io/WavIO.h"
 
 #include <QFile>
 #include <QFileInfo>

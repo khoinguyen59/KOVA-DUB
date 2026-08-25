@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dubbing/DubbingDuration.h"
+#include "dubbing/timing/DubbingDuration.h"
 #include "translation/backends/TranslationBackend.h"
-#include "translation/TranslationService.h"
+#include "translation/services/TranslationService.h"
 
 #include <QObject>
 #include <QPointer>

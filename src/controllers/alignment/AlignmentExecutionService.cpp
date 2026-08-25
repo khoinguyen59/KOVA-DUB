@@ -1,8 +1,8 @@
 #include "controllers/alignment/AlignmentExecutionService.h"
 
-#include "core/Logger.h"
-#include "core/ModelManager.h"
-#include "core/RuntimeManager.h"
+#include "core/utils/Logger.h"
+#include "core/models/ModelManager.h"
+#include "core/models/RuntimeManager.h"
 #include "controllers/alignment/AlignmentTranscriptMatcher.h"
 #include "SttAudioDecoder.h"
 #include "runtimes/CrispAlignmentInterface.h"

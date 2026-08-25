@@ -1,6 +1,6 @@
 #include "TranslationModelSession.h"
 #include "StudioConfigurationResolver.h"
-#include "translation/TranslationEngine.h"
+#include "translation/engine/TranslationEngine.h"
 #include <QFileInfo>
 
 namespace LAStudio {

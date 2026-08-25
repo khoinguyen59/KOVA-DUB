@@ -1,5 +1,5 @@
 #include "ModelLifecycleController.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 
 namespace LAStudio {
 

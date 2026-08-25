@@ -1,8 +1,8 @@
 #include "HistoryRepository.h"
 
-#include "core/Logger.h"
-#include "core/PathUtils.h"
-#include "audio/WavIO.h"
+#include "core/utils/Logger.h"
+#include "core/storage/PathUtils.h"
+#include "audio/io/WavIO.h"
 
 #include <QFile>
 #include <QSaveFile>

@@ -1,10 +1,10 @@
 #include "VoiceIsolatorController.h"
 #include "SourceSeparationService.h"
-#include "core/PathUtils.h"
+#include "core/storage/PathUtils.h"
 #include "controllers/app/AppController.h"
-#include "core/ModelManager.h"
-#include "core/RuntimeManager.h"
-#include "audio/WavIO.h"
+#include "core/models/ModelManager.h"
+#include "core/models/RuntimeManager.h"
+#include "audio/io/WavIO.h"
 
 #include <QDir>
 #include <QFile>

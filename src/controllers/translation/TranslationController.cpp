@@ -1,11 +1,11 @@
 #include "TranslationController.h"
 #include "TranslationModelSession.h"
-#include "core/Settings.h"
-#include "remote/ColabSession.h"
-#include "remote/ExecutionProvider.h"
-#include "translation/ColabTranslationRunner.h"
-#include "translation/GatewayTranslationRunner.h"
-#include "translation/TranslationService.h"
+#include "core/storage/Settings.h"
+#include "remote/colab/ColabSession.h"
+#include "remote/gateway/ExecutionProvider.h"
+#include "translation/runners/ColabTranslationRunner.h"
+#include "translation/runners/GatewayTranslationRunner.h"
+#include "translation/services/TranslationService.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>

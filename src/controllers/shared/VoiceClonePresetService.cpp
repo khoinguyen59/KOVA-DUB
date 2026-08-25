@@ -1,6 +1,6 @@
 #include "VoiceClonePresetService.h"
-#include "core/Logger.h"
-#include "core/PathUtils.h"
+#include "core/utils/Logger.h"
+#include "core/storage/PathUtils.h"
 
 #include <QDateTime>
 #include <QCryptographicHash>

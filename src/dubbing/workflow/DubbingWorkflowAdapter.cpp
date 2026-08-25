@@ -1,7 +1,7 @@
 #include "dubbing/workflow/DubbingWorkflowAdapter.h"
 
 #include "controllers/dubbing/DubbingJobRunner.h"
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 
 namespace LAStudio {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "workflows/WorkflowExecutionAdapter.h"
+#include "workflows/registry/WorkflowExecutionAdapter.h"
 
 #include <QString>
 

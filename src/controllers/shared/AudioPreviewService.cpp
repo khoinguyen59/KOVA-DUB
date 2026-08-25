@@ -1,11 +1,11 @@
 #include "AudioPreviewService.h"
 
-#include "core/PathUtils.h"
-#include "tts/TtsEngine.h"
-#include "audio/AudioPlayer.h"
-#include "audio/WaveformProvider.h"
-#include "audio/WavIO.h"
-#include "core/Logger.h"
+#include "core/storage/PathUtils.h"
+#include "tts/engine/TtsEngine.h"
+#include "audio/player/AudioPlayer.h"
+#include "audio/io/WaveformProvider.h"
+#include "audio/io/WavIO.h"
+#include "core/utils/Logger.h"
 
 #include <QThreadPool>
 #include <QMetaObject>

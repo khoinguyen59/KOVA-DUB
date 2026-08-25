@@ -1,4 +1,4 @@
-#include "stt/SttEngine.h"
+#include "stt/engine/SttEngine.h"
 #include <QTimer>
 
 namespace LAStudio {

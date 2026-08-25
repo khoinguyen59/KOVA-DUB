@@ -1,12 +1,12 @@
 #include "SubtitleVoiceController.h"
 
-#include "audio/AudioPlayer.h"
-#include "audio/WavIO.h"
+#include "audio/player/AudioPlayer.h"
+#include "audio/io/WavIO.h"
 #include "controllers/shared/HistoryService.h"
-#include "core/PathUtils.h"
-#include "subtitles/SrtTimelineParser.h"
-#include "tts/TimedSpeechPipeline.h"
-#include "tts/TtsEngine.h"
+#include "core/storage/PathUtils.h"
+#include "subtitles/cues/SrtTimelineParser.h"
+#include "tts/pipeline/TimedSpeechPipeline.h"
+#include "tts/engine/TtsEngine.h"
 
 #include <QFile>
 #include <QFileInfo>

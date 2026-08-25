@@ -1,6 +1,6 @@
 #pragma once
 
-#include "workflows/WorkflowGraph.h"
+#include "workflows/graph/WorkflowGraph.h"
 
 namespace LAStudio {
 

@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <cstring>
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 #include "runtimes/WindowsDllSearch.h"
 
 #ifdef Q_OS_WIN

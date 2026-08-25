@@ -8,8 +8,8 @@
 #include <QThread>
 #include <atomic>
 #include <memory>
-#include "core/StudioSelectionRepository.h"
-#include "remote/ExecutionProvider.h"
+#include "core/storage/StudioSelectionRepository.h"
+#include "remote/gateway/ExecutionProvider.h"
 #include "SttAudioDecoder.h"
 
 namespace LAStudio {

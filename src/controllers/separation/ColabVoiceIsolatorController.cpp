@@ -1,10 +1,10 @@
 #include "ColabVoiceIsolatorController.h"
 
-#include "audio/AudioFileDecoder.h"
-#include "core/PathUtils.h"
-#include "core/Settings.h"
-#include "remote/ColabSession.h"
-#include "separation/ColabSeparationRunner.h"
+#include "audio/io/AudioFileDecoder.h"
+#include "core/storage/PathUtils.h"
+#include "core/storage/Settings.h"
+#include "remote/colab/ColabSession.h"
+#include "separation/runners/ColabSeparationRunner.h"
 
 #include <QDir>
 #include <QFile>

@@ -7,8 +7,8 @@
 #include <QtQml/qqml.h>
 #include "controllers/app/IStudioAction.h"
 #include "IModelSession.h"
-#include "core/CapabilityFamilyModel.h"
-#include "core/StudioSelectionRepository.h"
+#include "core/models/CapabilityFamilyModel.h"
+#include "core/storage/StudioSelectionRepository.h"
 
 namespace LAStudio {
 

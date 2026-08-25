@@ -15,23 +15,23 @@
 #include <cstdio>
 
 #include "lastudio/AppVersion.h"
-#include "core/Logger.h"
-#include "core/CrashHandler.h"
-#include "core/QmlLogger.h"
+#include "core/utils/Logger.h"
+#include "core/utils/CrashHandler.h"
+#include "core/utils/QmlLogger.h"
 #include "controllers/app/AppController.h"
 #include "controllers/app/StudioSessionViewModel.h"
-#include "core/Settings.h"
-#include "core/HFHubClient.h"
-#include "core/DownloadManager.h"
-#include "core/ModelManager.h"
-#include "core/CatalogManager.h"
-#include "core/VoiceCloningUtils.h"
-#include "stt/SttEngine.h"
-#include "tts/TtsEngine.h"
-#include "audio/AudioRecorder.h"
-#include "audio/AudioPlayer.h"
-#include "audio/WaveformProvider.h"
-#include "core/HardwareManager.h"
+#include "core/storage/Settings.h"
+#include "core/models/HFHubClient.h"
+#include "core/models/DownloadManager.h"
+#include "core/models/ModelManager.h"
+#include "core/models/CatalogManager.h"
+#include "core/utils/VoiceCloningUtils.h"
+#include "stt/engine/SttEngine.h"
+#include "tts/engine/TtsEngine.h"
+#include "audio/player/AudioRecorder.h"
+#include "audio/player/AudioPlayer.h"
+#include "audio/io/WaveformProvider.h"
+#include "core/hardware/HardwareManager.h"
 
 
 #include <QtQml/qqml.h>
@@ -102,15 +102,20 @@ int main(int argc, char *argv[])
     }
     LAStudio::Logger::info("App", "Application starting...");
 
-    // Establish the hardware singleton on the GUI thread before QML or worker
-    // services can access it. GPU discovery itself remains asynchronous.
+    // Establish singletons on the GUI thread before QML or worker
+    // services can access them. GPU discovery itself remains asynchronous.
     LAStudio::HardwareManager::instance();
+    auto *controller = LAStudio::AppController::create(nullptr, nullptr);
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QQmlApplicationEngine engine;
     engine.addImportPath(QStringLiteral("qrc:/"));
- 
+
+    if (controller) {
+        controller->localization()->setEngine(&engine);
+        engine.addImageProvider(QStringLiteral("waveform"), controller->waveformProvider());
+    }
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
@@ -150,11 +155,6 @@ int main(int argc, char *argv[])
         QTimer::singleShot(0, root, [root] {
             QMetaObject::invokeMethod(root, "startQmlRouteSmoke");
         });
-    }
-
-    if (auto *controller = LAStudio::AppController::instance()) {
-        controller->localization()->setEngine(&engine);
-        engine.addImageProvider(QStringLiteral("waveform"), controller->waveformProvider());
     }
 
     const int exitCode = app.exec();

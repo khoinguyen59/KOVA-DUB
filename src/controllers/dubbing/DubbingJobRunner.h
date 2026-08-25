@@ -10,7 +10,7 @@
 #include <QPointer>
 #include <QThread>
 #include <atomic>
-#include "separation/SeparationTypes.h"
+#include "separation/io/SeparationTypes.h"
 #include "controllers/dubbing/DubbingRunCoordinator.h"
 
 namespace LAStudio {

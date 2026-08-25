@@ -1,7 +1,7 @@
 #pragma once
 
-#include "remote/ColabCapabilityCatalog.h"
-#include "remote/GatewayModelCatalog.h"
+#include "remote/colab/ColabCapabilityCatalog.h"
+#include "remote/gateway/GatewayModelCatalog.h"
 
 #include <QFutureWatcher>
 #include <QMap>

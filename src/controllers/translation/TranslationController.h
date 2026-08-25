@@ -1,7 +1,7 @@
 #pragma once
 
-#include "translation/TranslationEngine.h"
-#include "translation/TranslationProject.h"
+#include "translation/engine/TranslationEngine.h"
+#include "translation/services/TranslationProject.h"
 
 #include <QObject>
 #include <QThread>

@@ -3,7 +3,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
-#include "core/StudioSelectionRepository.h"
+#include "core/storage/StudioSelectionRepository.h"
 
 namespace LAStudio {
 

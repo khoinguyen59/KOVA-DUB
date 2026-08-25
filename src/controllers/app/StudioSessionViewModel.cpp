@@ -2,11 +2,11 @@
 #include "controllers/app/AppController.h"
 #include "controllers/models/ModelSessionRegistry.h"
 #include "controllers/models/IModelSession.h"
-#include "core/StudioCapabilityRegistry.h"
+#include "core/services/StudioCapabilityRegistry.h"
 #include "controllers/models/StudioConfigurationResolver.h"
-#include "core/Logger.h"
-#include "core/RegistryManager.h"
-#include "core/HardwareManager.h"
+#include "core/utils/Logger.h"
+#include "core/models/RegistryManager.h"
+#include "core/hardware/HardwareManager.h"
 #include <QFileInfo>
 #include <QTimer>
 

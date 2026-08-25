@@ -7,14 +7,15 @@
 #include <QTemporaryDir>
 #include <memory>
 
-#include "separation/SourceSeparationService.h"
-#include "separation/SeparationTypes.h"
+#include "separation/engine/SourceSeparationService.h"
+#include "separation/io/SeparationTypes.h"
 
 namespace LAStudio {
 
-class VoiceIsolatorController final : public QObject
+class VoiceIsolatorController : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     QML_UNCREATABLE("VoiceIsolatorController is managed by AppController")
     Q_PROPERTY(QString sourcePath READ sourcePath WRITE setSourcePath NOTIFY stateChanged)
     Q_PROPERTY(QString runtimePath READ runtimePath WRITE setRuntimePath NOTIFY stateChanged)

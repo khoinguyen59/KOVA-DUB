@@ -3,13 +3,13 @@
 #include "controllers/app/AppController.h"
 #include "controllers/models/ModelSessionRegistry.h"
 
-#include "core/Settings.h"
-#include "core/ModelManager.h"
-#include "core/DownloadManager.h"
-#include "core/PathUtils.h"
-#include "stt/SttEngine.h"
-#include "tts/TtsEngine.h"
-#include "core/Logger.h"
+#include "core/storage/Settings.h"
+#include "core/models/ModelManager.h"
+#include "core/models/DownloadManager.h"
+#include "core/storage/PathUtils.h"
+#include "stt/engine/SttEngine.h"
+#include "tts/engine/TtsEngine.h"
+#include "core/utils/Logger.h"
 
 #include <QDir>
 #include <QThreadPool>

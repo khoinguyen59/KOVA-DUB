@@ -1,4 +1,4 @@
-#include "audio/AudioPlayer.h"
+#include "audio/player/AudioPlayer.h"
 
 namespace LAStudio {
 

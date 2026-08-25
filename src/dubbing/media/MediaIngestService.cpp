@@ -1,7 +1,7 @@
 #include "dubbing/media/MediaIngestService.h"
 
-#include "core/MediaRuntimeLocator.h"
-#include "core/PathUtils.h"
+#include "core/services/MediaRuntimeLocator.h"
+#include "core/storage/PathUtils.h"
 
 #include <QCryptographicHash>
 #include <QDir>

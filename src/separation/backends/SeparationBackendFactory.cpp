@@ -1,5 +1,5 @@
 #include "SeparationBackendFactory.h"
-#include "sherpa/SherpaOnnxSeparationBackend.h"
+#include "separation/backends/sherpa/SherpaOnnxSeparationBackend.h"
 
 namespace LAStudio {
 

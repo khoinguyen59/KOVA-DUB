@@ -5,7 +5,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <stdint.h>
-#include "core/Logger.h"
+#include "core/utils/Logger.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
