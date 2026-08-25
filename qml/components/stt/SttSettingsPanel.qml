@@ -21,7 +21,9 @@ Rectangle {
     property var advancedSchema: []
     property var studioConfig: ({})
     property bool advancedOpen: false
+    property string activeOptionTab: "colab" // "colab", "gateway"
     readonly property bool hasLanguageInput: studioConfig && studioConfig.inputs ? studioConfig.inputs.indexOf("language") !== -1 : true
+
     component ColabField: TextField {
         Layout.fillWidth: true
         color: Theme.textPrimary
@@ -36,7 +38,6 @@ Rectangle {
             border.width: parent.activeFocus ? 2 : 1
         }
     }
-
 
     signal closeRequested()
 
@@ -133,215 +134,228 @@ Rectangle {
     }
 
     ColumnLayout {
-        width: 300 // Keep internal width fixed to avoid layout jumping
-        height: parent.height
-        anchors.left: parent.left
-        anchors.margins: 0
-        
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.margins: Theme.paddingLarge
-            spacing: Theme.paddingLarge
+        anchors.fill: parent
+        anchors.margins: Theme.paddingMedium
+        spacing: Theme.paddingMedium
 
-            RowLayout {
-                Layout.fillWidth: true
-                Text {
-                    text: qsTr("Model Settings")
-                    color: Theme.textPrimary
-                    font.pixelSize: Theme.fontLarge
-                    font.bold: true
-                    Layout.fillWidth: true
-                }
-                
-                Button {
-                    id: closeButton
-                    Layout.preferredWidth: 32
-                    Layout.preferredHeight: 32
-                    flat: true
-                    onClicked: root.closeRequested()
-                    contentItem: LineIcon {
-                        name: "close"
-                        color: Theme.textSecondary
-                        anchors.centerIn: parent
-                        width: 14; height: 14
-                    }
-                    background: Rectangle {
-                        radius: 16
-                        color: closeButton.hovered ? Qt.rgba(1,1,1,0.05) : "transparent"
-                    }
-                }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+
+            LineIcon {
+                name: "settings"
+                color: Theme.accentLight
+                Layout.preferredWidth: Theme.iconSize
+                Layout.preferredHeight: Theme.iconSize
             }
 
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.surfaceAlt }
-
-            ScrollView {
-                id: sttSettingsScroll
+            Text {
+                text: qsTr("Model Settings")
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontLarge
+                font.bold: true
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+            }
 
-                ColumnLayout {
-                    width: sttSettingsScroll.availableWidth
-                    spacing: Theme.paddingMedium
-
-                    SettingsSection {
-                        title: qsTr("Core")
-                        iconName: "file"
-                        visible: root.hasLanguageInput
-
-                        LanguageSelector {
-                            id: langSelector
-                            Layout.fillWidth: true
-                            family: root.family
-                            hasLanguageInput: root.hasLanguageInput
-                            useTextFieldFallback: true
-                            language: root.sttSession ? root.sttSession.language : "auto"
-                            onLanguageSelected: function(language) {
-                                if (root.sttSession && root.sttSession.language !== language) {
-                                    root.sttSession.language = language
-                                }
-                            }
-                        }
-                    }
-
-                    SettingsSection {
-                        title: qsTr("Colab GPU Worker")
-                        iconName: "cloud"
-
-                        Text { Layout.fillWidth: true; text: qsTr("This direct temporary worker is independent of API Gateway."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.sttSession && root.sttSession.colabModel !== ""
-                                  ? qsTr("Selected Colab model: %1").arg(root.sttSession.colabModel)
-                                  : qsTr("No Colab model selected. Open Load Model and use Select for Colab.")
-                            color: root.sttSession && root.sttSession.colabModel !== "" ? Theme.success : Theme.warning
-                            font.pixelSize: Theme.fontSmall
-                            font.bold: true
-                            wrapMode: Text.WordWrap
-                        }
-                        ColabNotebookLink {
-                            notebookFile: root.sttSession ? root.sttSession.colabNotebookFile : ""
-                        }
-                        Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                        ColabField {
-                            id: colabUrl
-                            text: AppController.colabSttSession.workerUrl
-                            placeholderText: qsTr("https://….trycloudflare.com")
-                        }
-                        Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                        ColabField {
-                            id: colabToken
-                            echoMode: TextInput.Password
-                            placeholderText: root.sttSession && root.sttSession.colabActive ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab")
-                        }
-                        ColabSessionStatus {
-                            session: AppController.colabSttSession
-                        }
-                        PrimaryButton {
-                            Layout.fillWidth: true
-                            text: AppController.colabSttSession.checking
-                                  ? qsTr("Verifying CUDA and exact model...")
-                                  : (root.sttSession && root.sttSession.colabActive
-                                     ? qsTr("Using Colab GPU")
-                                     : qsTr("Use or connect Colab GPU"))
-                            iconName: root.sttSession && root.sttSession.colabActive ? "check" : "cloud"
-                            enabled: root.sttSession && root.sttSession.colabModel !== ""
-                                     && !AppController.colabSttSession.checking
-                            onClicked: {
-                                if (!root.sttSession) return
-                                if (root.sttSession.colabPaired) {
-                                    root.sttSession.useColab()
-                                } else if (root.sttSession.connectColab(colabUrl.text.trim(), colabToken.text)) {
-                                    colabToken.text = ""
-                                }
-                            }
-                        }
-                        PrimaryButton {
-                            Layout.fillWidth: true
-                            visible: root.sttSession && root.sttSession.colabPaired
-                            text: qsTr("Disconnect Colab worker")
-                            iconName: "close"
-                            quiet: true
-                            onClicked: if (root.sttSession) root.sttSession.disconnectColab()
-                        }
-                    }
-
-                    SettingsSection {
-                        title: qsTr("API Gateway STT")
-                        iconName: "cloud"
-
-                        Text { Layout.fillWidth: true; text: qsTr("This is a separate Gateway path and never uses the Colab session."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                        Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                        ColabField {
-                            text: AppController.settings.gatewayUrl
-                            placeholderText: qsTr("https://gateway.example/v1")
-                            onEditingFinished: AppController.settings.gatewayUrl = text.trim()
-                        }
-                        Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                        ColabField {
-                            id: gatewayKey
-                            echoMode: TextInput.Password
-                            placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
-                            onEditingFinished: {
-                                if (text.trim() !== "") {
-                                    AppController.settings.setGatewayApiKey(text)
-                                    text = ""
-                                }
-                            }
-                        }
-                        Text { text: qsTr("STT model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                        ColabField {
-                            text: root.sttSession ? root.sttSession.gatewayModel : ""
-                            placeholderText: qsTr("Gateway STT model ID")
-                            onEditingFinished: if (root.sttSession) root.sttSession.gatewayModel = text.trim()
-                        }
-                        PrimaryButton {
-                            Layout.fillWidth: true
-                            text: root.sttSession && root.sttSession.gatewayActive ? qsTr("Disconnect API Gateway") : qsTr("Use API Gateway STT")
-                            iconName: root.sttSession && root.sttSession.gatewayActive ? "close" : "cloud"
-                            onClicked: {
-                                if (!root.sttSession) return
-                                if (root.sttSession.gatewayActive) root.sttSession.disconnectGateway()
-                                else root.sttSession.useGateway()
-                            }
-                        }
-                    }
-
-                    SettingsSection {
-                        title: qsTr("Model Parameters")
-                        iconName: "sliders"
-                        visible: root.basicSchema.length > 0
-
-                        ModelParameterControls {
-                            schema: root.basicSchema
-                            dynamicSettings: root.dynamicSettings
-                            onParameterChanged: function(parameterId, value) {
-                                root.updateDynamicSetting(parameterId, value)
-                            }
-                        }
-                    }
-
-                    CollapsibleSettingsSection {
-                        title: qsTr("Advanced")
-                        iconName: "sliders"
-                        visible: root.advancedSchema.length > 0
-                        expanded: root.advancedOpen
-                        onToggled: root.advancedOpen = !root.advancedOpen
-
-                        ModelParameterControls {
-                            schema: root.advancedSchema
-                            dynamicSettings: root.dynamicSettings
-                            onParameterChanged: function(parameterId, value) {
-                                root.updateDynamicSetting(parameterId, value)
-                            }
-                        }
-                    }
-
-                    Item { Layout.fillHeight: true }
+            Button {
+                id: closeBtn
+                implicitWidth: 28
+                implicitHeight: 28
+                flat: true
+                contentItem: LineIcon {
+                    name: "close"
+                    color: closeBtn.hovered ? Theme.textPrimary : Theme.textSecondary
+                    anchors.centerIn: parent
+                    width: 14
+                    height: 14
                 }
+                background: Rectangle {
+                    color: closeBtn.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                    radius: Theme.radiusSmall
+                }
+                onClicked: root.closeRequested()
+            }
+        }
+
+        ScrollView {
+            id: sttSettingsScroll
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+            ColumnLayout {
+                width: sttSettingsScroll.availableWidth
+                spacing: Theme.paddingMedium
+
+                // Route Option Switcher
+                StudioOptionSwitcher {
+                    Layout.fillWidth: true
+                    activeId: root.activeOptionTab
+                    options: [
+                        { id: "colab", label: qsTr("Colab GPU"), icon: "cloud" },
+                        { id: "gateway", label: qsTr("API Gateway"), icon: "globe" }
+                    ]
+                    onOptionSelected: function(id) { root.activeOptionTab = id }
+                }
+
+                SettingsSection {
+                    title: qsTr("Language")
+                    iconName: "file"
+                    visible: root.hasLanguageInput
+
+                    LanguageSelector {
+                        id: langSelector
+                        Layout.fillWidth: true
+                        family: root.family
+                        hasLanguageInput: root.hasLanguageInput
+                        useTextFieldFallback: true
+                        language: root.sttSession ? root.sttSession.language : "auto"
+                        onLanguageSelected: function(language) {
+                            if (root.sttSession && root.sttSession.language !== language) {
+                                root.sttSession.language = language
+                            }
+                        }
+                    }
+                }
+
+                SettingsSection {
+                    title: qsTr("Colab GPU Worker")
+                    iconName: "cloud"
+                    visible: root.activeOptionTab === "colab"
+
+                    Text { Layout.fillWidth: true; text: qsTr("This direct temporary worker is independent of API Gateway."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.sttSession && root.sttSession.colabModel !== ""
+                              ? qsTr("Selected Colab model: %1").arg(root.sttSession.colabModel)
+                              : qsTr("No Colab model selected. Open Load Model and use Select for Colab.")
+                        color: root.sttSession && root.sttSession.colabModel !== "" ? Theme.success : Theme.warning
+                        font.pixelSize: Theme.fontSmall
+                        font.bold: true
+                        wrapMode: Text.WordWrap
+                    }
+                    ColabNotebookLink {
+                        notebookFile: root.sttSession ? root.sttSession.colabNotebookFile : ""
+                    }
+                    Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    ColabField {
+                        id: colabUrl
+                        text: AppController.colabSttSession.workerUrl
+                        placeholderText: qsTr("https://….trycloudflare.com")
+                    }
+                    Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    ColabField {
+                        id: colabToken
+                        echoMode: TextInput.Password
+                        placeholderText: root.sttSession && root.sttSession.colabActive ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab")
+                    }
+                    ColabSessionStatus {
+                        session: AppController.colabSttSession
+                    }
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: AppController.colabSttSession.checking
+                              ? qsTr("Verifying CUDA and exact model...")
+                              : (root.sttSession && root.sttSession.colabActive
+                                 ? qsTr("Using Colab GPU")
+                                 : qsTr("Use or connect Colab GPU"))
+                        iconName: root.sttSession && root.sttSession.colabActive ? "check" : "cloud"
+                        enabled: root.sttSession && root.sttSession.colabModel !== ""
+                                 && !AppController.colabSttSession.checking
+                        onClicked: {
+                            if (!root.sttSession) return
+                            if (root.sttSession.colabPaired) {
+                                root.sttSession.useColab()
+                            } else if (root.sttSession.connectColab(colabUrl.text.trim(), colabToken.text)) {
+                                colabToken.text = ""
+                            }
+                        }
+                    }
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        visible: root.sttSession && root.sttSession.colabPaired
+                        text: qsTr("Disconnect Colab worker")
+                        iconName: "close"
+                        quiet: true
+                        onClicked: if (root.sttSession) root.sttSession.disconnectColab()
+                    }
+                }
+
+                SettingsSection {
+                    title: qsTr("API Gateway STT")
+                    iconName: "globe"
+                    visible: root.activeOptionTab === "gateway"
+
+                    Text { Layout.fillWidth: true; text: qsTr("This is a separate Gateway path and never uses the Colab session."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
+                    Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    ColabField {
+                        text: AppController.settings.gatewayUrl
+                        placeholderText: qsTr("https://gateway.example/v1")
+                        onEditingFinished: AppController.settings.gatewayUrl = text.trim()
+                    }
+                    Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    ColabField {
+                        id: gatewayKey
+                        echoMode: TextInput.Password
+                        placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
+                        onEditingFinished: {
+                            if (text.trim() !== "") {
+                                AppController.settings.setGatewayApiKey(text)
+                                text = ""
+                            }
+                        }
+                    }
+                    Text { text: qsTr("STT model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    ColabField {
+                        text: root.sttSession ? root.sttSession.gatewayModel : ""
+                        placeholderText: qsTr("Gateway STT model ID")
+                        onEditingFinished: if (root.sttSession) root.sttSession.gatewayModel = text.trim()
+                    }
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: root.sttSession && root.sttSession.gatewayActive ? qsTr("Disconnect API Gateway") : qsTr("Use API Gateway STT")
+                        iconName: root.sttSession && root.sttSession.gatewayActive ? "close" : "cloud"
+                        onClicked: {
+                            if (!root.sttSession) return
+                            if (root.sttSession.gatewayActive) root.sttSession.disconnectGateway()
+                            else root.sttSession.useGateway()
+                        }
+                    }
+                }
+
+                SettingsSection {
+                    title: qsTr("Model Parameters")
+                    iconName: "sliders"
+                    visible: root.basicSchema.length > 0
+
+                    ModelParameterControls {
+                        schema: root.basicSchema
+                        dynamicSettings: root.dynamicSettings
+                        onParameterChanged: function(parameterId, value) {
+                            root.updateDynamicSetting(parameterId, value)
+                        }
+                    }
+                }
+
+                CollapsibleSettingsSection {
+                    title: qsTr("Advanced")
+                    iconName: "sliders"
+                    visible: root.advancedSchema.length > 0
+                    expanded: root.advancedOpen
+                    onToggled: root.advancedOpen = !root.advancedOpen
+
+                    ModelParameterControls {
+                        schema: root.advancedSchema
+                        dynamicSettings: root.dynamicSettings
+                        onParameterChanged: function(parameterId, value) {
+                            root.updateDynamicSetting(parameterId, value)
+                        }
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
             }
         }
     }

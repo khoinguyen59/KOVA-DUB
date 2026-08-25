@@ -633,6 +633,7 @@ qt_add_qml_module(LAStudio
         qml/components/shared/settings/LanguageSelector.qml
         qml/components/shared/settings/ModelParameterControls.qml
         qml/components/shared/settings/SettingsSection.qml
+        qml/components/shared/settings/StudioOptionSwitcher.qml
         qml/components/shared/settings/ParameterSlider.qml
         qml/components/shared/settings/ToggleRow.qml
         qml/components/shared/settings/FieldLabel.qml

@@ -690,9 +690,9 @@
     "semantic_hash": ""
   },
   "i18n/lastudio_vi.ts": {
-    "mtime": 1787687801.3326023,
-    "seen": 1787687975.9698055,
-    "ast_hash": "8d9ef96dc8aa579c76aa6c5b9758398c",
+    "mtime": 1787691383.7011216,
+    "seen": 1787691472.474066,
+    "ast_hash": "3b4d59339b1845776bcadeaa6725ebbf",
     "semantic_hash": ""
   },
   "include/runtimes/CrispAlignmentInterface.h": {
@@ -3276,9 +3276,9 @@
     "semantic_hash": ""
   },
   "CMakeLists.txt": {
-    "mtime": 1787685522.5089874,
-    "seen": 1787686997.6193795,
-    "ast_hash": "1b366672399a6d6af388184ea10b3c3c",
+    "mtime": 1787691931.3198936,
+    "seen": 1787692460.7620962,
+    "ast_hash": "e1a09ba6a5f382456667219aabe37838",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -6225,6 +6225,12 @@
     "mtime": 1787563435.0,
     "seen": 1787686997.60447,
     "ast_hash": "80206f71c32150d504f7b3d48a45007b",
+    "semantic_hash": ""
+  },
+  "PRE_DELIVERY_CHECKLIST.md": {
+    "mtime": 1787692403.4625509,
+    "seen": 1787692460.7626493,
+    "ast_hash": "beca94865a0289554e865ba6aabb8a63",
     "semantic_hash": ""
   }
 }

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import LAStudio
 import "../shared"
+import "../shared/settings"
 import "../base"
 
 StudioShell {
@@ -121,6 +122,8 @@ StudioShell {
         }
     ]
 
+    property string activeOptionTab: "gateway" // "gateway", "colab"
+
     settingsContent: [
         ScrollView {
             id: llmSettingsScroll
@@ -146,103 +149,124 @@ StudioShell {
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
 
+                // Route Option Switcher
+                StudioOptionSwitcher {
+                    Layout.fillWidth: true
+                    activeId: root.activeOptionTab
+                    options: [
+                        { id: "gateway", label: qsTr("9Router Gateway"), icon: "globe" },
+                        { id: "colab", label: qsTr("Colab GPU"), icon: "cloud" }
+                    ]
+                    onOptionSelected: function(id) { root.activeOptionTab = id }
+                }
+
+                // 9Router Gateway Section
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+                    visible: root.activeOptionTab === "gateway"
+
+                    Text { text: qsTr("Inference source"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
+                    Text { Layout.fillWidth: true; text: qsTr("9Router is an independent API path. It does not start or connect to Colab."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: Theme.fontSmall }
+                    Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    NumberField {
+                        Layout.fillWidth: true
+                        text: AppController.settings.gatewayUrl
+                        placeholderText: qsTr("https://gateway.example/v1")
+                        onEditingFinished: AppController.settings.gatewayUrl = text.trim()
+                    }
+                    Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    NumberField {
+                        id: gatewayKey
+                        Layout.fillWidth: true
+                        echoMode: TextInput.Password
+                        placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
+                        onEditingFinished: {
+                            if (text.trim() !== "") {
+                                AppController.settings.setGatewayApiKey(text)
+                                text = ""
+                            }
+                        }
+                    }
+                    Text { text: qsTr("Chat model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    NumberField {
+                        Layout.fillWidth: true
+                        text: chat.gatewayModel
+                        placeholderText: qsTr("Model ID exposed by 9Router")
+                        onEditingFinished: chat.gatewayModel = text.trim()
+                    }
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: chat.gatewayActive ? qsTr("Using 9Router") : qsTr("Use 9Router")
+                        iconName: "cloud"
+                        enabled: !chat.generating && !chat.gatewayActive
+                        onClicked: chat.useGateway()
+                    }
+                }
+
+                // Colab GPU Worker Section
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+                    visible: root.activeOptionTab === "colab"
+
+                    Text { text: qsTr("Colab GPU Worker"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
+                    Text { Layout.fillWidth: true; text: qsTr("Direct temporary worker. URL and token are independent from API Gateway."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: Theme.fontSmall }
+                    ColabNotebookLink { notebookFile: chat.colabNotebookFile }
+                    Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    NumberField { id: colabUrl; Layout.fillWidth: true; text: AppController.colabChatSession.workerUrl; placeholderText: qsTr("https://…trycloudflare.com") }
+                    Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    NumberField { id: colabToken; Layout.fillWidth: true; echoMode: TextInput.Password; placeholderText: chat.colabActive ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab") }
+                    ColabSessionStatus { session: AppController.colabChatSession }
+                    Text { text: qsTr("Selected Colab model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    Text { Layout.fillWidth: true; text: chat.colabModel; color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WrapAnywhere }
+                    Text { text: qsTr("Exact notebook"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    Text { Layout.fillWidth: true; text: chat.colabNotebookFile; color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WrapAnywhere }
+                    PrimaryButton {
+                        Layout.fillWidth: true
+                        text: AppController.colabChatSession.checking
+                              ? qsTr("Verifying CUDA and exact model...")
+                              : (chat.colabActive ? qsTr("Using Colab GPU") : qsTr("Connect Colab GPU"))
+                        iconName: "cloud"
+                        enabled: !chat.generating && !AppController.colabChatSession.checking
+                        onClicked: {
+                            if (chat.colabActive) chat.useColab()
+                            else if (chat.connectColab(colabUrl.text.trim(), colabToken.text)) colabToken.text = ""
+                        }
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+
+                // System Prompt Section
                 Text { text: qsTr("System prompt"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
-                Text { Layout.fillWidth: true; text: qsTr("Optional instructions applied before the conversation."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: Theme.fontSmall }
                 AppTextArea {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 92
+                    Layout.preferredHeight: 76
                     text: chat.systemPrompt
                     placeholderText: qsTr("Optional instructions")
                     onTextChanged: if (!activeFocus || text !== chat.systemPrompt) chat.systemPrompt = text
                 }
 
-                Text { text: qsTr("Generation limits"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 2
-                    columnSpacing: Theme.paddingSmall
-                    rowSpacing: Theme.paddingSmall
-                    Text { text: qsTr("Context"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
-                    NumberField { text: chat.contextTokens.toString(); Layout.preferredWidth: 108; inputMethodHints: Qt.ImhDigitsOnly; onEditingFinished: chat.contextTokens = parseInt(text) || 4096 }
-                    Text { text: qsTr("Max output"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
-                    NumberField { text: chat.maxTokens.toString(); Layout.preferredWidth: 108; inputMethodHints: Qt.ImhDigitsOnly; onEditingFinished: chat.maxTokens = parseInt(text) || 1024 }
-                }
+                // Collapsible Sampling Controls
+                CollapsibleSettingsSection {
+                    title: qsTr("Sampling & Limits")
+                    iconName: "sliders"
+                    expanded: false
 
-                Text { text: qsTr("Sampling"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 2
-                    columnSpacing: Theme.paddingSmall
-                    rowSpacing: Theme.paddingSmall
-                    Text { text: qsTr("Temperature"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
-                    NumberField { text: chat.temperature.toFixed(2); Layout.preferredWidth: 108; onEditingFinished: chat.temperature = parseFloat(text) || 0.7 }
-                    Text { text: qsTr("Top P"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
-                    NumberField { text: chat.topP.toFixed(2); Layout.preferredWidth: 108; onEditingFinished: chat.topP = parseFloat(text) || 0.8 }
-                    Text { text: qsTr("Top K"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
-                    NumberField { text: chat.topK.toString(); Layout.preferredWidth: 108; inputMethodHints: Qt.ImhDigitsOnly; onEditingFinished: chat.topK = parseInt(text) || 20 }
-                }
-
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
-                Text { text: qsTr("Inference source"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
-                Text { Layout.fillWidth: true; text: qsTr("9Router is an independent API path. It does not start or connect to Colab."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: Theme.fontSmall }
-                Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                NumberField {
-                    Layout.fillWidth: true
-                    text: AppController.settings.gatewayUrl
-                    placeholderText: qsTr("https://gateway.example/v1")
-                    onEditingFinished: AppController.settings.gatewayUrl = text.trim()
-                }
-                Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                NumberField {
-                    id: gatewayKey
-                    Layout.fillWidth: true
-                    echoMode: TextInput.Password
-                    placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
-                    onEditingFinished: {
-                        if (text.trim() !== "") {
-                            AppController.settings.setGatewayApiKey(text)
-                            text = ""
-                        }
-                    }
-                }
-                Text { text: qsTr("Chat model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                NumberField {
-                    Layout.fillWidth: true
-                    text: chat.gatewayModel
-                    placeholderText: qsTr("Model ID exposed by 9Router")
-                    onEditingFinished: chat.gatewayModel = text.trim()
-                }
-                PrimaryButton {
-                    Layout.fillWidth: true
-                    text: chat.gatewayActive ? qsTr("Using 9Router") : qsTr("Use 9Router")
-                    iconName: "cloud"
-                    enabled: !chat.generating && !chat.gatewayActive
-                    onClicked: chat.useGateway()
-                }
-
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
-                Text { text: qsTr("Colab GPU Worker"); color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; font.bold: true }
-                Text { Layout.fillWidth: true; text: qsTr("This direct temporary worker has its own URL and token. It does not use, start, or forward through API Gateway."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: Theme.fontSmall }
-                ColabNotebookLink { notebookFile: chat.colabNotebookFile }
-                Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                NumberField { id: colabUrl; Layout.fillWidth: true; text: AppController.colabChatSession.workerUrl; placeholderText: qsTr("https://…trycloudflare.com") }
-                Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                NumberField { id: colabToken; Layout.fillWidth: true; echoMode: TextInput.Password; placeholderText: chat.colabActive ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab") }
-                ColabSessionStatus { session: AppController.colabChatSession }
-                Text { text: qsTr("Selected Colab model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                Text { Layout.fillWidth: true; text: chat.colabModel; color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WrapAnywhere }
-                Text { text: qsTr("Exact notebook"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                Text { Layout.fillWidth: true; text: chat.colabNotebookFile; color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WrapAnywhere }
-                PrimaryButton {
-                    Layout.fillWidth: true
-                    text: AppController.colabChatSession.checking
-                          ? qsTr("Verifying CUDA and exact model...")
-                          : (chat.colabActive ? qsTr("Using Colab GPU") : qsTr("Connect Colab GPU"))
-                    iconName: "cloud"
-                    enabled: !chat.generating && !AppController.colabChatSession.checking
-                    onClicked: {
-                        if (chat.colabActive) chat.useColab()
-                        else if (chat.connectColab(colabUrl.text.trim(), colabToken.text)) colabToken.text = ""
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        columnSpacing: Theme.paddingSmall
+                        rowSpacing: Theme.paddingSmall
+                        Text { text: qsTr("Context"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
+                        NumberField { text: chat.contextTokens.toString(); Layout.preferredWidth: 108; inputMethodHints: Qt.ImhDigitsOnly; onEditingFinished: chat.contextTokens = parseInt(text) || 4096 }
+                        Text { text: qsTr("Max output"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
+                        NumberField { text: chat.maxTokens.toString(); Layout.preferredWidth: 108; inputMethodHints: Qt.ImhDigitsOnly; onEditingFinished: chat.maxTokens = parseInt(text) || 1024 }
+                        Text { text: qsTr("Temperature"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
+                        NumberField { text: chat.temperature.toFixed(2); Layout.preferredWidth: 108; onEditingFinished: chat.temperature = parseFloat(text) || 0.7 }
+                        Text { text: qsTr("Top P"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; Layout.fillWidth: true }
+                        NumberField { text: chat.topP.toFixed(2); Layout.preferredWidth: 108; onEditingFinished: chat.topP = parseFloat(text) || 0.8 }
                     }
                 }
 

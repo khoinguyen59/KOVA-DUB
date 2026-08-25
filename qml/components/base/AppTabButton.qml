@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import LAStudio
 
 Rectangle {
@@ -12,31 +13,29 @@ Rectangle {
 
     signal clicked()
 
-    implicitWidth: tabText.implicitWidth + Theme.paddingMedium * 2 + (tabIcon.visible || tabEmoji.visible ? 20 : 0)
+    implicitWidth: Math.max(76, contentRow.implicitWidth + Theme.paddingMedium * 2)
     implicitHeight: 34
     radius: 7
     color: {
-        if (selected) return Qt.rgba(0.49, 0.30, 1.0, 0.18)
-        if (hoverHandler.hovered && root.enabled) return Qt.rgba(1, 1, 1, 0.055)
+        if (selected) return Qt.rgba(0.49, 0.30, 1.0, 0.22)
+        if (hoverHandler.hovered && root.enabled) return Qt.rgba(1, 1, 1, 0.06)
         return "transparent"
     }
-    border.color: selected ? Qt.rgba(0.49, 0.30, 1.0, 0.55) : Qt.rgba(1, 1, 1, 0.07)
+    border.color: selected ? Qt.rgba(0.64, 0.49, 1.0, 0.65) : Qt.rgba(1, 1, 1, 0.08)
     border.width: 1
-    opacity: enabled ? 1.0 : 0.6
+    opacity: enabled ? 1.0 : 0.55
 
-    Item {
-        id: tabLayout
-        anchors.fill: parent
+    RowLayout {
+        id: contentRow
+        anchors.centerIn: parent
+        spacing: 6
 
         LineIcon {
             id: tabIcon
             name: root.iconName
-            color: root.selected ? Theme.accentLight : Theme.textSecondary
-            width: 14
-            height: 14
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: tabText.left
-            anchors.rightMargin: 6
+            color: root.selected ? Theme.accentLight : (hoverHandler.hovered ? Theme.textPrimary : Theme.textSecondary)
+            Layout.preferredWidth: 14
+            Layout.preferredHeight: 14
             visible: root.iconName !== ""
         }
 
@@ -45,20 +44,16 @@ Rectangle {
             text: root.icon
             font.pixelSize: Theme.fontMedium
             visible: root.icon !== "" && root.iconName === ""
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: tabText.left
-            anchors.rightMargin: 6
         }
 
         Text {
             id: tabText
-            anchors.centerIn: parent
-            width: Math.max(0, Math.min(implicitWidth, parent.width - (tabIcon.visible || tabEmoji.visible ? 20 : 0)))
             text: root.text
-            color: selected ? Theme.textPrimary : Theme.textSecondary
+            color: selected ? "#ffffff" : (hoverHandler.hovered ? Theme.textPrimary : Theme.textSecondary)
             font.pixelSize: Theme.fontSmall
             font.bold: selected
             horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
     }

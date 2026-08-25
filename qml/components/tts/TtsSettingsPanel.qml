@@ -102,17 +102,66 @@ ColumnLayout {
         }
     }
 
-    function refreshReusableCloneVoices() {
-        if (root.cloneVoiceModel === "") {
-            root.reusableCloneVoices = []
-            root.reusableCloneVoiceIndex = -1
-            root.reusableCloneConsent = false
-            return
+    property string activeOptionTab: "colab" // "colab", "gateway", "clone"
+
+    readonly property var cloneModelOptions: [
+        { id: "", title: qsTr("All Model Families") },
+        { id: "vieneu-tts-v3-turbo", title: "VieNeu-TTS v3 Turbo" },
+        { id: "qwen3-tts-1.7b-base", title: "Qwen3-TTS 1.7B Base" },
+        { id: "qwen3-tts-0.6b-base", title: "Qwen3-TTS 0.6B Base" },
+        { id: "omnivoice", title: "OmniVoice" },
+        { id: "vieneu-tts-v2-turbo", title: "VieNeu-TTS v2 Turbo" },
+        { id: "voxcpm2", title: "VoxCPM2" }
+    ]
+    property string selectedCloneModelFilter: ""
+    property int selectedCloneModelFilterIndex: 0
+
+    function selectedVoiceModelTitle() {
+        var voice = selectedReusableCloneVoice()
+        if (!voice || !voice.familyId) return qsTr("Unknown Model")
+        var famId = String(voice.familyId).trim().toLowerCase()
+        for (var i = 0; i < root.cloneModelOptions.length; ++i) {
+            if (root.cloneModelOptions[i].id === famId)
+                return root.cloneModelOptions[i].title
         }
-        var voices = AppController.voiceClonePresets.presetsForFamily(root.cloneVoiceModel)
+        return famId
+    }
+
+    readonly property bool cloneWorkerActiveForSelectedVoice: {
+        var voice = selectedReusableCloneVoice()
+        if (!voice || !voice.familyId) return false
+        var voiceFam = String(voice.familyId).trim().toLowerCase()
+        return AppController.colabVoiceClone
+               && AppController.colabVoiceClone.colabActive
+               && AppController.colabVoiceClone.model.trim().toLowerCase() === voiceFam
+    }
+
+    function syncSelectedVoiceModel() {
+        var voice = selectedReusableCloneVoice()
+        if (voice && voice.familyId) {
+            var famId = String(voice.familyId).trim().toLowerCase()
+            if (AppController.colabVoiceClone && famId !== "") {
+                AppController.colabVoiceClone.selectColabModel(famId)
+            }
+        }
+    }
+
+    function refreshReusableCloneVoices() {
+        var voices = []
+        if (AppController.voiceClonePresets) {
+            var targetFamily = root.selectedCloneModelFilter !== "" ? root.selectedCloneModelFilter : root.cloneVoiceModel
+            voices = targetFamily !== ""
+                     ? AppController.voiceClonePresets.presetsForFamily(targetFamily)
+                     : (root.cloneVoiceModel !== ""
+                        ? AppController.voiceClonePresets.presetsForFamily(root.cloneVoiceModel)
+                        : AppController.voiceClonePresets.allPresets())
+            if ((!voices || voices.length === 0) && (targetFamily !== "" || root.cloneVoiceModel !== "")) {
+                voices = AppController.voiceClonePresets.allPresets()
+            }
+        }
         var validVoices = []
         for (var i = 0; i < voices.length; ++i) {
-            if (voices[i].valid)
+            if (voices[i] && (voices[i].valid || voices[i].audioFilePath || voices[i].name))
                 validVoices.push(voices[i])
         }
         var previousId = root.selectedReusableCloneVoiceId()
@@ -129,11 +178,10 @@ ColumnLayout {
                                            ? root.reusableCloneVoiceIndex : 0
 
         var nextId = root.selectedReusableCloneVoiceId()
-        // Consent applies to one durable voice identity, never merely to the
-        // current list row. Revoke it if a preset refresh selects a different
-        // saved clone (or leaves no valid clone).
         if (previousId !== nextId)
             root.reusableCloneConsent = false
+
+        syncSelectedVoiceModel()
     }
 
     function selectedReusableCloneVoice() {
@@ -168,7 +216,7 @@ ColumnLayout {
         target: AppController.voiceClonePresets
         function onPresetsChanged(familyId) {
             var normalizedFamilyId = String(familyId || "").trim().toLowerCase()
-            if (normalizedFamilyId === "" || normalizedFamilyId === root.cloneVoiceModel)
+            if (normalizedFamilyId === "" || root.selectedCloneModelFilter === "" || normalizedFamilyId === root.selectedCloneModelFilter)
                 root.refreshReusableCloneVoices()
         }
     }
@@ -327,187 +375,25 @@ ColumnLayout {
             width: ttsSettingsScroll.availableWidth
             spacing: Theme.paddingMedium
 
-            SettingsSection {
-                title: qsTr("Core")
-                visible: true // Always show Core for language selection if supported
-                iconName: "file"
-
-                LanguageSelector {
-                    id: langSelector
-                    Layout.fillWidth: true
-                    labelText: qsTr("Target Language")
-                    family: root.family
-                    hasLanguageInput: root.hasLanguageInput
-                    useTextFieldFallback: false
-                    language: root.selectedLanguage
-                    enabled: !root.locked
-                    onLanguageSelected: function(language) {
-                        if (root.selectedLanguage !== language) {
-                            root.selectedLanguage = language
-                            root.settingsChanged()
-                        }
-                    }
-                }
-
-                FieldLabel { 
-                    text: (root.family && root.family.id && root.family.id.indexOf("qwen3") !== -1) ? qsTr("Style Instruction") : qsTr("Style & Emotion")
-                    visible: instructInput.visible
-                }
-
-                TextField {
-                    id: instructInput
-                    Layout.fillWidth: true
-                    visible: root.hasInstructInput
-                    placeholderText: (root.family && root.family.id && root.family.id.indexOf("qwen3") !== -1)
-                                     ? qsTr("e.g. Speak with excitement, whisper, or deep voice...") 
-                                     : qsTr("happy, whisper, dramatic...")
-                    color: Theme.textPrimary
-                    placeholderTextColor: Theme.textSecondary
-                    selectionColor: Theme.accent
-                    selectedTextColor: "#ffffff"
-                    enabled: !root.locked
-                    background: Rectangle {
-                        color: Qt.rgba(1, 1, 1, 0.035)
-                        radius: 7
-                        border.color: instructInput.activeFocus ? Qt.rgba(0.49, 0.30, 1.0, 0.75) : Qt.rgba(1, 1, 1, 0.08)
-                        border.width: 1
-                    }
-                    padding: Theme.paddingMedium
-                    onTextChanged: {
-                        root.styleInstruction = text
-                        root.settingsChanged()
-                    }
-                }
+            // Execution Route Option Switcher
+            StudioOptionSwitcher {
+                Layout.fillWidth: true
+                activeId: root.activeOptionTab
+                options: [
+                    { id: "colab", label: qsTr("Colab GPU"), icon: "cloud" },
+                    { id: "gateway", label: qsTr("Gateway"), icon: "globe" },
+                    { id: "clone", label: qsTr("Cloned"), icon: "users" }
+                ]
+                onOptionSelected: function(id) { root.activeOptionTab = id }
             }
 
-            SettingsSection {
-                title: qsTr("API Gateway TTS")
-                iconName: "cloud"
-                visible: root.showGatewaySettings
-
-                Text { Layout.fillWidth: true; text: qsTr("This independent route uses API Gateway only; it never uses a Colab worker or token."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                GatewayField {
-                    text: AppController.settings.gatewayUrl
-                    placeholderText: qsTr("https://gateway.example/v1")
-                    onEditingFinished: AppController.settings.gatewayUrl = text.trim()
-                }
-                Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                GatewayField {
-                    id: gatewayKey
-                    echoMode: TextInput.Password
-                    placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
-                    onEditingFinished: {
-                        if (text.trim() !== "") {
-                            AppController.settings.setGatewayApiKey(text)
-                            text = ""
-                        }
-                    }
-                }
-                Text { text: qsTr("TTS model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                GatewayField {
-                    text: AppController.gatewayTts.gatewayModel
-                    placeholderText: qsTr("OpenAI-compatible TTS model")
-                    onEditingFinished: AppController.gatewayTts.gatewayModel = text.trim()
-                }
-                Text { text: qsTr("Voice"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                GatewayField {
-                    text: AppController.gatewayTts.gatewayVoice
-                    placeholderText: qsTr("alloy")
-                    onEditingFinished: AppController.gatewayTts.gatewayVoice = text.trim()
-                }
-                PrimaryButton {
-                    Layout.fillWidth: true
-                    enabled: !root.locked && !(root.remoteFirstMode && AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway")
-                    text: root.remoteFirstMode
-                          ? (AppController.gatewayTts.gatewayActive
-                             ? (root.selectedRemoteProvider === "gateway" ? qsTr("API Gateway TTS selected") : qsTr("Select API Gateway TTS"))
-                             : qsTr("Use API Gateway TTS"))
-                          : (AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway"
-                             ? qsTr("Use local TTS")
-                             : (AppController.gatewayTts.gatewayActive ? qsTr("Select API Gateway TTS") : qsTr("Use API Gateway TTS")))
-                    iconName: root.remoteFirstMode || !(AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway") ? "cloud" : "close"
-                    onClicked: {
-                        if (AppController.gatewayTts.gatewayActive && !root.remoteFirstMode && root.selectedRemoteProvider === "gateway") {
-                            AppController.gatewayTts.disconnectGateway()
-                            root.remoteProviderSelected("")
-                        } else {
-                            if (!AppController.gatewayTts.gatewayActive)
-                                AppController.gatewayTts.useGateway()
-                            if (AppController.gatewayTts.gatewayActive)
-                                root.remoteProviderSelected("gateway")
-                        }
-                    }
-                }
-            }
-
-            SettingsSection {
-                title: qsTr("Reuse cloned voice")
-                iconName: "users"
-                visible: root.cloneVoiceActive
-
-                Text {
-                    Layout.fillWidth: true
-                    text: qsTr("The verified %1 Voice Cloning Colab worker is ready. This uses its existing Direct Colab session; no Local model is downloaded and no ordinary TTS notebook is selected or changed.")
-                              .arg(root.cloneVoiceModel)
-                    color: Theme.success
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-
-                Text { text: qsTr("Saved cloned voice"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                AppComboBox {
-                    id: reusableCloneVoiceCombo
-                    Layout.fillWidth: true
-                    model: root.reusableCloneVoices
-                    textRole: "name"
-                    secondaryTextRole: "originalAudioName"
-                    currentIndex: root.reusableCloneVoiceIndex
-                    enabled: !root.locked && root.reusableCloneVoices.length > 0
-                    onActivated: function(index) {
-                        root.reusableCloneVoiceIndex = index
-                        root.reusableCloneConsent = false
-                    }
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    visible: root.reusableCloneVoices.length === 0
-                    text: qsTr("No reusable %1 clone yet. In Voice Cloning, enter Voice name for TTS reuse and finish one clone with permission confirmed.")
-                              .arg(root.cloneVoiceModel)
-                    color: Theme.warning
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-
-                CheckBox {
-                    id: reusableCloneConsentCheck
-                    Layout.fillWidth: true
-                    text: qsTr("I have permission to use this cloned voice for TTS")
-                    checked: root.reusableCloneConsent
-                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0
-                    onCheckedChanged: root.reusableCloneConsent = checked
-                }
-
-                PrimaryButton {
-                    Layout.fillWidth: true
-                    enabled: !root.locked && root.cloneVoiceActive
-                             && root.reusableCloneVoiceIndex >= 0
-                             && root.reusableCloneConsent
-                    text: root.selectedRemoteProvider === "clone"
-                          ? qsTr("%1 clone route selected").arg(root.cloneVoiceModel)
-                          : qsTr("Use cloned voice in TTS")
-                    iconName: "cloud"
-                    onClicked: root.remoteProviderSelected("clone")
-                }
-            }
-
+            // Colab GPU Option Section
             SettingsSection {
                 title: qsTr("Colab GPU TTS")
                 iconName: "cloud"
-                visible: root.showColabSettings
+                visible: root.showColabSettings && root.activeOptionTab === "colab"
 
-                Text { Layout.fillWidth: true; text: qsTr("This direct temporary worker is independent of API Gateway. Its token stays only in this desktop session."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
+                Text { Layout.fillWidth: true; text: qsTr("Direct Colab GPU acceleration. Connect temporary worker token."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
                 Text {
                     Layout.fillWidth: true
                     text: AppController.colabTts.colabModel !== ""
@@ -577,6 +463,329 @@ ColumnLayout {
                 }
             }
 
+            // API Gateway Option Section
+            SettingsSection {
+                title: qsTr("API Gateway TTS")
+                iconName: "globe"
+                visible: root.showGatewaySettings && root.activeOptionTab === "gateway"
+
+                Text { Layout.fillWidth: true; text: qsTr("This independent route uses API Gateway only; it never uses a Colab worker or token."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
+                Text { text: qsTr("Gateway URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                GatewayField {
+                    text: AppController.settings.gatewayUrl
+                    placeholderText: qsTr("https://gateway.example/v1")
+                    onEditingFinished: AppController.settings.gatewayUrl = text.trim()
+                }
+                Text { text: qsTr("API key"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                GatewayField {
+                    id: gatewayKey
+                    echoMode: TextInput.Password
+                    placeholderText: AppController.settings.gatewayApiKeyConfigured ? qsTr("API key saved — enter to replace") : qsTr("Stored encrypted on this device")
+                    onEditingFinished: {
+                        if (text.trim() !== "") {
+                            AppController.settings.setGatewayApiKey(text)
+                            text = ""
+                        }
+                    }
+                }
+                Text { text: qsTr("TTS model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                GatewayField {
+                    text: AppController.gatewayTts.gatewayModel
+                    placeholderText: qsTr("OpenAI-compatible TTS model")
+                    onEditingFinished: AppController.gatewayTts.gatewayModel = text.trim()
+                }
+                Text { text: qsTr("Voice"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                GatewayField {
+                    text: AppController.gatewayTts.gatewayVoice
+                    placeholderText: qsTr("alloy")
+                    onEditingFinished: AppController.gatewayTts.gatewayVoice = text.trim()
+                }
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    enabled: !root.locked && !(root.remoteFirstMode && AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway")
+                    text: root.remoteFirstMode
+                          ? (AppController.gatewayTts.gatewayActive
+                             ? (root.selectedRemoteProvider === "gateway" ? qsTr("API Gateway TTS selected") : qsTr("Select API Gateway TTS"))
+                             : qsTr("Use API Gateway TTS"))
+                          : (AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway"
+                             ? qsTr("Use local TTS")
+                             : (AppController.gatewayTts.gatewayActive ? qsTr("Select API Gateway TTS") : qsTr("Use API Gateway TTS")))
+                    iconName: root.remoteFirstMode || !(AppController.gatewayTts.gatewayActive && root.selectedRemoteProvider === "gateway") ? "cloud" : "close"
+                    onClicked: {
+                        if (AppController.gatewayTts.gatewayActive && !root.remoteFirstMode && root.selectedRemoteProvider === "gateway") {
+                            AppController.gatewayTts.disconnectGateway()
+                            root.remoteProviderSelected("")
+                        } else {
+                            if (!AppController.gatewayTts.gatewayActive)
+                                AppController.gatewayTts.useGateway()
+                            if (AppController.gatewayTts.gatewayActive)
+                                root.remoteProviderSelected("gateway")
+                        }
+                    }
+                }
+            }
+
+            // Reuse Cloned Voice Option Section
+            SettingsSection {
+                title: qsTr("Reuse cloned voice")
+                iconName: "users"
+                visible: root.activeOptionTab === "clone"
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.cloneWorkerActiveForSelectedVoice
+                          ? qsTr("The verified %1 Colab GPU worker is ready. You can now generate speech with your saved voice.").arg(root.selectedVoiceModelTitle())
+                          : qsTr("Each model family has distinct data. Select the model and saved cloned voice below.")
+                    color: root.cloneWorkerActiveForSelectedVoice ? Theme.success : Theme.textSecondary
+                    font.pixelSize: Theme.fontSmall
+                    wrapMode: Text.WordWrap
+                }
+
+                // 1. Model Family Filter / Selector
+                Text { text: qsTr("Filter by model family"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                AppComboBox {
+                    id: cloneModelFilterCombo
+                    Layout.fillWidth: true
+                    model: root.cloneModelOptions
+                    textRole: "title"
+                    currentIndex: root.selectedCloneModelFilterIndex
+                    enabled: !root.locked
+                    onActivated: function(index) {
+                        root.selectedCloneModelFilterIndex = index
+                        root.selectedCloneModelFilter = root.cloneModelOptions[index].id
+                        root.refreshReusableCloneVoices()
+                    }
+                }
+
+                // 2. Saved Voice Selector
+                Text { text: qsTr("Saved cloned voice"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                AppComboBox {
+                    id: reusableCloneVoiceCombo
+                    Layout.fillWidth: true
+                    model: root.reusableCloneVoices
+                    textRole: "name"
+                    secondaryTextRole: "originalAudioName"
+                    currentIndex: root.reusableCloneVoiceIndex
+                    enabled: !root.locked && root.reusableCloneVoices.length > 0
+                    onActivated: function(index) {
+                        root.reusableCloneVoiceIndex = index
+                        root.reusableCloneConsent = false
+                        root.syncSelectedVoiceModel()
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: root.reusableCloneVoices.length === 0
+                    text: qsTr("No saved cloned voices found for this model family. Go to Voice Cloning studio to clone and save a voice.")
+                    color: Theme.warning
+                    font.pixelSize: Theme.fontSmall
+                    wrapMode: Text.WordWrap
+                }
+
+                // 3. Selected Voice Model Info Badge
+                Rectangle {
+                    Layout.fillWidth: true
+                    visible: root.selectedReusableCloneVoice() !== null
+                    radius: Theme.radiusSmall
+                    color: Qt.rgba(1, 1, 1, 0.03)
+                    border.color: Qt.rgba(1, 1, 1, 0.08)
+                    border.width: 1
+                    implicitHeight: modelInfoCol.implicitHeight + Theme.paddingSmall * 2
+
+                    ColumnLayout {
+                        id: modelInfoCol
+                        anchors.fill: parent
+                        anchors.margins: Theme.paddingSmall
+                        spacing: 4
+
+                        RowLayout {
+                            spacing: 6
+                            LineIcon {
+                                name: "spark"
+                                color: Theme.accent
+                                Layout.preferredWidth: 14
+                                Layout.preferredHeight: 14
+                            }
+                            Text {
+                                text: qsTr("Source Model:")
+                                color: Theme.textSecondary
+                                font.pixelSize: Theme.fontSmall
+                            }
+                            Text {
+                                text: root.selectedVoiceModelTitle()
+                                color: Theme.accent
+                                font.bold: true
+                                font.pixelSize: Theme.fontSmall
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.cloneWorkerActiveForSelectedVoice
+                                  ? qsTr("Colab GPU Worker is connected and verified.")
+                                  : qsTr("Status: Colab GPU worker not connected yet.")
+                            color: root.cloneWorkerActiveForSelectedVoice ? Theme.success : Theme.warning
+                            font.pixelSize: Theme.fontSmall - 1
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
+                // 4. In-Place Colab Connection Controls (visible when worker is not connected)
+                Rectangle {
+                    Layout.fillWidth: true
+                    visible: root.selectedReusableCloneVoice() !== null && !root.cloneWorkerActiveForSelectedVoice
+                    radius: Theme.radiusSmall
+                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.04)
+                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
+                    border.width: 1
+                    implicitHeight: colabConnCol.implicitHeight + Theme.paddingMedium * 2
+
+                    ColumnLayout {
+                        id: colabConnCol
+                        anchors.fill: parent
+                        anchors.margins: Theme.paddingMedium
+                        spacing: Theme.paddingSmall
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("Connect Colab GPU for %1").arg(root.selectedVoiceModelTitle())
+                            color: Theme.textPrimary
+                            font.bold: true
+                            font.pixelSize: Theme.fontSmall
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("Open the notebook on Google Colab, run all cells, and enter the worker URL & token below:")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontSmall - 1
+                            wrapMode: Text.WordWrap
+                        }
+
+                        ColabNotebookLink {
+                            notebookFile: AppController.colabVoiceClone ? AppController.colabVoiceClone.colabNotebookFile : ""
+                        }
+
+                        Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                        GatewayField {
+                            id: cloneColabUrl
+                            text: AppController.colabVoiceCloneSession.workerUrl
+                            placeholderText: qsTr("https://…trycloudflare.com")
+                            enabled: !root.locked
+                        }
+
+                        Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                        GatewayField {
+                            id: cloneColabToken
+                            echoMode: TextInput.Password
+                            placeholderText: AppController.colabVoiceClone.colabConnected ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab")
+                            enabled: !root.locked
+                        }
+
+                        ColabSessionStatus {
+                            session: AppController.colabVoiceCloneSession
+                        }
+
+                        PrimaryButton {
+                            Layout.fillWidth: true
+                            enabled: !root.locked
+                                     && (AppController.colabVoiceClone ? AppController.colabVoiceClone.colabNotebookFile !== "" : false)
+                                     && !AppController.colabVoiceCloneSession.checking
+                            text: AppController.colabVoiceCloneSession.checking
+                                  ? qsTr("Verifying CUDA and model...")
+                                  : (AppController.colabVoiceClone.colabConnected
+                                     ? qsTr("Select direct Colab GPU route")
+                                     : qsTr("Connect %1 GPU worker").arg(root.selectedVoiceModelTitle()))
+                            iconName: "cloud"
+                            onClicked: {
+                                if (AppController.colabVoiceClone.colabConnected) {
+                                    AppController.colabVoiceClone.useColab()
+                                    root.remoteProviderSelected("clone")
+                                } else if (AppController.colabVoiceClone.connectColab(cloneColabUrl.text.trim(), cloneColabToken.text)) {
+                                    cloneColabToken.text = ""
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 5. Consent Checkbox & Route Selection
+                CheckBox {
+                    id: reusableCloneConsentCheck
+                    Layout.fillWidth: true
+                    text: qsTr("I have permission to use this cloned voice for TTS")
+                    checked: root.reusableCloneConsent
+                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.cloneWorkerActiveForSelectedVoice
+                    onCheckedChanged: root.reusableCloneConsent = checked
+                }
+
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.reusableCloneConsent && root.cloneWorkerActiveForSelectedVoice
+                    text: root.selectedRemoteProvider === "clone"
+                          ? qsTr("Cloned voice route active")
+                          : qsTr("Use cloned voice in TTS")
+                    iconName: "check"
+                    onClicked: root.remoteProviderSelected("clone")
+                }
+            }
+
+            // Voice & Language Section
+            SettingsSection {
+                title: qsTr("Voice & Language")
+                visible: true
+                iconName: "file"
+
+                LanguageSelector {
+                    id: langSelector
+                    Layout.fillWidth: true
+                    labelText: qsTr("Target Language")
+                    family: root.family
+                    hasLanguageInput: root.hasLanguageInput
+                    useTextFieldFallback: false
+                    language: root.selectedLanguage
+                    enabled: !root.locked
+                    onLanguageSelected: function(language) {
+                        if (root.selectedLanguage !== language) {
+                            root.selectedLanguage = language
+                            root.settingsChanged()
+                        }
+                    }
+                }
+
+                FieldLabel { 
+                    text: (root.family && root.family.id && root.family.id.indexOf("qwen3") !== -1) ? qsTr("Style Instruction") : qsTr("Style & Emotion")
+                    visible: instructInput.visible
+                }
+
+                TextField {
+                    id: instructInput
+                    Layout.fillWidth: true
+                    visible: root.hasInstructInput
+                    placeholderText: (root.family && root.family.id && root.family.id.indexOf("qwen3") !== -1)
+                                     ? qsTr("e.g. Speak with excitement, whisper, or deep voice...") 
+                                     : qsTr("happy, whisper, dramatic...")
+                    color: Theme.textPrimary
+                    placeholderTextColor: Theme.textSecondary
+                    selectionColor: Theme.accent
+                    selectedTextColor: "#ffffff"
+                    enabled: !root.locked
+                    background: Rectangle {
+                        color: Qt.rgba(1, 1, 1, 0.035)
+                        radius: 7
+                        border.color: instructInput.activeFocus ? Qt.rgba(0.49, 0.30, 1.0, 0.75) : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: 1
+                    }
+                    padding: Theme.paddingMedium
+                    onTextChanged: {
+                        root.styleInstruction = text
+                        root.settingsChanged()
+                    }
+                }
+            }
+
             SettingsSection {
                 title: qsTr("Model Parameters")
                 iconName: "sliders"
@@ -605,10 +814,11 @@ ColumnLayout {
                 }
             }
 
-            SettingsSection {
-                title: qsTr("Audio & System")
-                visible: !root.isKokoro
+            CollapsibleSettingsSection {
+                title: qsTr("Audio & Generation")
                 iconName: "cpu"
+                expanded: false
+                visible: !root.isKokoro
 
                 ToggleRow {
                     id: denoiseToggle

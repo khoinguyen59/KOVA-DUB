@@ -18,13 +18,9 @@ Button {
     property bool quiet: false
     readonly property real requiredContentWidth:
         root.iconOnly ? 38
-                      : buttonLabel.implicitWidth
-                        + Theme.paddingSmall * 2
-                        + (buttonIcon.visible
-                           ? (buttonIcon.width + Theme.paddingSmall) * 2
-                           : 0)
+                      : contentRow.implicitWidth + Theme.paddingMedium * 2
 
-    implicitWidth: root.iconOnly ? 38 : Math.max(120, root.requiredContentWidth)
+    implicitWidth: root.iconOnly ? 38 : Math.max(100, root.requiredContentWidth)
     implicitHeight: 38
     Layout.minimumWidth: root.requiredContentWidth
 
@@ -40,55 +36,66 @@ Button {
     contentItem: Item {
         opacity: root.loading ? 0 : 1
 
-        LineIcon {
-            id: buttonIcon
-            visible: root.iconName !== ""
-            name: root.iconName
-            color: root.enabled ? root.textColor : Theme.textSecondary
-            width: 16
-            height: 16
-            anchors.verticalCenter: root.iconOnly ? undefined : parent.verticalCenter
-            anchors.centerIn: root.iconOnly ? parent : undefined
-            anchors.right: buttonLabel.left
-            anchors.rightMargin: root.iconOnly ? 0 : Theme.paddingSmall
-        }
-
-        Text {
-            id: buttonLabel
-            visible: !root.iconOnly
-            text: root.text
-            color: root.enabled ? root.textColor : Theme.textSecondary
-            font.pixelSize: Theme.fontSmall
-            font.bold: true
+        RowLayout {
+            id: contentRow
             anchors.centerIn: parent
-            width: Math.min(implicitWidth, parent.width)
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
+            spacing: 6
+            visible: !root.loading
 
-        Item {
-            visible: root.iconOnly
-            anchors.fill: parent
+            LineIcon {
+                id: buttonIcon
+                visible: root.iconName !== ""
+                name: root.iconName
+                color: root.enabled ? root.textColor : Theme.textSecondary
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+            }
+
+            Text {
+                id: buttonLabel
+                visible: !root.iconOnly
+                text: root.text
+                color: root.enabled ? root.textColor : Theme.textSecondary
+                font.pixelSize: Theme.fontSmall
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+                Layout.maximumWidth: root.width - (buttonIcon.visible ? 36 : 24)
+            }
         }
     }
 
     background: Rectangle {
-        implicitWidth: root.iconOnly ? 38 : 120
+        implicitWidth: root.iconOnly ? 38 : 100
         implicitHeight: 38
-        radius: 7
+        radius: 8
+        
+        gradient: (!root.quiet && root.enabled) ? primaryGradient : null
         color: {
             if (!root.enabled) return Theme.surfaceAlt
             if (root.quiet) {
-                if (root.pressed) return Qt.rgba(1, 1, 1, 0.10)
-                if (root.hovered) return Qt.rgba(1, 1, 1, 0.07)
-                return Theme.surface
+                if (root.pressed) return Qt.rgba(1, 1, 1, 0.12)
+                if (root.hovered) return Qt.rgba(1, 1, 1, 0.08)
+                return Qt.rgba(1, 1, 1, 0.04)
             }
-            if (root.pressed) return Qt.darker(root.buttonColor, 1.12)
-            if (root.hovered) return Qt.lighter(root.buttonColor, 1.08)
             return root.buttonColor
         }
-        border.color: root.enabled ? (root.quiet ? root.borderColor : Qt.rgba(1, 1, 1, 0.10)) : "transparent"
+
+        Gradient {
+            id: primaryGradient
+            orientation: Gradient.Vertical
+            GradientStop {
+                position: 0.0
+                color: root.pressed ? Qt.darker(root.buttonColor, 1.15) : (root.hovered ? Qt.lighter(root.buttonColor, 1.12) : root.buttonColor)
+            }
+            GradientStop {
+                position: 1.0
+                color: root.pressed ? Qt.darker(root.buttonColor, 1.25) : (root.hovered ? root.buttonColor : Qt.darker(root.buttonColor, 1.15))
+            }
+        }
+
+        border.color: root.enabled ? (root.quiet ? root.borderColor : Qt.rgba(255, 255, 255, 0.15)) : "transparent"
         border.width: 1
 
         // Loading spinner
@@ -96,8 +103,8 @@ Button {
             anchors.centerIn: parent
             running: root.loading
             visible: root.loading
-            width: 24
-            height: 24
+            width: 22
+            height: 22
             palette.dark: root.textColor
         }
     }
@@ -107,4 +114,5 @@ Button {
         cursorShape: Qt.PointingHandCursor
     }
 }
+
 

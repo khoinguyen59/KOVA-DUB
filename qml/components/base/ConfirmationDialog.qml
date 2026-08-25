@@ -88,8 +88,7 @@ Dialog {
             PrimaryButton {
                 text: root.cancelText
                 quiet: true
-                implicitWidth: 90
-                implicitHeight: 32
+                implicitHeight: 34
                 onClicked: {
                     root.cancelled()
                     root.reject()
@@ -98,8 +97,7 @@ Dialog {
 
             PrimaryButton {
                 text: root.confirmText
-                implicitWidth: 100
-                implicitHeight: 32
+                implicitHeight: 34
                 buttonColor: root.isDestructive ? Theme.danger : Theme.accent
                 onClicked: {
                     root.confirmed()

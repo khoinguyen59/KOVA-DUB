@@ -102,6 +102,8 @@ StudioShell {
     onCloneVoiceActiveChanged: {
         if (!cloneVoiceActive && selectedRemoteProvider === "clone")
             selectedRemoteProvider = ""
+        else if (cloneVoiceActive && (selectedRemoteProvider === "" || (settingsPanel && settingsPanel.activeOptionTab === "clone")))
+            selectedRemoteProvider = "clone"
     }
 
     onRequestBack: root.backToGallery()

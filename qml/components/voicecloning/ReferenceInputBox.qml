@@ -5,6 +5,7 @@ import QtQuick.Dialogs
 import LAStudio
 import "../base"
 import "../shared"
+import "../shared/settings"
 
 // Component for reference voice input with transcript
 ColumnLayout {
@@ -122,6 +123,8 @@ ColumnLayout {
     Layout.fillHeight: false
 
     // Header
+    property string referenceMode: "saved" // "saved", "custom"
+
     Text {
         visible: root.showHeader
         text: qsTr("Reference Voice")
@@ -130,118 +133,88 @@ ColumnLayout {
         font.bold: true
     }
 
-    ColumnLayout {
+    StudioOptionSwitcher {
         Layout.fillWidth: true
-        spacing: Theme.paddingSmall
+        activeId: root.referenceMode
+        options: [
+            { id: "saved", label: qsTr("Saved Voices") + (root.savedVoices.length > 0 ? " (" + root.savedVoices.length + ")" : ""), icon: "users" },
+            { id: "custom", label: qsTr("Upload / Record"), icon: "mic" }
+        ]
+        onOptionSelected: function(id) { root.referenceMode = id }
+    }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.paddingSmall
-
-            LineIcon {
-                name: "spark"
-                color: Theme.accentLight
-                Layout.preferredWidth: 14
-                Layout.preferredHeight: 14
-            }
-
-            Text {
-                text: qsTr("Saved reference voices") + (root.savedVoices.length > 0 ? " (" + root.savedVoices.length + ")" : "")
-                color: Theme.textPrimary
-                font.pixelSize: Theme.fontSmall
-                font.bold: true
-                Layout.fillWidth: true
-            }
-        }
-
-        AppComboBox {
-            id: savedVoiceCombo
-            Layout.fillWidth: true
-            model: root.savedVoices
-            textRole: "name"
-            secondaryTextRole: "originalAudioName"
-            currentIndex: root.selectedSavedVoiceIndex
-            enabled: !root.locked && root.savedVoices.length > 0
-            onActivated: function(index) { root.loadSavedVoice(index) }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.paddingSmall
-
-            PrimaryButton {
-                text: qsTr("Save reference")
-                quiet: true
-                implicitHeight: 34
-                implicitWidth: 120
-                enabled: !root.locked && root.audioPath !== ""
-                onClicked: root.saveCurrentVoice()
-            }
-
-            PrimaryButton {
-                text: qsTr("Manage")
-                iconName: "settings"
-                quiet: true
-                implicitHeight: 34
-                implicitWidth: 105
-                onClicked: root.manageVoices()
-            }
-        }
+    // Saved Voice Profile Section
+    Rectangle {
+        Layout.fillWidth: true
+        implicitHeight: savedCol.implicitHeight + Theme.paddingMedium * 2
+        radius: 10
+        color: "#1d1b2c"
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.width: 1
+        visible: root.referenceMode === "saved"
 
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 4
+            id: savedCol
+            anchors.fill: parent
+            anchors.margins: Theme.paddingMedium
+            spacing: Theme.paddingSmall
 
             Text {
-                text: qsTr("Voice name for TTS reuse")
-                color: Theme.textPrimary
-                font.pixelSize: Theme.fontSmall
-                font.bold: true
-            }
-
-            TextField {
-                id: reusableVoiceNameField
-                Layout.fillWidth: true
-                text: root.reusableVoiceName
-                placeholderText: qsTr("e.g. Hoài Vũ — Vietnamese")
-                enabled: !root.locked
-                color: Theme.textPrimary
-                placeholderTextColor: Theme.textSecondary
-                selectByMouse: true
-                onTextChanged: {
-                    if (root.reusableVoiceName !== text)
-                        root.reusableVoiceName = text
-                }
-                background: Rectangle {
-                    radius: Theme.radiusSmall
-                    color: Qt.rgba(1, 1, 1, 0.035)
-                    border.color: reusableVoiceNameField.activeFocus ? Theme.accent : Theme.surfaceAlt
-                    border.width: reusableVoiceNameField.activeFocus ? 2 : 1
-                }
-            }
-
-            Text {
-                Layout.fillWidth: true
-                text: qsTr("After a successful Direct Colab clone, this reference is saved locally under this name and appears in TTS.")
+                text: qsTr("Select from previously saved clone voices:")
                 color: Theme.textSecondary
-                font.pixelSize: 10
-                wrapMode: Text.WordWrap
+                font.pixelSize: Theme.fontSmall
+            }
+
+            AppComboBox {
+                id: savedVoiceCombo
+                Layout.fillWidth: true
+                model: root.savedVoices
+                textRole: "name"
+                secondaryTextRole: "originalAudioName"
+                currentIndex: root.selectedSavedVoiceIndex
+                enabled: !root.locked && root.savedVoices.length > 0
+                onActivated: function(index) { root.loadSavedVoice(index) }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.paddingSmall
+
+                PrimaryButton {
+                    text: qsTr("Save Current")
+                    quiet: true
+                    implicitHeight: 34
+                    implicitWidth: 110
+                    enabled: !root.locked && root.audioPath !== ""
+                    onClicked: root.saveCurrentVoice()
+                }
+
+                PrimaryButton {
+                    text: qsTr("Manage Presets")
+                    iconName: "settings"
+                    quiet: true
+                    implicitHeight: 34
+                    implicitWidth: 125
+                    onClicked: root.manageVoices()
+                }
             }
         }
     }
 
-    // Input tabs box
+    // Custom Upload / Record Box
     Rectangle {
         Layout.fillWidth: true
-        Layout.preferredHeight: 160
-        color: Qt.rgba(1, 1, 1, 0.02)
-        radius: Theme.radiusSmall
+        implicitHeight: root.audioPath === "" ? 170 : customCol.implicitHeight + Theme.paddingMedium * 2
+        color: "#1d1b2c"
+        radius: 10
         border.color: Qt.rgba(1, 1, 1, 0.08)
         border.width: 1
+        visible: root.referenceMode === "custom" || root.audioPath !== ""
 
         ColumnLayout {
+            id: customCol
             anchors.fill: parent
-            anchors.margins: Theme.paddingLarge
+            anchors.margins: Theme.paddingMedium
             spacing: Theme.paddingMedium
             visible: root.audioPath === ""
 
@@ -258,6 +231,39 @@ ColumnLayout {
                 onAudioLoaded: (path) => {
                     if (root.locked) return
                     root.audioPath = path
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.paddingSmall
+
+                Text {
+                    text: qsTr("Voice name for TTS reuse")
+                    color: Theme.textSecondary
+                    font.pixelSize: Theme.fontSmall
+                    font.bold: true
+                }
+
+                TextField {
+                    id: reusableVoiceNameField
+                    Layout.fillWidth: true
+                    text: root.reusableVoiceName
+                    placeholderText: qsTr("e.g. Hoài Vũ — Vietnamese")
+                    enabled: !root.locked
+                    color: Theme.textPrimary
+                    placeholderTextColor: Theme.textSecondary
+                    selectByMouse: true
+                    onTextChanged: {
+                        if (root.reusableVoiceName !== text)
+                            root.reusableVoiceName = text
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: Qt.rgba(1, 1, 1, 0.04)
+                        border.color: reusableVoiceNameField.activeFocus ? Theme.accent : Qt.rgba(1, 1, 1, 0.1)
+                        border.width: 1
+                    }
                 }
             }
         }
