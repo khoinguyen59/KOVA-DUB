@@ -228,10 +228,11 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         clip: true
-        contentWidth: availableWidth
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
         ColumnLayout {
-            width: parent.width - 16
+            width: colabSettingsScroll.availableWidth
             spacing: Theme.paddingMedium
 
             SettingsSection {

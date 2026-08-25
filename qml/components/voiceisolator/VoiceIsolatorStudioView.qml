@@ -232,12 +232,13 @@ StudioShell {
             }
 
             ScrollView {
+                id: isolatorSettingsScroll
                 anchors.fill: parent
                 clip: true
-                contentWidth: availableWidth
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
                 ColumnLayout {
-                    width: parent.width - Theme.paddingLarge * 2
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: isolatorSettingsScroll.availableWidth
                     spacing: Theme.paddingMedium
 
                     Text { Layout.fillWidth: true; text: qsTr("Voice Isolation"); color: Theme.textPrimary; font.pixelSize: Theme.fontLarge; font.bold: true }

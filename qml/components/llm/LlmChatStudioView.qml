@@ -122,11 +122,13 @@ StudioShell {
 
     settingsContent: [
         ScrollView {
+            id: llmSettingsScroll
             anchors.fill: parent
             clip: true
-            contentWidth: availableWidth
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
             ColumnLayout {
-                width: parent.width
+                width: llmSettingsScroll.availableWidth
                 spacing: Theme.paddingMedium
 
                 RowLayout {

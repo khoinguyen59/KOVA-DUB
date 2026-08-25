@@ -50,7 +50,7 @@ RowLayout {
     property bool showLeftPanel: false
     property bool isLeftPanelOpen: false
     property int leftPanelWidth: 332
-    property int settingsPanelWidth: 332
+    property int settingsPanelWidth: 380
     property bool resizingLeftPanel: false
     property bool resizingSettingsPanel: false
     property int mainContentMinimumWidth: 640
@@ -69,7 +69,7 @@ RowLayout {
     signal requestWorkflow()
 
     function clampedPanelWidth(width) {
-        return Math.round(Math.max(240, Math.min(480, width)))
+        return Math.round(Math.max(280, Math.min(640, width)))
     }
 
     function currentRuntimeItem() {
@@ -640,7 +640,7 @@ RowLayout {
         Item {
             id: settingsItem
             anchors.fill: parent
-            anchors.margins: root.isSettingsOpen ? Theme.paddingLarge : 0
+            anchors.margins: root.isSettingsOpen ? Theme.paddingMedium : 0
             visible: root.isSettingsOpen
             enabled: !root.settingsRequiresReady || root.studioReady
             opacity: (!root.settingsRequiresReady || root.studioReady) ? 1.0 : 0.58

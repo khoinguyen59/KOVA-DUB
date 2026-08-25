@@ -176,13 +176,15 @@ Rectangle {
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.surfaceAlt }
 
             ScrollView {
+                id: sttSettingsScroll
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                contentWidth: availableWidth
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
                 ColumnLayout {
-                    width: parent.width - 4
+                    width: sttSettingsScroll.availableWidth
                     spacing: Theme.paddingMedium
 
                     SettingsSection {

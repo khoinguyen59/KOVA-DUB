@@ -34,22 +34,23 @@ ColumnLayout {
         wrapMode: Text.WordWrap
     }
 
-    RowLayout {
+    ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.paddingSmall
 
         PrimaryButton {
+            Layout.fillWidth: true
             text: qsTr("Open this notebook in Colab")
             iconName: "cloud"
             quiet: true
             onClicked: Qt.openUrlExternally(root.colabNotebookUrl)
         }
         PrimaryButton {
+            Layout.fillWidth: true
             text: qsTr("Open notebook folder")
             iconName: "folder"
             quiet: true
             onClicked: AppController.openColabNotebooksDirectory()
         }
-        Item { Layout.fillWidth: true }
     }
 }

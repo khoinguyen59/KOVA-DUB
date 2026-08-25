@@ -316,13 +316,15 @@ ColumnLayout {
     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.07) }
 
     ScrollView {
+        id: ttsSettingsScroll
         Layout.fillWidth: true
         Layout.fillHeight: true
         clip: true
-        contentWidth: availableWidth
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
         ColumnLayout {
-            width: parent.width - 16
+            width: ttsSettingsScroll.availableWidth
             spacing: Theme.paddingMedium
 
             SettingsSection {
