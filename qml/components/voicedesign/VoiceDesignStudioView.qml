@@ -17,6 +17,7 @@ StudioShell {
     studioReady: false
     // VoiceDesign can run entirely on its Colab worker before local setup.
     settingsRequiresReady: false
+    settingsPanelWidth: 325
     isSettingsOpen: true
     showLeftPanel: true
     isLeftPanelOpen: false

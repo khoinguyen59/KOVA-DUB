@@ -43,6 +43,7 @@ StudioShell {
     showLeftPanel: true
     isLeftPanelOpen: false
     showSettingsPanel: true
+    settingsPanelWidth: 325
     isSettingsOpen: true
     settingsRequiresReady: false
     modalSelectionMode: true

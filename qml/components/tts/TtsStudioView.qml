@@ -18,6 +18,7 @@ StudioShell {
     // Let users pair independent Gateway/Colab routes without first loading
     // a local TTS family.
     settingsRequiresReady: false
+    settingsPanelWidth: 340
     isSettingsOpen: true
     showLeftPanel: true
     isLeftPanelOpen: false

@@ -26,6 +26,7 @@ StudioShell {
     // Remote setup must be available before a local model is selected.  The
     // input action remains gated by studioReady and the selected provider.
     settingsRequiresReady: false
+    settingsPanelWidth: 310
     isSettingsOpen: true
     showLeftPanel: true
     isLeftPanelOpen: false

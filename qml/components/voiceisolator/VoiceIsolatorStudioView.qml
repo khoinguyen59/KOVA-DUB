@@ -20,6 +20,7 @@ StudioShell {
     settingsRequiresReady: false
     studioIconName: "voice-isolator"
     showSettingsPanel: true
+    settingsPanelWidth: 315
     showLeftPanel: true
     isLeftPanelOpen: false
     modalSelectionMode: true

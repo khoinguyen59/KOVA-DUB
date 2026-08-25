@@ -19,6 +19,7 @@ StudioShell {
     // Voice cloning's Colab worker is a complete execution route, so its
     // setup cannot depend on a local model being loaded first.
     settingsRequiresReady: false
+    settingsPanelWidth: 325
     isSettingsOpen: true
     showLeftPanel: true
     isLeftPanelOpen: false

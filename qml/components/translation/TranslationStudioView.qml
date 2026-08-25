@@ -44,10 +44,12 @@ StudioShell {
     // API Gateway and direct Colab are standalone routes; keep their setup
     // editable even while no local translation runtime is loaded.
     settingsRequiresReady: false
+    settingsPanelWidth: 315
     selectedFamilyId: studioController ? studioController.selectedFamilyId : ""
     modalSelectionMode: true
     showSwitcher: false
     showLeftPanel: true
+    isLeftPanelOpen: false
     modalSelectionTitle: family ? family.title : qsTr("Model + Runtime")
     modalSelectionValue: studioController ? studioController.runtimeDisplayText : qsTr("Select model and runtime")
     modalSelectionDetail: studioController ? studioController.statusDetail : ""
