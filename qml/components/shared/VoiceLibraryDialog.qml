@@ -25,7 +25,26 @@ Dialog {
     property string editingId: ""
     property string editingKind: ""
     property string pendingDeleteId: ""
-    property string pendingDeleteKind: ""
+    property string currentPlayingPath: ""
+
+    Connections {
+        target: AppController.player
+        function onPlayingChanged() {
+            if (!AppController.player.playing) {
+                root.currentPlayingPath = ""
+            }
+        }
+        function onPlaybackFinished() {
+            root.currentPlayingPath = ""
+        }
+    }
+
+    onClosed: {
+        if (AppController.player && AppController.player.playing) {
+            AppController.player.stop()
+        }
+        currentPlayingPath = ""
+    }
 
     signal referenceVoiceSelected(string audioPath, string referenceText, string name)
     signal designVoiceSelected(string description, string name)
@@ -293,8 +312,20 @@ Dialog {
                         onEditRequested: function(item) { root.editReferenceVoice(item) }
                         onDeleteRequested: function(item) { root.requestDelete("reference", item.id || "") }
                         onPlayRequested: function(item) {
-                            if (item.audioPath)
-                                AppController.player.playFile(item.audioPath)
+                            if (!item || !item.audioPath) return
+                            var path = item.audioPath
+                            if (root.currentPlayingPath === path) {
+                                if (AppController.player.playing && !AppController.player.paused) {
+                                    AppController.player.pause()
+                                } else if (AppController.player.paused) {
+                                    AppController.player.resume()
+                                } else {
+                                    AppController.player.playFile(path)
+                                }
+                            } else {
+                                root.currentPlayingPath = path
+                                AppController.player.playFile(path)
+                            }
                         }
                     }
 
@@ -550,11 +581,15 @@ Dialog {
                                         onClicked: listRoot.useRequested(modelData)
                                     }
                                     PrimaryButton {
-                                        text: qsTr("Play")
-                                        quiet: true
+                                        readonly property bool isPlayingThis: modelData && modelData.audioPath && root.currentPlayingPath === modelData.audioPath && AppController.player && AppController.player.playing && !AppController.player.paused
+                                        readonly property bool isPausedThis: modelData && modelData.audioPath && root.currentPlayingPath === modelData.audioPath && AppController.player && AppController.player.paused
+                                        text: isPlayingThis ? qsTr("Pause") : (isPausedThis ? qsTr("Resume") : qsTr("Play"))
+                                        iconName: isPlayingThis ? "pause" : "play"
+                                        buttonColor: isPlayingThis ? Theme.accent : Theme.surfaceAlt
+                                        quiet: !isPlayingThis
                                         visible: root.activeMode === "reference"
                                         enabled: modelData.valid !== false
-                                        implicitWidth: 70
+                                        implicitWidth: 84
                                         implicitHeight: 32
                                         onClicked: listRoot.playRequested(modelData)
                                     }

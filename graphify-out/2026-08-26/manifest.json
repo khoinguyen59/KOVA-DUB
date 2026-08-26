@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "qml/components/base/colabNotebookUrls.js": {
-    "mtime": 1787664504.6252756,
-    "seen": 1787666975.8534853,
-    "ast_hash": "1b0e3c5f77b4fd527b5eb0f88ec21c8d",
+    "mtime": 1787708725.600583,
+    "seen": 1787710603.3933067,
+    "ast_hash": "dc8c9bc41eba6971fccecbb283d0a5ee",
     "semantic_hash": ""
   },
   "resources/paddle-ocr-runtime-manifest.json": {
@@ -1464,9 +1464,9 @@
     "semantic_hash": ""
   },
   "src/controllers/separation/VoiceCloneReferenceIsolatorController.cpp": {
-    "mtime": 1787683489.8976867,
-    "seen": 1787686997.5987365,
-    "ast_hash": "dd1e3f244c25124280940b94612ce609",
+    "mtime": 1787711321.0512803,
+    "seen": 1787721475.0897317,
+    "ast_hash": "30133669d301f6554d0d606d96e5da07",
     "semantic_hash": ""
   },
   "src/controllers/separation/VoiceCloneReferenceIsolatorController.h": {
@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.cpp": {
-    "mtime": 1787683489.8976867,
-    "seen": 1787686997.599382,
-    "ast_hash": "0b946c003f339cb9c791f3777d985a84",
+    "mtime": 1787712537.8591285,
+    "seen": 1787721475.0939066,
+    "ast_hash": "08b6315c639e6fba8704db89d089b33a",
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.h": {
@@ -3276,9 +3276,9 @@
     "semantic_hash": ""
   },
   "CMakeLists.txt": {
-    "mtime": 1787691931.3198936,
-    "seen": 1787692460.7620962,
-    "ast_hash": "e1a09ba6a5f382456667219aabe37838",
+    "mtime": 1787720489.5770595,
+    "seen": 1787721475.157043,
+    "ast_hash": "871d1b33ac4176a0afdb1ec29e277ae8",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -5844,9 +5844,9 @@
     "semantic_hash": ""
   },
   "tests/colab/test_ColabVoiceCloneRunner.cpp": {
-    "mtime": 1787683490.3112183,
-    "seen": 1787686997.6043198,
-    "ast_hash": "8bfeb931fe4969f587665efa82583ee9",
+    "mtime": 1787712515.3998904,
+    "seen": 1787721475.13453,
+    "ast_hash": "ef852a7924017bc86c727d94af5133f7",
     "semantic_hash": ""
   },
   "tests/colab/test_ColabVoiceCloneRunner.h": {
@@ -6228,9 +6228,435 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787692403.4625509,
-    "seen": 1787692460.7626493,
-    "ast_hash": "beca94865a0289554e865ba6aabb8a63",
+    "mtime": 1787721461.0498035,
+    "seen": 1787721475.1572094,
+    "ast_hash": "d73c7aefe450b10d07e197a81034d5bb",
+    "semantic_hash": ""
+  },
+  "data/presets/vieneu_voices.json": {
+    "mtime": 1787564404.152686,
+    "seen": 1787721475.0435598,
+    "ast_hash": "9849480347cda7342778235886e91d78",
+    "semantic_hash": ""
+  },
+  "data/presets/vieneu_voices_v3_turbo.json": {
+    "mtime": 1787564404.1538098,
+    "seen": 1787721475.043564,
+    "ast_hash": "95b1543ffa2718f99c912f7893b64635",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_presets.json": {
+    "mtime": 1787720422.9572177,
+    "seen": 1787721475.0435667,
+    "ast_hash": "1df7ce06b309a0d880111031b950eab4",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/conversational-vi-qa.json": {
+    "mtime": 1787711404.7176838,
+    "seen": 1787721475.046742,
+    "ast_hash": "0b5177680592c0edcbbff545744381ab",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/expressive-vi-emotional.json": {
+    "mtime": 1787711412.545803,
+    "seen": 1787721475.0467453,
+    "ast_hash": "8d378708d227036b264e919106168f35",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/long-en-documentary.json": {
+    "mtime": 1787711435.607283,
+    "seen": 1787721475.0470035,
+    "ast_hash": "9747d4a63f9af8e3f0f8a3844c6f4eaf",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/long-vi-audiobook-story.json": {
+    "mtime": 1787711396.3761601,
+    "seen": 1787721475.0470066,
+    "ast_hash": "76bfe3909ef16daa02ecb1054e1785f8",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/medium-en-narration.json": {
+    "mtime": 1787711427.8906417,
+    "seen": 1787721475.0472653,
+    "ast_hash": "6dea1a42d192311d23fe7d18b5f673ff",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/medium-vi-tech-intro.json": {
+    "mtime": 1787711389.0820966,
+    "seen": 1787721475.0472682,
+    "ast_hash": "bc67ba483cd736c4f6d9ffd6f04ee462",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/news-vi-broadcast.json": {
+    "mtime": 1787711420.3361938,
+    "seen": 1787721475.0472703,
+    "ast_hash": "1b6336a8677571d2762daba13354ecd6",
+    "semantic_hash": ""
+  },
+  "examples/voice-cloning/common/very-short-vi-greeting.json": {
+    "mtime": 1787711381.7627516,
+    "seen": 1787721475.0477548,
+    "ast_hash": "fa0389dea93a2196978db051679c35c3",
+    "semantic_hash": ""
+  },
+  "docs/VOICE_TRAINING_AND_GALLERY_AUDIT_REPORT.md": {
+    "mtime": 1787721417.196903,
+    "seen": 1787721475.164139,
+    "ast_hash": "39f9a2ef601db3ea1e6ccbdd33f6f0ae",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/aussie_podcaster.wav": {
+    "mtime": 1787563647.1204996,
+    "seen": 1787721475.1695905,
+    "ast_hash": "54366cc76d746dbc9a42b707aaf1b4cc",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/bedtime_storyteller.wav": {
+    "mtime": 1787563647.1248846,
+    "seen": 1787721475.1695924,
+    "ast_hash": "8453f6f9626869672404abea930912c2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Alex_\u0110\u1ea1i_\u0110\u1ebf.wav": {
+    "mtime": 1787720422.9404778,
+    "seen": 1787721475.1695945,
+    "ast_hash": "b01f231dbbe032d7724f843d0cd66ed2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Ban_Mai.wav": {
+    "mtime": 1787720422.8909812,
+    "seen": 1787721475.1695962,
+    "ast_hash": "be4446c4381eecd80903645a2562a438",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_B\u1ea3n_Tin_1.wav": {
+    "mtime": 1787720422.8989496,
+    "seen": 1787721475.1695976,
+    "ast_hash": "c8a5c1de1cb36e8e308a52127facb05f",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_B\u1ea3n_Tin_n\u1eef.wav": {
+    "mtime": 1787720422.9071853,
+    "seen": 1787721475.1695995,
+    "ast_hash": "344ceecd4714d42e43300fbce1474406",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_C\u00f4_G\u00e1i_Ho\u1ea1t_Ng\u00f4n.wav": {
+    "mtime": 1787720422.8738701,
+    "seen": 1787721475.169601,
+    "ast_hash": "feb2bd7b95cdaffcc5dbfdf489f5a00c",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Gi\u1ecdng_B\u00e9.wav": {
+    "mtime": 1787720422.8738701,
+    "seen": 1787721475.1696024,
+    "ast_hash": "8f59e4538c52fe0cf0f83491a1d0cccd",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Gi\u1ecdng_G\u00e1i_M\u1edbi_L\u1edbn.wav": {
+    "mtime": 1787720422.9237337,
+    "seen": 1787721475.1696038,
+    "ast_hash": "a829f4130701011d20cf130747a634d7",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Gi\u1ecdng_Nam_Tr\u1ea7m_.wav": {
+    "mtime": 1787720422.9237337,
+    "seen": 1787721475.169605,
+    "ast_hash": "e268f954b5065aca65b16790bab3469b",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Gi\u1ecdng_N\u1eef_Ph\u1ed5_Th\u00f4ng.wav": {
+    "mtime": 1787720422.8657012,
+    "seen": 1787721475.1696064,
+    "ast_hash": "04717f6765d408a5bd54d8e79465164f",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Kenny_\u0110\u1ea1i_\u0110\u1ebf.wav": {
+    "mtime": 1787720422.9154966,
+    "seen": 1787721475.1696076,
+    "ast_hash": "bda9c0f47b55cc4dceae7ff25f5fabf4",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Mai.wav": {
+    "mtime": 1787720422.882822,
+    "seen": 1787721475.169609,
+    "ast_hash": "dc086ac40a967d6c8859bf17ccb85383",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Nam_b\u1ea3n_tin.wav": {
+    "mtime": 1787720422.9321127,
+    "seen": 1787721475.1696115,
+    "ast_hash": "6d93de6357d09f4f2baad1a84fa3f2d3",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Nh\u1ecf_Ng\u1ecdt_Ng\u00e0o.wav": {
+    "mtime": 1787720422.8572423,
+    "seen": 1787721475.1696134,
+    "ast_hash": "a306bd9ccd6deaa1d8d5bf92311e0b5b",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Qu\u00ean_T\u00ean_T\u1ef1_Test.wav": {
+    "mtime": 1787720422.9321127,
+    "seen": 1787721475.1696148,
+    "ast_hash": "45cdb91d0fc8c2044903a6c3ccb9d566",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Review_Phim_2.wav": {
+    "mtime": 1787720422.9071853,
+    "seen": 1787721475.1696165,
+    "ast_hash": "36e510747d391f3dba18686fc51d8d30",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Review_Phim_3.wav": {
+    "mtime": 1787720422.9071853,
+    "seen": 1787721475.169618,
+    "ast_hash": "d7d9fdcafd9246f135db29aed5dd7dc3",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Review_Phim_4.wav": {
+    "mtime": 1787720422.8989496,
+    "seen": 1787721475.1696188,
+    "ast_hash": "bd90baa7e2a5a811c9843b1f1dd94ee3",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Review_Phim_new.wav": {
+    "mtime": 1787720422.8909812,
+    "seen": 1787721475.1696203,
+    "ast_hash": "070cea57c97e4c896f95772a2de56650",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Robot_VN.wav": {
+    "mtime": 1787720422.9154966,
+    "seen": 1787721475.1696215,
+    "ast_hash": "f6866393c87923b1c420d961ff0594c3",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Sunny_Idol.wav": {
+    "mtime": 1787720422.9154966,
+    "seen": 1787721475.1696231,
+    "ast_hash": "2197338727599f914358ff900426ace2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Thanh_Ni\u00ean_T\u1ef1_Tin.wav": {
+    "mtime": 1787720422.9404778,
+    "seen": 1787721475.1696246,
+    "ast_hash": "71d177c6f1dab4b4b3c623d936d0bbfe",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_capcut_Vi\u1ec7t_M\u00e9o.wav": {
+    "mtime": 1787720422.882822,
+    "seen": 1787721475.1696255,
+    "ast_hash": "52516f225c6c35f3e18ac4e9a21fc90c",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/french_hospitality_guide.wav": {
+    "mtime": 1787563647.1118474,
+    "seen": 1787721475.1696267,
+    "ast_hash": "56e7892bb037bf9fbc0dc210b51a56c2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/indian_support_agent.wav": {
+    "mtime": 1787563647.1300514,
+    "seen": 1787721475.169628,
+    "ast_hash": "00c12abe41eb128dd7926aa42f6b7d08",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/mandarin_voice.wav": {
+    "mtime": 1787563647.1330812,
+    "seen": 1787721475.169629,
+    "ast_hash": "9256541526aa0c1c97aab1f0f7f94fe9",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/natural_conversational_female.wav": {
+    "mtime": 1787563647.1027248,
+    "seen": 1787721475.1696305,
+    "ast_hash": "c57b3272d0bc5b0d5dd2cf69f18b381e",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_audiobook_uk_narrator.wav": {
+    "mtime": 1787563647.1165285,
+    "seen": 1787721475.1696317,
+    "ast_hash": "f0e8639d285de6829788776f105f311a",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_aussie_podcaster.wav": {
+    "mtime": 1787563647.1204996,
+    "seen": 1787721475.1696327,
+    "ast_hash": "54366cc76d746dbc9a42b707aaf1b4cc",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_bedtime_storyteller.wav": {
+    "mtime": 1787563647.1248846,
+    "seen": 1787721475.1696339,
+    "ast_hash": "8453f6f9626869672404abea930912c2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_conversational_female.wav": {
+    "mtime": 1787563647.106124,
+    "seen": 1787721475.1696348,
+    "ast_hash": "5106a8695892679f14f040421f8f0d59",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_demo_clone_output.wav": {
+    "mtime": 1787563647.0986726,
+    "seen": 1787721475.1696358,
+    "ast_hash": "087496c49add75d151edb49afc21e7c7",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_demo_voice.wav": {
+    "mtime": 1787563647.1027248,
+    "seen": 1787721475.169637,
+    "ast_hash": "c57b3272d0bc5b0d5dd2cf69f18b381e",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_dubbed_es.wav": {
+    "mtime": 1787563646.9891832,
+    "seen": 1787721475.169638,
+    "ast_hash": "42bcf4c1367e6906332edc13ea2afa1d",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_dubbed_fr.wav": {
+    "mtime": 1787563647.019129,
+    "seen": 1787721475.1696389,
+    "ast_hash": "553f5c60a6e1b79f5d3903e462581a95",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_dubbed_ja.wav": {
+    "mtime": 1787563647.0510783,
+    "seen": 1787721475.1696396,
+    "ast_hash": "904a8c3330b420ce72c26faaa9d1e442",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_dubbed_zh.wav": {
+    "mtime": 1787563647.0789785,
+    "seen": 1787721475.1696413,
+    "ast_hash": "797825222eac384466f662484dc2fddc",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_french_hospitality.wav": {
+    "mtime": 1787563647.1118474,
+    "seen": 1787721475.1696422,
+    "ast_hash": "56e7892bb037bf9fbc0dc210b51a56c2",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_gravelly_villain.wav": {
+    "mtime": 1787563647.1272497,
+    "seen": 1787721475.1696434,
+    "ast_hash": "b221b5f959dedd1aa99bdaf43246656c",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_indian_support_agent.wav": {
+    "mtime": 1787563647.1300514,
+    "seen": 1787721475.1696446,
+    "ast_hash": "00c12abe41eb128dd7926aa42f6b7d08",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_mandarin_sichuan.wav": {
+    "mtime": 1787563647.1330812,
+    "seen": 1787721475.1696458,
+    "ast_hash": "9256541526aa0c1c97aab1f0f7f94fe9",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_source_en.wav": {
+    "mtime": 1787563647.0944781,
+    "seen": 1787721475.1696467,
+    "ast_hash": "41f82fd2aa77275f2686a63549a88e10",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_technical_presenter.wav": {
+    "mtime": 1787563647.1092367,
+    "seen": 1787721475.1696482,
+    "ast_hash": "c1f2a6b4798a0d2769ee9e08e90033c5",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/omni_us_news_anchor.wav": {
+    "mtime": 1787563647.1359437,
+    "seen": 1787721475.1696491,
+    "ast_hash": "11b6e8a4de198a1fb7ace5f5b5d2e679",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/technical_presenter.wav": {
+    "mtime": 1787563647.1092367,
+    "seen": 1787721475.16965,
+    "ast_hash": "c1f2a6b4798a0d2769ee9e08e90033c5",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/uk_audiobook_narrator.wav": {
+    "mtime": 1787563647.1165285,
+    "seen": 1787721475.1696515,
+    "ast_hash": "f0e8639d285de6829788776f105f311a",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/us_news_anchor.wav": {
+    "mtime": 1787563647.1359437,
+    "seen": 1787721475.1696525,
+    "ast_hash": "11b6e8a4de198a1fb7ace5f5b5d2e679",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_binh_nam_bac.wav": {
+    "mtime": 1787564404.1395845,
+    "seen": 1787721475.1696534,
+    "ast_hash": "a36d19b7f0e23251d87baf459449e090",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_day_so_nam_bac.wav": {
+    "mtime": 1787564404.1233718,
+    "seen": 1787721475.1696544,
+    "ast_hash": "a60624153a7fe0ceb621232162a49a38",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_doan_nu_nam.wav": {
+    "mtime": 1787564404.1521072,
+    "seen": 1787721475.1696558,
+    "ast_hash": "2bdbed60b906c0c07d74233043d5076e",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_ly_nu_bac.wav": {
+    "mtime": 1787564404.1418822,
+    "seen": 1787721475.1696568,
+    "ast_hash": "85e5465d6a6fda99bfc48ec004631536",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_minh_duc_nam_bac.wav": {
+    "mtime": 1787564404.1205156,
+    "seen": 1787721475.169658,
+    "ast_hash": "e3515f74fafe676ca33962ab2f423d41",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_ngoc_huyen_nu_nam.wav": {
+    "mtime": 1787564404.1251175,
+    "seen": 1787721475.169659,
+    "ast_hash": "a293d7b68e6fec081abf1dce94f85e7f",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_ngoc_nu_bac.wav": {
+    "mtime": 1787564404.1441724,
+    "seen": 1787721475.16966,
+    "ast_hash": "9732d659d07305da571b4f781ecfc3ef",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_tet_xuan_nu_bac.wav": {
+    "mtime": 1787564404.1216538,
+    "seen": 1787721475.1696613,
+    "ast_hash": "da72548e9f33390280b76601ffd6b51d",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_tuyen_nam_bac.wav": {
+    "mtime": 1787564404.147088,
+    "seen": 1787721475.1696622,
+    "ast_hash": "c558d10b0c75db2d13738f8b894bb52a",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_vinh_nam_nam.wav": {
+    "mtime": 1787564404.1487474,
+    "seen": 1787721475.1696632,
+    "ast_hash": "9993a5cfd8e36a781714ed8a2d2d1fc1",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vn_xuan_vinh_nam_nam.wav": {
+    "mtime": 1787564404.1182709,
+    "seen": 1787721475.1696641,
+    "ast_hash": "e680cdf480b13fbdd25a51960f402b1b",
     "semantic_hash": ""
   }
 }

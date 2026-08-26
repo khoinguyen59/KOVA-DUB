@@ -24478,5 +24478,445 @@
       "Miền Nam",
       "Đàm thoại"
     ]
+  },
+  {
+    "id": "capcut-BV421-vivn-streaming",
+    "name": "CapCut: Nhỏ Ngọt Ngào",
+    "description": "Giọng đọc viral CapCut/TikTok: Nhỏ Ngọt Ngào",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Nhỏ_Ngọt_Ngào.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Nhỏ Ngọt Ngào",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Nhỏ Ngọt Ngào",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-vi-female-huong",
+    "name": "CapCut: Giọng Nữ Phổ Thông",
+    "description": "Giọng đọc viral CapCut/TikTok: Giọng Nữ Phổ Thông",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Giọng_Nữ_Phổ_Thông.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Giọng Nữ Phổ Thông",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Giọng Nữ Phổ Thông",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV074-streaming-dsp",
+    "name": "CapCut: Giọng Bé",
+    "description": "Giọng đọc viral CapCut/TikTok: Giọng Bé",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Giọng_Bé.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Giọng Bé",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Giọng Bé",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV074-streaming",
+    "name": "CapCut: Cô Gái Hoạt Ngôn",
+    "description": "Giọng đọc viral CapCut/TikTok: Cô Gái Hoạt Ngôn",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Cô_Gái_Hoạt_Ngôn.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Cô Gái Hoạt Ngôn",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Cô Gái Hoạt Ngôn",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV075-streaming-vibrato-dsp",
+    "name": "CapCut: Việt Méo",
+    "description": "Giọng đọc viral CapCut/TikTok: Việt Méo",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Việt_Méo.wav",
+    "referenceTranscript": "Xin chào cả nhà đã quay trở lại với video hài hước ngày hôm nay của tụi mình nha.",
+    "instruct": "vietnamese viral voice, Việt Méo",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Việt Méo",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV562-streaming",
+    "name": "CapCut: Mai",
+    "description": "Giọng đọc viral CapCut/TikTok: Mai",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Mai.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Mai",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Mai",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-yangguangnv-uranus-bigtts",
+    "name": "CapCut: Ban Mai",
+    "description": "Giọng đọc viral CapCut/TikTok: Ban Mai",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Ban_Mai.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Ban Mai",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Ban Mai",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-richgirl-uranus-bigtts",
+    "name": "CapCut: Review Phim new",
+    "description": "Giọng đọc viral CapCut/TikTok: Review Phim new",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Review_Phim_new.wav",
+    "referenceTranscript": "Đây là bộ phim hành động gay cấn và hấp dẫn nhất mà bạn nhất định không thể bỏ qua.",
+    "instruct": "vietnamese viral voice, Review Phim new",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Review Phim new",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-quanweinv-uranus-bigtts",
+    "name": "CapCut: Bản Tin 1",
+    "description": "Giọng đọc viral CapCut/TikTok: Bản Tin 1",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Bản_Tin_1.wav",
+    "referenceTranscript": "Bản tin thời sự chiều nay ghi nhận những diễn biến mới nhất trên thị trường kinh tế và xã hội.",
+    "instruct": "vietnamese viral voice, Bản Tin 1",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Bản Tin 1",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-stokie-uranus-bigtts",
+    "name": "CapCut: Review Phim 4",
+    "description": "Giọng đọc viral CapCut/TikTok: Review Phim 4",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Review_Phim_4.wav",
+    "referenceTranscript": "Đây là bộ phim hành động gay cấn và hấp dẫn nhất mà bạn nhất định không thể bỏ qua.",
+    "instruct": "vietnamese viral voice, Review Phim 4",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Review Phim 4",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-sisi-uranus-bigtts",
+    "name": "CapCut: Bản Tin nữ",
+    "description": "Giọng đọc viral CapCut/TikTok: Bản Tin nữ",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Bản_Tin_nữ.wav",
+    "referenceTranscript": "Bản tin thời sự chiều nay ghi nhận những diễn biến mới nhất trên thị trường kinh tế và xã hội.",
+    "instruct": "vietnamese viral voice, Bản Tin nữ",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Bản Tin nữ",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-daqi-uranus-bigtts",
+    "name": "CapCut: Review Phim 3",
+    "description": "Giọng đọc viral CapCut/TikTok: Review Phim 3",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Review_Phim_3.wav",
+    "referenceTranscript": "Đây là bộ phim hành động gay cấn và hấp dẫn nhất mà bạn nhất định không thể bỏ qua.",
+    "instruct": "vietnamese viral voice, Review Phim 3",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Review Phim 3",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-xyf04auto-uranus-bigtts",
+    "name": "CapCut: Review Phim 2",
+    "description": "Giọng đọc viral CapCut/TikTok: Review Phim 2",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Review_Phim_2.wav",
+    "referenceTranscript": "Đây là bộ phim hành động gay cấn và hấp dẫn nhất mà bạn nhất định không thể bỏ qua.",
+    "instruct": "vietnamese viral voice, Review Phim 2",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Review Phim 2",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-kiwi-uranus-bigtts",
+    "name": "CapCut: Sunny Idol",
+    "description": "Giọng đọc viral CapCut/TikTok: Sunny Idol",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Sunny_Idol.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Sunny Idol",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Sunny Idol",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV075-streaming-demon-dsp",
+    "name": "CapCut: Kenny Đại Đế",
+    "description": "Giọng đọc viral CapCut/TikTok: Kenny Đại Đế",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Kenny_Đại_Đế.wav",
+    "referenceTranscript": "Xin chào cả nhà đã quay trở lại với video hài hước ngày hôm nay của tụi mình nha.",
+    "instruct": "vietnamese viral voice, Kenny Đại Đế",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Kenny Đại Đế",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV075-streaming-robot-dsp",
+    "name": "CapCut: Robot VN",
+    "description": "Giọng đọc viral CapCut/TikTok: Robot VN",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Robot_VN.wav",
+    "referenceTranscript": "Xin chào cả nhà đã quay trở lại với video hài hước ngày hôm nay của tụi mình nha.",
+    "instruct": "vietnamese viral voice, Robot VN",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Robot VN",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-male-felipe-uranus-bigtts",
+    "name": "CapCut: Giọng Nam Trầm ",
+    "description": "Giọng đọc viral CapCut/TikTok: Giọng Nam Trầm ",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Giọng_Nam_Trầm_.wav",
+    "referenceTranscript": "Đêm dần về khuya, không gian trở nên tĩnh lặng, chỉ còn lại tiếng gió khẽ lay nhẹ qua những tán cây.",
+    "instruct": "vietnamese viral voice, Giọng Nam Trầm ",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Giọng Nam Trầm ",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-peiqi-uranus-bigtts",
+    "name": "CapCut: Giọng Gái Mới Lớn",
+    "description": "Giọng đọc viral CapCut/TikTok: Giọng Gái Mới Lớn",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Giọng_Gái_Mới_Lớn.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Giọng Gái Mới Lớn",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Giọng Gái Mới Lớn",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-xinwenjieshuo-uranus-bigtts",
+    "name": "CapCut: Nam bản tin",
+    "description": "Giọng đọc viral CapCut/TikTok: Nam bản tin",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Nam_bản_tin.wav",
+    "referenceTranscript": "Bản tin thời sự chiều nay ghi nhận những diễn biến mới nhất trên thị trường kinh tế và xã hội.",
+    "instruct": "vietnamese viral voice, Nam bản tin",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Nam bản tin",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-multi-female-tianmeijieshuo-uranus-bigtts",
+    "name": "CapCut: Quên Tên Tự Test",
+    "description": "Giọng đọc viral CapCut/TikTok: Quên Tên Tự Test",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Quên_Tên_Tự_Test.wav",
+    "referenceTranscript": "Chào bạn, hôm nay thời tiết rất trong lành và mát mẻ, chúc bạn một ngày làm việc thật nhiều niềm vui.",
+    "instruct": "vietnamese viral voice, Quên Tên Tự Test",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Quên Tên Tự Test",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV075-streaming",
+    "name": "CapCut: Thanh Niên Tự Tin",
+    "description": "Giọng đọc viral CapCut/TikTok: Thanh Niên Tự Tin",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Thanh_Niên_Tự_Tin.wav",
+    "referenceTranscript": "Bản tin thời sự chiều nay ghi nhận những diễn biến mới nhất trên thị trường kinh tế và xã hội.",
+    "instruct": "vietnamese viral voice, Thanh Niên Tự Tin",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Thanh Niên Tự Tin",
+      "Viral"
+    ]
+  },
+  {
+    "id": "capcut-BV560-streaming",
+    "name": "CapCut: Alex Đại Đế",
+    "description": "Giọng đọc viral CapCut/TikTok: Alex Đại Đế",
+    "modelFamily": "general",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Vietnamese (CapCut Viral)",
+    "style": "viral",
+    "referenceAudio": "capcut_capcut_Alex_Đại_Đế.wav",
+    "referenceTranscript": "Xin chào cả nhà đã quay trở lại với video hài hước ngày hôm nay của tụi mình nha.",
+    "instruct": "vietnamese viral voice, Alex Đại Đế",
+    "tags": [
+      "CapCut",
+      "TikTok",
+      "Vietnamese",
+      "Alex Đại Đế",
+      "Viral"
+    ]
   }
 ]

@@ -165,15 +165,29 @@ ColumnLayout {
                 font.pixelSize: Theme.fontSmall
             }
 
-            AppComboBox {
-                id: savedVoiceCombo
+            RowLayout {
                 Layout.fillWidth: true
-                model: root.savedVoices
-                textRole: "name"
-                secondaryTextRole: "originalAudioName"
-                currentIndex: root.selectedSavedVoiceIndex
-                enabled: !root.locked && root.savedVoices.length > 0
-                onActivated: function(index) { root.loadSavedVoice(index) }
+                spacing: Theme.paddingSmall
+
+                AppComboBox {
+                    id: savedVoiceCombo
+                    Layout.fillWidth: true
+                    model: root.savedVoices
+                    textRole: "name"
+                    secondaryTextRole: "originalAudioName"
+                    currentIndex: root.selectedSavedVoiceIndex
+                    enabled: !root.locked && root.savedVoices.length > 0
+                    onActivated: function(index) { root.loadSavedVoice(index) }
+                }
+
+                PrimaryButton {
+                    text: qsTr("Bảng Giọng Nói")
+                    iconName: "users"
+                    buttonColor: Theme.accent
+                    implicitHeight: 38
+                    implicitWidth: 140
+                    onClicked: voiceGalleryDialog.open()
+                }
             }
 
             RowLayout {
@@ -463,6 +477,28 @@ ColumnLayout {
             if (root.locked) return
             root.audioPath = audioPath
             root.referenceText = referenceText
+        }
+    }
+
+    VoiceGalleryDialog {
+        id: voiceGalleryDialog
+        parent: Overlay.overlay
+        familyId: root.familyId
+        onVoiceSelected: function(audioPath, referenceText, name, familyId) {
+            if (root.locked) return
+            root.loadingSavedVoice = true
+            root.audioPath = audioPath
+            root.referenceText = referenceText
+            root.reusableVoiceName = name
+
+            for (var i = 0; i < root.savedVoices.length; ++i) {
+                if (root.savedVoices[i].name === name || root.savedVoices[i].audioPath === audioPath) {
+                    root.selectedSavedVoiceIndex = i
+                    root.selectedSavedVoiceId = root.savedVoices[i].id || ""
+                    break
+                }
+            }
+            root.loadingSavedVoice = false
         }
     }
     Loader {

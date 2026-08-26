@@ -559,18 +559,32 @@ ColumnLayout {
 
                 // 2. Saved Voice Selector
                 Text { text: qsTr("Saved cloned voice"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                AppComboBox {
-                    id: reusableCloneVoiceCombo
+                RowLayout {
                     Layout.fillWidth: true
-                    model: root.reusableCloneVoices
-                    textRole: "name"
-                    secondaryTextRole: "originalAudioName"
-                    currentIndex: root.reusableCloneVoiceIndex
-                    enabled: !root.locked && root.reusableCloneVoices.length > 0
-                    onActivated: function(index) {
-                        root.reusableCloneVoiceIndex = index
-                        root.reusableCloneConsent = false
-                        root.syncSelectedVoiceModel()
+                    spacing: Theme.paddingSmall
+
+                    AppComboBox {
+                        id: reusableCloneVoiceCombo
+                        Layout.fillWidth: true
+                        model: root.reusableCloneVoices
+                        textRole: "name"
+                        secondaryTextRole: "originalAudioName"
+                        currentIndex: root.reusableCloneVoiceIndex
+                        enabled: !root.locked && root.reusableCloneVoices.length > 0
+                        onActivated: function(index) {
+                            root.reusableCloneVoiceIndex = index
+                            root.reusableCloneConsent = false
+                            root.syncSelectedVoiceModel()
+                        }
+                    }
+
+                    PrimaryButton {
+                        text: qsTr("Bảng Giọng Nói")
+                        iconName: "users"
+                        buttonColor: Theme.accent
+                        implicitHeight: 38
+                        implicitWidth: 140
+                        onClicked: ttsVoiceGalleryDialog.open()
                     }
                 }
 
@@ -881,6 +895,23 @@ ColumnLayout {
             }
 
             Item { Layout.fillWidth: true; Layout.preferredHeight: Theme.paddingSmall }
+        }
+    }
+
+    VoiceGalleryDialog {
+        id: ttsVoiceGalleryDialog
+        parent: Overlay.overlay
+        onVoiceSelected: function(audioPath, referenceText, name, familyId) {
+            if (root.locked) return
+            root.refreshReusableCloneVoices()
+            for (var i = 0; i < root.reusableCloneVoices.length; ++i) {
+                if (root.reusableCloneVoices[i].name === name || root.reusableCloneVoices[i].audioPath === audioPath) {
+                    root.reusableCloneVoiceIndex = i
+                    root.reusableCloneConsent = false
+                    root.syncSelectedVoiceModel()
+                    break
+                }
+            }
         }
     }
 }
