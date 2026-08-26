@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "qml/components/base/colabNotebookUrls.js": {
-    "mtime": 1787664504.6252756,
-    "seen": 1787666975.8534853,
-    "ast_hash": "1b0e3c5f77b4fd527b5eb0f88ec21c8d",
+    "mtime": 1787708725.600583,
+    "seen": 1787710603.3933067,
+    "ast_hash": "dc8c9bc41eba6971fccecbb283d0a5ee",
     "semantic_hash": ""
   },
   "resources/paddle-ocr-runtime-manifest.json": {
@@ -3276,9 +3276,9 @@
     "semantic_hash": ""
   },
   "CMakeLists.txt": {
-    "mtime": 1787691931.3198936,
-    "seen": 1787692460.7620962,
-    "ast_hash": "e1a09ba6a5f382456667219aabe37838",
+    "mtime": 1787709424.4971616,
+    "seen": 1787710603.4582963,
+    "ast_hash": "5cf9e232e5fe1f485f728717bc23953b",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787692403.4625509,
-    "seen": 1787692460.7626493,
-    "ast_hash": "beca94865a0289554e865ba6aabb8a63",
+    "mtime": 1787709741.0568595,
+    "seen": 1787710603.4584801,
+    "ast_hash": "0f24a17c6fcfb29260b0452620c5939e",
     "semantic_hash": ""
   }
 }

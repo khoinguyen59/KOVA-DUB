@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-long-audiobook-vi",
+  "title": "Voice clone — audiobook narrative (VI)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "vi"],
+  "inputs": { "text": "Ngày xửa ngày xưa, ở một ngôi làng nhỏ nằm nép mình bên sườn đồi xanh ngát, có một người thợ gốm già luôn cần mẫn bên bàn xoay. Mỗi tác phẩm ông tạo ra không chỉ là những chiếc bình gốm tinh xảo, mà còn chứa đựng cả tâm huyết, tình yêu và những câu chuyện kỳ diệu về vùng đất thanh bình nơi ông đã gắn bó suốt cả cuộc đời." },
+  "settings": { "lang": "vi", "temperature": 0.65, "top_k": 25, "top_p": 0.9 },
+  "expected": { "output": "A long storytelling paragraph in Vietnamese.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}

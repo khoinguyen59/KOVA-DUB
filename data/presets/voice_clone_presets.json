@@ -1,0 +1,425 @@
+[
+  {
+    "id": "omni-the-librarian",
+    "name": "OmniVoice: The Librarian (UK Narrator)",
+    "description": "Warm British audiobook narrator — measured, atmospheric, rich depth.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "female",
+    "accent": "British",
+    "style": "audiobook",
+    "referenceAudio": "omni_audiobook_uk_narrator.wav",
+    "referenceTranscript": "The clock tower struck thirteen, and for the first time in her life, Eleanor wondered if she had been counting wrong all along.",
+    "instruct": "female, middle-aged, low pitch, british accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Narrator",
+      "Audiobook",
+      "British"
+    ]
+  },
+  {
+    "id": "omni-the-anchor",
+    "name": "OmniVoice: The Anchor (US Primetime News)",
+    "description": "Clear American broadcaster — primetime evening television news.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "male",
+    "accent": "American",
+    "style": "news",
+    "referenceAudio": "omni_us_news_anchor.wav",
+    "referenceTranscript": "Good evening. Topping our broadcast tonight: scientists at the coastal observatory have confirmed the signal is, in fact, repeating.",
+    "instruct": "male, middle-aged, moderate pitch, american accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "News",
+      "Professional",
+      "American"
+    ]
+  },
+  {
+    "id": "omni-the-helpdesk",
+    "name": "OmniVoice: The Helpdesk (Indian Support Agent)",
+    "description": "Patient, clear Indian-English customer support and assistance voice.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "female",
+    "accent": "Indian",
+    "style": "support",
+    "referenceAudio": "omni_indian_support_agent.wav",
+    "referenceTranscript": "Thank you for calling VoiceStudio support. I can see your account here. Let's get this sorted out together.",
+    "instruct": "female, young adult, moderate pitch, indian accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Customer Service",
+      "Friendly"
+    ]
+  },
+  {
+    "id": "omni-the-podcaster",
+    "name": "OmniVoice: The Podcaster (Aussie Host)",
+    "description": "Aussie explainer host — quick, punchy, energetic, friendly.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "female",
+    "accent": "Australian",
+    "style": "podcast",
+    "referenceAudio": "omni_aussie_podcaster.wav",
+    "referenceTranscript": "Right, so here's the wild bit. Nobody told the engineers the satellite was supposed to be in orbit by Tuesday. Tuesday came and went.",
+    "instruct": "female, young adult, high pitch, australian accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Podcast",
+      "Energetic",
+      "Australian"
+    ]
+  },
+  {
+    "id": "omni-junior-quacks",
+    "name": "OmniVoice: Junior Quacks (Storyteller Sidekick)",
+    "description": "Anxious squawky bedtime sidekick — cartoon character energy.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "neutral",
+    "accent": "Neutral",
+    "style": "storyteller",
+    "referenceAudio": "omni_bedtime_storyteller.wav",
+    "referenceTranscript": "Once, in a town where every street was named after a kind of bread, a small fox decided she was going to learn to play the cello.",
+    "instruct": "young adult, high pitch",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Storyteller",
+      "Animated"
+    ]
+  },
+  {
+    "id": "omni-captain-crusty",
+    "name": "OmniVoice: Captain Crusty (Gravelly Villain)",
+    "description": "Gravelly old sailor — cartoon villain energy, rich character depth.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "male",
+    "accent": "American",
+    "style": "character",
+    "referenceAudio": "omni_gravelly_villain.wav",
+    "referenceTranscript": "You came a long way for an answer you already had. Sit. The fire is warm, and the truth is not.",
+    "instruct": "male, elderly, very low pitch",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Character",
+      "Deep",
+      "Villain"
+    ]
+  },
+  {
+    "id": "omni-sichuan-friend",
+    "name": "OmniVoice: The Sichuan Friend (四川话)",
+    "description": "Sichuan dialect Chinese showcase — natural, expressive, dialect-aware.",
+    "modelFamily": "f5-tts",
+    "language": "zh",
+    "gender": "female",
+    "accent": "Sichuan",
+    "style": "conversational",
+    "referenceAudio": "omni_mandarin_sichuan.wav",
+    "referenceTranscript": "今天天气巴适得很，我们去吃火锅嘛！记得多加点豆芽。",
+    "instruct": "female, young adult, moderate pitch, 四川话",
+    "tags": [
+      "OmniVoice",
+      "Chinese",
+      "Mandarin",
+      "Sichuan",
+      "Dialect"
+    ]
+  },
+  {
+    "id": "omni-demo-alto",
+    "name": "OmniVoice: Studio Alto (Warm Cinematic)",
+    "description": "Warm, smoky cinematic American alto voice, ideal for studio voice cloning.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "female",
+    "accent": "American",
+    "style": "conversational",
+    "referenceAudio": "omni_demo_voice.wav",
+    "referenceTranscript": "Hey. I'm the VoiceStudio demo voice. I was made right here, on your machine: private, local, and ready whenever you are.",
+    "instruct": "female, young adult, low pitch, american accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Clone Reference",
+      "Alto"
+    ]
+  },
+  {
+    "id": "omni-conversational",
+    "name": "OmniVoice: Conversational Assistant",
+    "description": "Natural conversational American female voice for virtual assistants and dialogue.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "female",
+    "accent": "American",
+    "style": "conversational",
+    "referenceAudio": "omni_conversational_female.wav",
+    "referenceTranscript": "Schedule a meeting with Pat for Tuesday at three PM and remind me to bring the quarterly report.",
+    "instruct": "female, young adult, moderate pitch, american accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Assistant",
+      "Conversational"
+    ]
+  },
+  {
+    "id": "omni-technical-presenter",
+    "name": "OmniVoice: Technical Presenter",
+    "description": "Precise, articulate American male voice for tutorials, code walkthroughs, and technical docs.",
+    "modelFamily": "f5-tts",
+    "language": "en",
+    "gender": "male",
+    "accent": "American",
+    "style": "technical",
+    "referenceAudio": "omni_technical_presenter.wav",
+    "referenceTranscript": "Patch the WebGPU shader in renderer.tsx, then bump pnpm to nine point fifteen and rerun the Vitest suite.",
+    "instruct": "male, young adult, moderate pitch, american accent",
+    "tags": [
+      "OmniVoice",
+      "English",
+      "Technical",
+      "Presenter"
+    ]
+  },
+  {
+    "id": "omni-french-hospitality",
+    "name": "OmniVoice: French Hospitality (Français)",
+    "description": "Gentle, welcoming French voice for hospitality, travel, and cultural guides.",
+    "modelFamily": "f5-tts",
+    "language": "fr",
+    "gender": "female",
+    "accent": "French",
+    "style": "hospitality",
+    "referenceAudio": "omni_french_hospitality.wav",
+    "referenceTranscript": "Bonjour, je voudrais réserver une table pour deux personnes à vingt heures.",
+    "instruct": "female, young adult, moderate pitch",
+    "tags": [
+      "OmniVoice",
+      "French",
+      "Hospitality",
+      "European"
+    ]
+  },
+  {
+    "id": "vn-minh-duc-nam-bac",
+    "name": "Minh Đức (Nam · Bắc · Tin tức chuẩn)",
+    "description": "Giọng nam miền Bắc chuẩn phát thanh truyền hình, phong cách tin tức chính luận sắc sảo.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Bắc",
+    "style": "tin_tuc",
+    "referenceAudio": "vn_minh_duc_nam_bac.wav",
+    "referenceTranscript": "Trên thực tế, các nghi ngờ đã bắt đầu xuất hiện từ lâu.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Bắc",
+      "Tin tức"
+    ]
+  },
+  {
+    "id": "vn-binh-nam-bac",
+    "name": "Thanh Bình (Nam · Bắc · Kể chuyện)",
+    "description": "Giọng nam miền Bắc trầm ấm, phong cách kể chuyện, đọc audio book và phóng sự tài liệu.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Bắc",
+    "style": "doc_truyen",
+    "referenceAudio": "vn_binh_nam_bac.wav",
+    "referenceTranscript": "Trên thực tế, các nghi ngờ đã bắt đầu xuất hiện.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Bắc",
+      "Kể chuyện"
+    ]
+  },
+  {
+    "id": "vn-tuyen-nam-bac",
+    "name": "Phạm Tuyên (Nam · Bắc · Tự nhiên)",
+    "description": "Giọng nam miền Bắc tự nhiên, chân thực, phù hợp cho trợ lý ảo và hội thoại đàm thoại.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Bắc",
+    "style": "tu_nhien",
+    "referenceAudio": "vn_tuyen_nam_bac.wav",
+    "referenceTranscript": "Chào mừng quý vị và các bạn đã quay trở lại với chương trình ngày hôm nay.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Bắc",
+      "Tự nhiên"
+    ]
+  },
+  {
+    "id": "vn-ly-nu-bac",
+    "name": "Trúc Ly (Nữ · Bắc · Tự nhiên)",
+    "description": "Giọng nữ miền Bắc thanh thoát, trong trẻo, tự nhiên và gần gũi.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Miền Bắc",
+    "style": "tu_nhien",
+    "referenceAudio": "vn_ly_nu_bac.wav",
+    "referenceTranscript": "Chúng ta có thể áp dụng logic tương tự với người khác.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nữ",
+      "Bắc",
+      "Tự nhiên"
+    ]
+  },
+  {
+    "id": "vn-ngoc-nu-bac",
+    "name": "Ngọc Linh (Nữ · Bắc · Đọc truyện)",
+    "description": "Giọng nữ miền Bắc truyền cảm, ấm áp, thích hợp cho đọc truyện đêm khuya và podcast.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Miền Bắc",
+    "style": "doc_truyen",
+    "referenceAudio": "vn_ngoc_nu_bac.wav",
+    "referenceTranscript": "Trong phòng rất tù mù, nên có thể dễ dàng che dấu nó.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nữ",
+      "Bắc",
+      "Đọc truyện"
+    ]
+  },
+  {
+    "id": "vn-tet-xuan-nu-bac",
+    "name": "Tết Xuân (Nữ · Bắc · Lời chúc ấm áp)",
+    "description": "Giọng nữ miền Bắc ngọt ngào, hân hoan, rộn rã không khí mùa xuân và lễ hội.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Miền Bắc",
+    "style": "le_hoi",
+    "referenceAudio": "vn_tet_xuan_nu_bac.wav",
+    "referenceTranscript": "Tết là dịp mọi người háo hức đón chào một năm mới với nhiều hy vọng và mong ước.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nữ",
+      "Bắc",
+      "Lễ hội"
+    ]
+  },
+  {
+    "id": "vn-day-so-nam-bac",
+    "name": "Dãy Số (Nam · Bắc · Đọc số khoa học)",
+    "description": "Giọng nam miền Bắc chuẩn xác, rõ âm từng chữ số, phù hợp bài giảng toán học và khoa học.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Bắc",
+    "style": "khoa_hoc",
+    "referenceAudio": "vn_day_so_nam_bac.wav",
+    "referenceTranscript": "ví dụ 2. tính trung bình của dãy số.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Bắc",
+      "Khoa học"
+    ]
+  },
+  {
+    "id": "vn-xuan-vinh-nam-nam",
+    "name": "Xuân Vĩnh (Nam · Nam · Tự nhiên đời thường)",
+    "description": "Giọng nam miền Nam hào sảng, phóng khoáng, tự nhiên và thân thiện.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Nam",
+    "style": "tu_nhien",
+    "referenceAudio": "vn_xuan_vinh_nam_nam.wav",
+    "referenceTranscript": "Hôm nay trời nắng đẹp ghê, tụi mình cùng đi cà phê tán gẫu chút xíu nha.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Nam",
+      "Tự nhiên"
+    ]
+  },
+  {
+    "id": "vn-vinh-nam-nam",
+    "name": "Vĩnh Nam (Nam · Nam · Đàm thoại)",
+    "description": "Giọng nam miền Nam đầm ấm, mộc mạc, phù hợp lồng tiếng và video đời thường.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "male",
+    "accent": "Miền Nam",
+    "style": "dam_thoai",
+    "referenceAudio": "vn_vinh_nam_nam.wav",
+    "referenceTranscript": "Hôm nay trời nắng đẹp ghê, tụi mình cùng đi cà phê tán gẫu chút xíu nha.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nam",
+      "Nam",
+      "Đàm thoại"
+    ]
+  },
+  {
+    "id": "vn-doan-nu-nam",
+    "name": "Thục Đoan (Nữ · Nam · Kể chuyện truyền cảm)",
+    "description": "Giọng nữ miền Nam ngọt ngào, êm dịu, đọc truyện và thuyết minh tình cảm sâu lắng.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Miền Nam",
+    "style": "doc_truyen",
+    "referenceAudio": "vn_doan_nu_nam.wav",
+    "referenceTranscript": "Dạ em xin chào anh chị, hôm nay em xin chia sẻ một câu chuyện rất thú vị.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nữ",
+      "Nam",
+      "Đọc truyện"
+    ]
+  },
+  {
+    "id": "vn-ngoc-huyen-nu-nam",
+    "name": "Ngọc Huyền (Nữ · Nam · Tự nhiên thanh lịch)",
+    "description": "Giọng nữ miền Nam thanh lịch, duyên dáng, thích hợp cho review, vlog và tin tức trẻ.",
+    "modelFamily": "f5-tts",
+    "language": "vi",
+    "gender": "female",
+    "accent": "Miền Nam",
+    "style": "tu_nhien",
+    "referenceAudio": "vn_ngoc_huyen_nu_nam.wav",
+    "referenceTranscript": "Cảm ơn mọi người đã theo dõi video, hẹn gặp lại các bạn trong những video tiếp theo.",
+    "tags": [
+      "Vietnamese",
+      "VieNeu-TTS",
+      "Nữ",
+      "Nam",
+      "Tự nhiên"
+    ]
+  }
+]

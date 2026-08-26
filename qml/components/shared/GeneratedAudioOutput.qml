@@ -223,26 +223,18 @@ Rectangle {
             }
 
             PrimaryButton {
-                text: root.isPaused ? qsTr("Resume") : qsTr("Play")
-                iconName: "play"
-                buttonColor: root.outputAccent
+                text: root.isPlaying && !root.isPaused ? qsTr("Pause") : (root.isPaused ? qsTr("Resume") : qsTr("Play"))
+                iconName: root.isPlaying && !root.isPaused ? "pause" : "play"
+                buttonColor: root.isPlaying && !root.isPaused ? Theme.accent : root.outputAccent
                 textColor: "#ffffff"
-                implicitWidth: 88
+                implicitWidth: 96
                 implicitHeight: 34
-                enabled: !root.processing && root.samples.length > 0 && (!root.isPlaying || root.isPaused)
-                onClicked: root.isPaused ? root.resumeClicked() : root.playClicked()
-            }
-
-            PrimaryButton {
-                text: qsTr("Pause")
-                iconName: "pause"
-                quiet: true
-                textColor: Theme.textPrimary
-                borderColor: Qt.rgba(1, 1, 1, 0.10)
-                implicitWidth: 90
-                implicitHeight: 34
-                enabled: !root.processing && root.isPlaying && !root.isPaused
-                onClicked: root.pauseClicked()
+                enabled: !root.processing && root.samples.length > 0
+                onClicked: {
+                    if (root.isPlaying && !root.isPaused) root.pauseClicked()
+                    else if (root.isPaused) root.resumeClicked()
+                    else root.playClicked()
+                }
             }
 
             PrimaryButton {
@@ -253,7 +245,7 @@ Rectangle {
                 borderColor: Qt.rgba(1, 1, 1, 0.10)
                 implicitWidth: 84
                 implicitHeight: 34
-                enabled: !root.processing && root.isPlaying
+                enabled: !root.processing && (root.isPlaying || root.isPaused)
                 onClicked: root.stopClicked()
             }
 

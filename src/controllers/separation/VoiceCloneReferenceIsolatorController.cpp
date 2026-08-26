@@ -126,18 +126,18 @@ bool VoiceCloneReferenceIsolatorController::usingColab() const
 
 QString VoiceCloneReferenceIsolatorController::selectedRoute() const
 {
-    return usingColab() ? QStringLiteral("Direct Colab GPU") : QStringLiteral("Local CPU");
+    return QStringLiteral("Direct Colab GPU");
 }
 
 QString VoiceCloneReferenceIsolatorController::selectedModel() const
 {
-    if (usingColab()) return m_colab ? m_colab->model() : QString();
-    return m_local ? m_local->configurationInfo().value(QStringLiteral("model")).toString() : QString();
+    if (m_colab && !m_colab->model().isEmpty()) return m_colab->model();
+    return QStringLiteral("sherpa-onnx-spleeter-2stems-fp16");
 }
 
 bool VoiceCloneReferenceIsolatorController::routeReady() const
 {
-    return usingColab() ? (m_colab && m_colab->ready()) : (m_local && m_local->ready());
+    return usingColab() && m_colab && m_colab->ready();
 }
 
 QString VoiceCloneReferenceIsolatorController::sourceFingerprint(QString *error) const
@@ -294,9 +294,7 @@ bool VoiceCloneReferenceIsolatorController::start()
         return false;
     }
     if (!routeReady()) {
-        setFailure(usingColab()
-            ? QStringLiteral("Direct Colab Isolator is not verified for the selected model. Open Isolator setup and run Check.")
-            : QStringLiteral("Local Isolator runtime/model is not ready. Configure Isolator before cleaning the reference audio."));
+        setFailure(QStringLiteral("Direct Colab Isolator is not connected or verified. Connect the Colab worker below before cleaning reference audio."));
         return false;
     }
     const QString configuration = configurationFingerprint();
@@ -305,7 +303,7 @@ bool VoiceCloneReferenceIsolatorController::start()
         emit stateChanged();
         return true;
     }
-    if ((usingColab() && m_colab->processing()) || (!usingColab() && m_local->processing())) {
+    if (m_colab && m_colab->processing()) {
         setFailure(QStringLiteral("Isolator is already processing another request. Wait for it to finish or cancel it before cleaning this reference."));
         return false;
     }
@@ -319,16 +317,10 @@ bool VoiceCloneReferenceIsolatorController::start()
     // emits stateChanged. Do it before claiming this controller owns a run;
     // otherwise that synchronous notification can be mistaken for a finished
     // cleanup and incorrectly reject the still-to-be-started job.
-    const bool colab = usingColab();
-    if (colab) m_colab->setSourcePath(m_sourcePath);
-    else m_local->setSourcePath(m_sourcePath);
-    m_ownedColabRun = colab;
+    m_colab->setSourcePath(m_sourcePath);
+    m_ownedColabRun = true;
     m_statusText = QStringLiteral("Separating Vocals and Background using %1 / %2.").arg(selectedRoute(), selectedModel());
-    if (m_ownedColabRun) {
-        m_colab->isolate();
-    } else {
-        m_local->isolate();
-    }
+    m_colab->isolate();
     // Both existing controllers synchronously clear their old result before
     // they mark themselves processing. Do not claim ownership until after
     // that reset has completed, otherwise its stateChanged signal can look

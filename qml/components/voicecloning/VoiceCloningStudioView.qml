@@ -30,6 +30,20 @@ StudioShell {
     modalSelectionDetail: ""
     backToolTip: qsTr("Change model and runtime")
 
+    component ColabField: TextField {
+        Layout.fillWidth: true
+        color: Theme.textPrimary
+        placeholderTextColor: Theme.textSecondary
+        font.pixelSize: Theme.fontSmall
+        padding: Theme.paddingSmall
+        selectByMouse: true
+        background: Rectangle {
+            color: Theme.surfaceLevel3
+            border.color: parent.activeFocus ? Theme.accent : Theme.border
+            radius: Theme.radiusSmall
+        }
+    }
+
     property string referenceAudioPath: ""
     property string playingType: "none"
     readonly property var referenceIsolator: AppController.voiceCloneReferenceIsolator
@@ -511,16 +525,21 @@ StudioShell {
                                                 onToggled: if (root.referenceIsolator) root.referenceIsolator.enabled = checked
                                             }
                                             Rectangle {
-                                                visible: root.referenceIsolator && root.referenceIsolator.selectedRoute !== ""
+                                                visible: root.referenceIsolator && root.referenceIsolator.enabled
                                                 radius: 4
-                                                color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.20)
-                                                implicitWidth: routeBadgeText.implicitWidth + 8
+                                                color: (root.referenceIsolator && root.referenceIsolator.routeReady)
+                                                       ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.20)
+                                                       : Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.15)
+                                                implicitWidth: routeBadgeText.implicitWidth + 10
                                                 implicitHeight: 20
                                                 Text {
                                                     id: routeBadgeText
                                                     anchors.centerIn: parent
-                                                    text: root.referenceIsolator ? root.referenceIsolator.selectedRoute : ""
-                                                    color: Theme.accentLight
+                                                    text: (root.referenceIsolator && root.referenceIsolator.routeReady)
+                                                          ? qsTr("Direct Colab GPU")
+                                                          : qsTr("Colab GPU Disconnected")
+                                                    color: (root.referenceIsolator && root.referenceIsolator.routeReady)
+                                                           ? Theme.accentLight : Theme.warning
                                                     font.pixelSize: 10
                                                     font.bold: true
                                                 }
@@ -530,9 +549,10 @@ StudioShell {
                                             Layout.fillWidth: true
                                             visible: root.referenceIsolator && root.referenceIsolator.enabled
                                             text: root.referenceIsolator
-                                                  ? qsTr("Isolator route: %1 · model: %2")
-                                                        .arg(root.referenceIsolator.selectedRoute)
-                                                        .arg(root.referenceIsolator.selectedModel || qsTr("not selected"))
+                                                  ? (root.referenceIsolator.routeReady
+                                                     ? qsTr("Isolator route: Direct Colab GPU · model: %1")
+                                                           .arg(root.referenceIsolator.selectedModel || qsTr("sherpa-onnx-spleeter-2stems-fp16"))
+                                                     : qsTr("Isolator route: Direct Colab GPU (Not Connected) — connect Colab worker below"))
                                                   : ""
                                             color: root.referenceIsolator && root.referenceIsolator.routeReady ? Theme.textSecondary : Theme.warning
                                             font.pixelSize: 10
@@ -547,87 +567,81 @@ StudioShell {
                                         }
                                         Text {
                                             Layout.fillWidth: true
-                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                            visible: root.referenceIsolator && root.referenceIsolator.statusText !== ""
                                             text: root.referenceIsolator ? root.referenceIsolator.statusText : ""
-                                            color: root.referenceIsolator && root.referenceIsolator.lastError !== "" ? Theme.danger
-                                                  : (root.referenceIsolator && root.referenceIsolator.resultReady ? Theme.success : Theme.textSecondary)
+                                            color: Theme.textSecondary
+                                            font.pixelSize: 10
+                                            wrapMode: Text.WordWrap
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            visible: root.referenceIsolator && root.referenceIsolator.lastError !== ""
+                                            text: root.referenceIsolator ? root.referenceIsolator.lastError : ""
+                                            color: Theme.danger
                                             font.pixelSize: 10
                                             wrapMode: Text.WordWrap
                                         }
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
+                                            spacing: Theme.paddingSmall
                                             PrimaryButton {
-                                                text: root.referenceIsolator && root.referenceIsolator.processing ? qsTr("Separating…")
-                                                                                                                    : qsTr("Run Isolator")
-                                                iconName: "waves"
-                                                quiet: true
-                                                enabled: root.referenceIsolator && !root.referenceIsolator.processing
-                                                         && root.referenceAudioPath !== "" && root.referenceIsolator.routeReady
-                                                onClicked: root.referenceIsolator.start()
+                                                text: (root.referenceIsolator && root.referenceIsolator.processing)
+                                                      ? qsTr("Separating...") : qsTr("Run Isolator")
+                                                iconName: "sliders"
+                                                enabled: !root.inputsLocked && root.referenceAudioPath !== ""
+                                                         && !(root.referenceIsolator && root.referenceIsolator.processing)
+                                                onClicked: if (root.referenceIsolator) root.referenceIsolator.start()
                                             }
                                             PrimaryButton {
-                                                text: root.referenceIsolatorSetupOpen ? qsTr("Hide setup") : qsTr("Set up Colab here")
+                                                text: referenceIsolatorSetupCol.visible
+                                                      ? qsTr("Hide setup") : qsTr("Setup Colab Isolator")
                                                 iconName: "settings"
                                                 quiet: true
-                                                enabled: !root.inputsLocked
-                                                onClicked: root.referenceIsolatorSetupOpen = !root.referenceIsolatorSetupOpen
-                                            }
-                                            PrimaryButton {
-                                                text: qsTr("Cancel")
-                                                iconName: "stop"
-                                                quiet: true
-                                                visible: root.referenceIsolator && root.referenceIsolator.processing
-                                                onClicked: root.referenceIsolator.cancel()
-                                            }
-                                            PrimaryButton {
-                                                text: qsTr("Retry")
-                                                iconName: "refresh"
-                                                quiet: true
-                                                visible: root.referenceIsolator && !root.referenceIsolator.processing
-                                                         && root.referenceIsolator.lastError !== ""
-                                                onClicked: root.referenceIsolator.retry()
+                                                onClicked: referenceIsolatorSetupCol.visible = !referenceIsolatorSetupCol.visible
                                             }
                                         }
                                         ColumnLayout {
-                                            id: referenceIsolatorColabSetup
+                                            id: referenceIsolatorSetupCol
                                             Layout.fillWidth: true
-                                            visible: root.referenceIsolator && root.referenceIsolator.enabled
-                                                     && root.referenceIsolatorSetupOpen
                                             spacing: Theme.paddingSmall
+                                            visible: !(root.referenceIsolator && root.referenceIsolator.routeReady)
 
                                             Rectangle {
                                                 Layout.fillWidth: true
-                                                implicitHeight: setupIntro.implicitHeight + Theme.paddingSmall * 2
+                                                implicitHeight: helperBoxCol.implicitHeight + Theme.paddingSmall * 2
                                                 radius: Theme.radiusSmall
-                                                color: Qt.rgba(1, 1, 1, 0.025)
+                                                color: Qt.rgba(1, 1, 1, 0.03)
                                                 border.color: Qt.rgba(1, 1, 1, 0.08)
                                                 border.width: 1
-                                                Text {
-                                                    id: setupIntro
+
+                                                ColumnLayout {
+                                                    id: helperBoxCol
                                                     anchors.fill: parent
                                                     anchors.margins: Theme.paddingSmall
-                                                    text: qsTr("Reference Isolator runs independently from the main Isolator tab. Run the exact Spleeter notebook below, then paste its URL and token here. The resulting Vocals WAV goes straight into this clone request; exporting it is optional.")
-                                                    color: Theme.textSecondary
-                                                    font.pixelSize: 10
-                                                    wrapMode: Text.WordWrap
+                                                    spacing: 4
+
+                                                    Text {
+                                                        Layout.fillWidth: true
+                                                        text: qsTr("Reference Isolator runs independently from the main Isolator tab. Run the exact Spleeter notebook below, then paste its URL and token here. The resulting Vocals WAV goes straight into this clone request; exporting it is optional.")
+                                                        color: Theme.textSecondary
+                                                        font.pixelSize: 10
+                                                        wrapMode: Text.WordWrap
+                                                    }
                                                 }
                                             }
+
                                             ColabNotebookLink {
-                                                Layout.fillWidth: true
-                                                notebookFile: root.referenceIsolatorColab
-                                                              ? root.referenceIsolatorColab.colabNotebookFile : ""
+                                                notebookFile: root.referenceIsolatorColab ? root.referenceIsolatorColab.colabNotebookFile : ""
                                             }
-                                            Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: 10 }
-                                            ReferenceIsolatorColabField {
+                                            Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                                            ColabField {
                                                 id: referenceIsolatorColabUrl
-                                                text: root.referenceIsolatorSession
-                                                      ? root.referenceIsolatorSession.workerUrl : ""
+                                                text: root.referenceIsolatorSession ? root.referenceIsolatorSession.workerUrl : ""
                                                 placeholderText: qsTr("https://…trycloudflare.com")
                                                 enabled: !root.inputsLocked
                                             }
-                                            Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: 10 }
-                                            ReferenceIsolatorColabField {
+                                            Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                                            ColabField {
                                                 id: referenceIsolatorColabToken
                                                 echoMode: TextInput.Password
                                                 placeholderText: root.referenceIsolatorColab && root.referenceIsolatorColab.colabConnected
@@ -636,27 +650,29 @@ StudioShell {
                                                 enabled: !root.inputsLocked
                                             }
                                             ColabSessionStatus {
-                                                Layout.fillWidth: true
                                                 session: root.referenceIsolatorSession
                                             }
                                             PrimaryButton {
                                                 Layout.fillWidth: true
-                                                enabled: root.referenceIsolatorColab && !root.inputsLocked
+                                                enabled: !root.inputsLocked
+                                                         && root.referenceIsolatorColab
                                                          && root.referenceIsolatorColab.colabNotebookFile !== ""
-                                                         && !(root.referenceIsolatorSession && root.referenceIsolatorSession.checking)
+                                                         && root.referenceIsolatorSession
+                                                         && !root.referenceIsolatorSession.checking
+                                                         && !root.referenceIsolatorColab.colabActive
                                                 text: root.referenceIsolatorSession && root.referenceIsolatorSession.checking
-                                                      ? qsTr("Verifying CUDA and Spleeter...")
-                                                      : (root.referenceIsolatorColab && root.referenceIsolatorColab.colabConnected
-                                                         ? qsTr("Use Direct Colab reference Isolator")
-                                                         : qsTr("Connect Direct Colab reference Isolator"))
-                                                iconName: "cloud"
+                                                      ? qsTr("Verifying CUDA and exact model...")
+                                                      : (root.referenceIsolatorColab && root.referenceIsolatorColab.colabActive
+                                                         ? qsTr("Direct Colab Isolator Active")
+                                                         : (root.referenceIsolatorColab && root.referenceIsolatorColab.colabConnected
+                                                            ? qsTr("Use Direct Colab reference Isolator")
+                                                            : qsTr("Connect Direct Colab reference Isolator")))
+                                                iconName: root.referenceIsolatorColab && root.referenceIsolatorColab.colabActive ? "check" : "cloud"
                                                 onClicked: {
                                                     if (!root.referenceIsolatorColab) return
                                                     if (root.referenceIsolatorColab.colabConnected) {
                                                         root.referenceIsolatorColab.useColab()
-                                                    } else if (root.referenceIsolatorColab.connectColab(
-                                                                   referenceIsolatorColabUrl.text.trim(),
-                                                                   referenceIsolatorColabToken.text)) {
+                                                    } else if (root.referenceIsolatorColab.connectColab(referenceIsolatorColabUrl.text.trim(), referenceIsolatorColabToken.text)) {
                                                         referenceIsolatorColabToken.text = ""
                                                     }
                                                 }
@@ -664,24 +680,63 @@ StudioShell {
                                         }
                                         RowLayout {
                                             Layout.fillWidth: true
+                                            spacing: 6
                                             visible: root.referenceIsolator && root.referenceIsolator.enabled
                                                      && root.referenceIsolator.resultReady
                                             Text { text: qsTr("Preview:"); color: Theme.textSecondary; font.pixelSize: 10 }
                                             PrimaryButton {
                                                 text: qsTr("Original")
-                                                quiet: true
+                                                iconName: (root.playingType === "reference" && AppController.player.playing) ? "pause" : "play"
+                                                quiet: !(root.playingType === "reference" && AppController.player.playing)
                                                 enabled: root.referenceAudioPath !== ""
-                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceAudioPath) ? "reference" : "none" }
+                                                implicitHeight: 28
+                                                onClicked: {
+                                                    if (root.playingType === "reference" && AppController.player.playing) {
+                                                        AppController.player.stop()
+                                                        root.playingType = "none"
+                                                    } else {
+                                                        root.playingType = AppController.player.playFile(root.referenceAudioPath) ? "reference" : "none"
+                                                    }
+                                                }
                                             }
                                             PrimaryButton {
                                                 text: qsTr("Vocals")
-                                                quiet: true
-                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceIsolator.vocalsPath) ? "reference-vocals" : "none" }
+                                                iconName: (root.playingType === "reference-vocals" && AppController.player.playing) ? "pause" : "play"
+                                                quiet: !(root.playingType === "reference-vocals" && AppController.player.playing)
+                                                implicitHeight: 28
+                                                onClicked: {
+                                                    if (root.playingType === "reference-vocals" && AppController.player.playing) {
+                                                        AppController.player.stop()
+                                                        root.playingType = "none"
+                                                    } else {
+                                                        root.playingType = AppController.player.playFile(root.referenceIsolator.vocalsPath) ? "reference-vocals" : "none"
+                                                    }
+                                                }
                                             }
                                             PrimaryButton {
                                                 text: qsTr("Background")
+                                                iconName: (root.playingType === "reference-background" && AppController.player.playing) ? "pause" : "play"
+                                                quiet: !(root.playingType === "reference-background" && AppController.player.playing)
+                                                implicitHeight: 28
+                                                onClicked: {
+                                                    if (root.playingType === "reference-background" && AppController.player.playing) {
+                                                        AppController.player.stop()
+                                                        root.playingType = "none"
+                                                    } else {
+                                                        root.playingType = AppController.player.playFile(root.referenceIsolator.backgroundPath) ? "reference-background" : "none"
+                                                    }
+                                                }
+                                            }
+                                            PrimaryButton {
+                                                text: qsTr("Stop")
+                                                iconName: "stop"
                                                 quiet: true
-                                                onClicked: { root.playingType = AppController.player.playFile(root.referenceIsolator.backgroundPath) ? "reference-background" : "none" }
+                                                implicitHeight: 28
+                                                visible: AppController.player.playing && (root.playingType === "reference" || root.playingType === "reference-vocals" || root.playingType === "reference-background")
+                                                onClicked: {
+                                                    AppController.player.stop()
+                                                    root.playingType = "none"
+                                                }
                                             }
                                         }
                                         Text {

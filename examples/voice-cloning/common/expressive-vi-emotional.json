@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-expressive-vi",
+  "title": "Voice clone — expressive & emotional (VI)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "vi"],
+  "inputs": { "text": "Thật không thể tin được! Chúng ta đã hoàn thành xuất sắc tất cả các mục tiêu đề ra trước thời hạn! Cảm ơn sự nỗ lực phi thường của toàn thể đội ngũ!" },
+  "settings": { "lang": "vi", "temperature": 0.7, "top_k": 30, "top_p": 0.95 },
+  "expected": { "output": "An expressive, enthusiastic sentence in Vietnamese.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}

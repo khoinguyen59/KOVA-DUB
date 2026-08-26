@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-conversational-vi",
+  "title": "Voice clone — conversational dialogue (VI)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "vi"],
+  "inputs": { "text": "Bạn có thể giúp tôi tóm tắt nhanh nội dung chính của buổi họp hôm nay không? Chắc chắn rồi, buổi họp tập trung vào ba kế hoạch trọng điểm và phương án tối ưu hóa hiệu suất làm việc." },
+  "settings": { "lang": "vi", "temperature": 0.58, "top_k": 20, "top_p": 0.9 },
+  "expected": { "output": "A natural conversational dialogue in Vietnamese.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}

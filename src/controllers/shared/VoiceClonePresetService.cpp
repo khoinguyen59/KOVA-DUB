@@ -2,6 +2,7 @@
 #include "core/utils/Logger.h"
 #include "core/storage/PathUtils.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QCryptographicHash>
 #include <QDir>
@@ -39,7 +40,18 @@ QString VoiceClonePresetService::audioStorageDir() const
 QVariantList VoiceClonePresetService::loadAllPresets() const
 {
     QVariantList list;
-    QFile file(presetsFilePath());
+    QString targetFile = presetsFilePath();
+    if (!QFile::exists(targetFile)) {
+        const QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_presets.json");
+        if (QFile::exists(bundled)) targetFile = bundled;
+#ifdef LASTUDIO_SOURCE_DIR
+        else {
+            const QString sourceBundled = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_presets.json");
+            if (QFile::exists(sourceBundled)) targetFile = sourceBundled;
+        }
+#endif
+    }
+    QFile file(targetFile);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return list;
     }
@@ -52,16 +64,13 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
         arr = doc.array();
     } else if (doc.isObject()) {
         const QJsonObject root = doc.object();
-        if (root.value(QLatin1String(kVoiceClonePresetSchemaKey)).toInt() != kVoiceClonePresetSchemaVersion) {
+        const QJsonValue entries = root.value(QLatin1String(kVoiceClonePresetItemsKey));
+        if (entries.isArray()) {
+            arr = entries.toArray();
+        } else if (root.value(QLatin1String(kVoiceClonePresetSchemaKey)).toInt() != kVoiceClonePresetSchemaVersion) {
             Logger::warning("VoiceClonePresetService", "Unsupported voice preset metadata schema.");
             return list;
         }
-        const QJsonValue entries = root.value(QLatin1String(kVoiceClonePresetItemsKey));
-        if (!entries.isArray()) {
-            Logger::warning("VoiceClonePresetService", "Voice preset metadata has no presets array.");
-            return list;
-        }
-        arr = entries.toArray();
     } else {
         return list;
     }
@@ -162,15 +171,46 @@ QVariantMap VoiceClonePresetService::persistReferenceAudio(const QString &id, co
 bool VoiceClonePresetService::isStoredReferenceAudio(const QString &audioPath) const
 {
     const QString localPath = PathUtils::urlToLocalPath(audioPath);
+    if (localPath.isEmpty()) return false;
     const QString storagePath = QDir::cleanPath(QFileInfo(audioStorageDir()).absoluteFilePath());
     const QString absolutePath = QDir::cleanPath(QFileInfo(localPath).absoluteFilePath());
-    return !absolutePath.isEmpty() && absolutePath.startsWith(storagePath + QLatin1Char('/'));
+    if (!absolutePath.isEmpty() && absolutePath.startsWith(storagePath + QLatin1Char('/')))
+        return true;
+    const QString bundledPath = QDir::cleanPath(QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
+    if (!absolutePath.isEmpty() && (absolutePath == bundledPath || absolutePath.startsWith(bundledPath + QLatin1Char('/'))))
+        return true;
+#ifdef LASTUDIO_SOURCE_DIR
+    const QString sourceBundled = QDir::cleanPath(QFileInfo(QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
+    if (!absolutePath.isEmpty() && (absolutePath == sourceBundled || absolutePath.startsWith(sourceBundled + QLatin1Char('/'))))
+        return true;
+#endif
+    return false;
 }
 
 QVariantMap VoiceClonePresetService::validatePreset(const QVariantMap &preset) const
 {
     QVariantMap result = preset;
-    const QString audioPath = PathUtils::urlToLocalPath(preset.value(QStringLiteral("audioPath")).toString());
+    QString audioPath = PathUtils::urlToLocalPath(preset.value(QStringLiteral("audioPath")).toString());
+    if (!QFileInfo(audioPath).isAbsolute() || !QFile::exists(audioPath)) {
+        const QString fileName = QFileInfo(audioPath).fileName();
+        const QString candidateInStorage = QDir(audioStorageDir()).filePath(fileName);
+        if (QFile::exists(candidateInStorage)) {
+            audioPath = candidateInStorage;
+        } else {
+            const QString candidateInBundled = QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_refs")).filePath(fileName);
+            if (QFile::exists(candidateInBundled)) {
+                audioPath = candidateInBundled;
+            }
+#ifdef LASTUDIO_SOURCE_DIR
+            else {
+                const QString candidateInSource = QDir(QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_refs")).filePath(fileName);
+                if (QFile::exists(candidateInSource)) {
+                    audioPath = candidateInSource;
+                }
+            }
+#endif
+        }
+    }
     const QFileInfo info(audioPath);
     QString error;
     if (!isStoredReferenceAudio(audioPath)) {
@@ -209,8 +249,11 @@ QVariantList VoiceClonePresetService::presetsForFamily(const QString &familyId)
     QVariantList filtered;
     for (const QVariant &val : loadAllPresets()) {
         const QVariantMap preset = val.toMap();
-        const QString itemFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
-        if (itemFamily == targetFamily) {
+        QString itemFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+        if (itemFamily.isEmpty()) {
+            itemFamily = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();
+        }
+        if (targetFamily.isEmpty() || itemFamily.isEmpty() || itemFamily == targetFamily) {
             filtered.append(validatePreset(preset));
         }
     }

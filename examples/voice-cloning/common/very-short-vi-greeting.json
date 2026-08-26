@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-very-short-vi",
+  "title": "Voice clone — ultra-short greeting (VI)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "vi"],
+  "inputs": { "text": "Xin chào, tôi là trợ lý ảo AI." },
+  "settings": { "lang": "vi", "temperature": 0.55, "top_k": 20, "top_p": 0.9 },
+  "expected": { "output": "An ultra-short cloned Vietnamese greeting.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}

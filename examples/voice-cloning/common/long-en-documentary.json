@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-long-documentary-en",
+  "title": "Voice clone — documentary narrative (EN)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "en"],
+  "inputs": { "text": "Throughout human history, major scientific discoveries and technological innovations have reshaped the way we understand our world, pushing the boundaries of exploration and opening new frontiers for future generations." },
+  "settings": { "lang": "en", "temperature": 0.6, "top_k": 20, "top_p": 0.9 },
+  "expected": { "output": "A long documentary narrative in English.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}

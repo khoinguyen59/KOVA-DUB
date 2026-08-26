@@ -414,9 +414,18 @@ void TestColabVoiceCloneRunner::savedPresetSurvivesRestartAndInvalidatesTemporar
     // managed audio must be available without retaining the original source.
     VoiceClonePresetService reloadedPresets;
     const QVariantList saved = reloadedPresets.presetsForFamily(QStringLiteral("omnivoice"));
-    QCOMPARE(saved.size(), 2);
-    const QVariantMap savedOne = saved.at(0).toMap();
-    const QVariantMap savedTwo = saved.at(1).toMap();
+    QVERIFY(saved.size() >= 2);
+    QVariantMap savedOne, savedTwo;
+    for (const QVariant &item : saved) {
+        const QVariantMap m = item.toMap();
+        if (m.value(QStringLiteral("name")).toString() == QStringLiteral("Saved one")) {
+            savedOne = m;
+        } else if (m.value(QStringLiteral("name")).toString() == QStringLiteral("Saved two")) {
+            savedTwo = m;
+        }
+    }
+    QVERIFY(!savedOne.isEmpty());
+    QVERIFY(!savedTwo.isEmpty());
     QVERIFY(savedOne.value(QStringLiteral("valid")).toBool());
     QVERIFY(savedTwo.value(QStringLiteral("valid")).toBool());
     QVERIFY(!savedOne.value(QStringLiteral("id")).toString().isEmpty());

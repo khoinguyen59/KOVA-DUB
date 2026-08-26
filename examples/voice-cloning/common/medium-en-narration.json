@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lastudio.example.v1",
+  "id": "voice-clone-medium-narration-en",
+  "title": "Voice clone — cinematic narration (EN)",
+  "task": "voice-cloning",
+  "model": { "familyId": null, "required": false },
+  "capabilities": ["voice-cloning", "en"],
+  "inputs": { "text": "The morning sun rose gently over the misty mountain peaks, illuminating the quiet river valley below with a warm, golden radiance." },
+  "settings": { "lang": "en", "temperature": 0.6, "top_k": 20, "top_p": 0.9 },
+  "expected": { "output": "A medium-length cinematic narration in English.", "manualChecks": ["Provide a reference voice first.", "The result follows the target text."] }
+}
