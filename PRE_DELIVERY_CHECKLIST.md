@@ -12,34 +12,47 @@
 ### 1. Kiểm tra đăng ký QML Module & Type Binding trong Build System
 * [ ] **Khai báo CMakeLists.txt**: Mọi file component mới (`.qml`, `.js`) trong thư mục `qml/` **bắt buộc** phải được thêm vào mục `QML_FILES` của hàm `qt_add_qml_module(LAStudio ...)` trong `CMakeLists.txt`.
 * [ ] **Đường dẫn Import đầy đủ**: Mọi file QML sử dụng component từ thư mục con khác (ví dụ: `qml/components/shared/`, `qml/components/shared/settings/`) phải có câu lệnh import chính xác (ví dụ: `import "../shared"`).
+* [ ] **Quy tắc kiểu dữ liệu nghiêm ngặt trong QML**:
+  - `font.pixelSize` **BẮT BUỘC** phải là số nguyên (`int`), ví dụ `10`, `12`, `Theme.fontSmall`. **TUYỆT ĐỐI KHÔNG** gán số thực (`9.5`, `11.2`) vì Qt 6 parser sẽ coi là Fatal Type Error và crash ứng dụng ngay lúc khởi động.
+  - Các thuộc tính `implicitWidth`, `implicitHeight`, `radius`, `border.width` cũng phải luôn là số nguyên.
+* [ ] **Quản lý vòng đời Dialog & Modal Popups**:
+  - Mọi `Dialog` hoặc `Popup` có cờ `modal: true` hoặc `closePolicy: Popup.NoAutoClose` **bắt buộc phải gọi `root.close()`** trong `onClicked` của tất cả các nút hành động (Chấp nhận, Từ chối, Bỏ qua, Thoát).
+  - Không được để Dialog con mở đè lên Dialog cha đang ở chế độ `modal` mà không đóng Dialog cha trước.
+* [ ] **Phòng thủ dữ liệu danh mục (Defensive Catalog & Array Access)**:
+  - Mọi hàm JavaScript trong QML duyệt mảng từ C++ (như `languageCatalog`, `voicePresets`, `models`) **bắt buộc** phải có guard: `if (!catalog || !Array.isArray(catalog) || catalog.length === 0) return ...;` để tránh ngoại lệ `TypeError: Cannot read property 'length' of undefined` làm đứng luồng giao diện.
 
 ### 2. Kiểm thử thực thi file nhị phân `.exe` thực tế (Live Binary Smoke Test)
-* [ ] **Không chỉ nhìn log build/package [SUCCESS]**: Phải chạy trực tiếp file `.exe` đã đóng gói trong thư mục staging (ví dụ: `out\LA-Studio-0.0.8.1\LA-Studio-0.0.8.1.exe`) qua dòng lệnh:
+* [ ] **Không chỉ nhìn log build/package [SUCCESS]**: Phải chạy trực tiếp file `.exe` đã đóng gói trong thư mục staging (ví dụ: `out\LA-Studio-0.0.8.3\LA-Studio-0.0.8.3.exe`) qua dòng lệnh:
   ```powershell
-  cmd /c "cd /d out\LA-Studio-0.0.8.1 && LA-Studio-0.0.8.1.exe"
+  cmd /c "cd /d out\LA-Studio-0.0.8.3 && LA-Studio-0.0.8.3.exe"
   ```
 * [ ] **Kiểm tra Console Logs**:
   - Không có thông báo `QQmlApplicationEngine failed to load component`.
   - Không có lỗi `... is not a type`.
+  - Không có lỗi `Type mismatch` hoặc `Cannot assign double to int`.
   - Không có cảnh báo thiếu DLL (`STATUS_DLL_NOT_FOUND`).
   - Xuất hiện log xác nhận: `[lastudio.app] QML module loaded.` và `[lastudio.app] Application services initialized.`
 
 ### 3. Kiểm thử Giao diện & Tương tác thực tế trên tất cả các Tab
 * [ ] **TTS Studio**:
   - Option Switcher chuyển mượt mà giữa: `[ Colab GPU ]`, `[ API Gateway ]`, và `[ Giọng đã clone ]`.
-  - Nút **"Bảng Giọng Nói"** mở modal `VoiceGalleryDialog` dạng lưới lớn (1060x760px), hỗ trợ tìm kiếm, phân loại thẻ (CapCut, VieNeu Bắc/Trung/Nam, OmniVoice) và chọn giọng trực tiếp.
-  - Nút nghe thử bên cạnh mỗi giọng toggle mượt mà giữa **Play ➔ Pause ➔ Resume**.
+  - Nút **"Bảng Giọng Nói"** mở modal `VoiceGalleryDialog` dạng lưới lớn (1060x760px), hiển thị đủ 61 giọng hệ thống + các giọng clone cá nhân, hỗ trợ tìm kiếm, lọc danh mục và chọn giọng trực tiếp.
+  - Nút nghe thử bên cạnh mỗi giọng toggle mượt mà giữa **Play ➔ Pause ➔ Resume** kèm hiệu ứng Equalizer sóng âm hoạt họa 3 vạch.
 * [ ] **Voice Cloning Studio**:
   - Option Switcher phân tách rõ ràng: `[ Giọng có sẵn ]` (load preset đã lưu) và `[ Tải lên / Thu âm ]` (file input / mic record).
   - Có nút **"Bảng Giọng Nói"** để mở thư viện 61 preset có sẵn.
-  - Tên gợi nhớ giọng (`reusableVoiceName`) hoạt động chuẩn xác.
+  - Các giọng clone cá nhân có biểu tượng sao vàng `⭐` và có nút Thùng rác đỏ `🗑️` cho phép xóa kèm popup xác nhận. Các giọng hệ thống không thể bị xóa.
+* [ ] **Dubbing Studio**:
+  - Hộp thoại chọn chế độ *"Choose how to use Dubbing"* (`DubbingEntryGateDialog`) đóng tức thì khi click **"Review one by one"** hoặc **"Automatic"** hoặc **"Leave Dubbing"**.
+  - Chọn **"Review one by one"** chuyển thẳng vào giao diện làm việc Bước 1 (`1. Nguồn Media (Import)`), cho phép kéo thả media, dán link yt-dlp ngay mà không bị popup nào chặn lại.
+  - Tại node 8 (`Synthesize - Lồng tiếng TTS`), có nút **"Bảng Giọng Nói"** mở thư viện giọng để nghe thử và chọn giọng cho từng nhân vật/đoạn thoại.
 * [ ] **STT Studio**:
   - Option Switcher chuyển đổi giữa `[ Colab GPU ]` và `[ API Gateway ]`.
 * [ ] **Translation Studio**:
   - Option Switcher chuyển đổi giữa `[ 9Router Gateway ]` và `[ Colab GPU ]`.
 * [ ] **LLM Chat Studio**:
   - Option Switcher chuyển đổi giữa `[ 9Router Gateway ]` và `[ Colab GPU ]`.
-* [ ] **Voice Isolator & Dubbing**:
+* [ ] **Voice Isolator**:
   - Các card thông số, panel tách giọng, waveform player hiển thị chuẩn xác, không vỡ layout, không tràn viền.
 
 ### 4. Kiểm tra Đóng gói & Tài nguyên Phụ trợ (Packaging & Assets Audit)
@@ -50,6 +63,7 @@
     ```
 * [ ] **File dịch thuật (`.qm`)**: Đã chạy `lupdate` và `lrelease` cập nhật `lastudio_vi.qm` vào thư mục phát hành.
 * [ ] **Thư mục Runtime đầy đủ**: Thư mục portable `out\LA-Studio-x.x.x.x\` phải có đầy đủ:
+  - `data/` (Chứa `presets/voice_clone_presets.json`, `voice_clone_refs/` chứa 61 file audio mẫu, `language-sets/`, `catalog.json`)
   - `subtitle-ocr/` (Tesseract runtime)
   - `media-tools/` (FFmpeg binary)
   - `espeak-ng/` (eSpeak NG speech data & binary)
@@ -86,6 +100,8 @@
 | **INC-009** | 2026-08-26 | Step 6 báo `'numpy.ndarray' object has no attribute 'cpu'` và `Unsupported instruct items found`. | 1) `model.generate()` của OmniVoice không nhận chuỗi `instruct` tùy ý (chỉ nhận keyword cố định). Khi clone giọng, bắt buộc phải dùng `ref_audio`. 2) Đầu ra `audios[0]` của OmniVoice trả về dạng `numpy.ndarray` (đã nằm trên RAM/CPU), việc gọi `.cpu()` trực tiếp gây lỗi. | **Chuẩn hóa API Voice Cloning & Safe Array Conversion**: Dùng `ref_audio` cho Voice Cloning và áp dụng hàm chuyển đổi an toàn `hasattr(audio, 'cpu')` kết hợp `soundfile.write(..., audio_arr, samplerate)` để hỗ trợ cả `Tensor` lẫn `ndarray`. |
 | **INC-010** | 2026-08-26 | Giọng âm thanh sau khi sinh bị giật cục, lặp từ, vấp âm ("cà hụp cà hụp"). | Nhãn văn bản (`text`) trong dataset bị gán giả định danh (`Mau giong doc {label}...`) thay vì lời thoại thật được nói trong file audio, làm phá hủy ma trận căn chỉnh âm vị (Cross-Attention Alignment) khi fine-tune và khi clone. | **Bắt buộc dùng Whisper ASR bóc tách 100% Transcript thật (No Synthetic Text)**: Tích hợp `Whisper ASR` tự động bóc tách transcript thật ngay từ Step 2 và luôn bật `load_asr=True` trong OmniVoice để đồng bộ âm vị hoàn hảo. |
 | **INC-011** | 2026-08-26 | File zip tải về ở Step 7 phình to quá mức (hơn 10.6 GB), gây nghẽn và đứt mạng khi tải qua trình duyệt Colab. | Gom toàn bộ thư mục `exp/` chứa nhiều checkpoint trung gian và các file trạng thái Optimizer (`optimizer.pt`, `scheduler.pt`, `scaler.pt`) chiếm 80% dung lượng. | **Tách gói tải ưu tiên & Lọc Model tinh gọn**: (1) Tải ngay file Zip 57 câu chào mẫu siêu nhẹ (~5-10 MB) để nghe ngay. (2) Lọc bỏ toàn bộ file optimizer thừa, giảm dung lượng checkpoint xuống ~1.2 GB và tự động lưu trực tiếp vào Google Drive (`MyDrive/...`). |
+| **INC-012** | 2026-08-26 | Mở file `.exe` không lên cửa sổ, ứng dụng crash và thoát ngay trước khi hiển thị. | Thuộc tính `font.pixelSize: 9.5` (số thực `float`) trong `VoiceGalleryDialog.qml`. Trong Qt 6 QML, `font.pixelSize` bắt buộc phải là số nguyên (`int`), khiến bộ phân tích QML gặp lỗi `Type Mismatch` nghiêm trọng (Fatal Error) và dừng toàn bộ ứng dụng ngay trong `main.cpp`. | **Quy tắc kiểu dữ liệu nghiêm ngặt trong QML** (mục I.1): Ép kiểu toàn bộ `font.pixelSize` về số nguyên (`int`), tuyệt đối không dùng số thực. Bắt buộc chạy Live Binary Smoke Test trước khi bàn giao. |
+| **INC-013** | 2026-08-26 | Bấm "Review one by one" (hoặc "Automatic", "Leave Dubbing") trên modal Dubbing Entry Gate không có phản hồi, màn hình đứng im. | 1) `DubbingEntryGateDialog.qml` có `modal: true` và `NoAutoClose` nhưng `onClicked` của các nút bấm chỉ emit signal mà **quên gọi `root.close()`**, khiến modal tiếp tục che khuất và chặn bắt mọi tương tác chuột. 2) Cờ C++ `m_dubbingEntryGateActive` không được giải phóng. 3) `DubbingProjectSetupDialog.qml` gặp lỗi JavaScript `TypeError: Cannot read property 'length' of undefined` khi duyệt `languageCatalog` chưa nạp xong. | **Quản lý vòng đời Dialog & Phòng thủ truy cập mảng** (mục I.1): 1) Mọi Dialog `modal` bắt buộc phải gọi `root.close()` khi bấm nút. 2) Đồng bộ cờ trạng thái sang C++ (`chooseDubbingEntryMode`). 3) Dùng `Array.isArray()` kiểm tra mảng trước khi duyệt. |
 
 ---
 
@@ -97,3 +113,4 @@ Chỉ xác nhận hoàn thành công việc và thông báo cho người dùng k
 3. Đã chạy thử file `.exe` thực tế thành công và không ghi nhận bất kỳ crash/warning nào trong log.
 4. Đã ghi nhận đầy đủ các sự cố mới phát sinh vào **Phần II (Living Incident Log)**.
 5. Đã cập nhật Knowledge Graph qua `graphify update .`.
+
