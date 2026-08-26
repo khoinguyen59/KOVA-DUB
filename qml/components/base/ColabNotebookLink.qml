@@ -19,19 +19,10 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: root.notebookFile !== ""
-        text: qsTr("Notebook to run in Colab: %1").arg(root.notebookFile)
+        text: qsTr("Notebook: %1").arg(root.notebookFile)
         color: Theme.textSecondary
-        font.pixelSize: Theme.fontSmall
-        wrapMode: Text.WordWrap
-    }
-
-    Text {
-        Layout.fillWidth: true
-        visible: root.notebookFile !== ""
-        text: qsTr("GitHub-backed notebook: open the named file on this branch, run it with a Colab GPU runtime, then copy only the temporary worker URL and token shown by the notebook. Sign in to GitHub only if this repository is private.")
-        color: Theme.warning
-        font.pixelSize: 10
-        wrapMode: Text.WordWrap
+        font.pixelSize: 11
+        elide: Text.ElideMiddle
     }
 
     ColumnLayout {

@@ -437,7 +437,9 @@ StudioShell {
                         spacing: Theme.paddingLarge
 
                         Rectangle {
-                            Layout.preferredWidth: 360
+                            Layout.preferredWidth: 420
+                            Layout.minimumWidth: 380
+                            Layout.maximumWidth: 460
                             Layout.fillHeight: true
                             radius: Theme.radiusSmall
                             color: Qt.rgba(1, 1, 1, 0.02)
@@ -496,21 +498,32 @@ StudioShell {
                                         spacing: Theme.paddingSmall
                                         RowLayout {
                                             Layout.fillWidth: true
+                                            spacing: Theme.paddingSmall
                                             CheckBox {
                                                 id: cleanReferenceToggle
                                                 objectName: "cleanReferenceAudioWithIsolator"
                                                 text: qsTr("Clean reference audio with Isolator")
+                                                Layout.fillWidth: true
                                                 checked: root.referenceIsolator ? root.referenceIsolator.enabled : false
                                                 enabled: !root.inputsLocked
                                                          && !(root.referenceIsolator && root.referenceIsolator.processing)
                                                          && root.referenceIsolator !== null
                                                 onToggled: if (root.referenceIsolator) root.referenceIsolator.enabled = checked
                                             }
-                                            Item { Layout.fillWidth: true }
-                                            Text {
-                                                text: root.referenceIsolator ? root.referenceIsolator.selectedRoute : ""
-                                                color: Theme.textSecondary
-                                                font.pixelSize: 10
+                                            Rectangle {
+                                                visible: root.referenceIsolator && root.referenceIsolator.selectedRoute !== ""
+                                                radius: 4
+                                                color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.20)
+                                                implicitWidth: routeBadgeText.implicitWidth + 8
+                                                implicitHeight: 20
+                                                Text {
+                                                    id: routeBadgeText
+                                                    anchors.centerIn: parent
+                                                    text: root.referenceIsolator ? root.referenceIsolator.selectedRoute : ""
+                                                    color: Theme.accentLight
+                                                    font.pixelSize: 10
+                                                    font.bold: true
+                                                }
                                             }
                                         }
                                         Text {

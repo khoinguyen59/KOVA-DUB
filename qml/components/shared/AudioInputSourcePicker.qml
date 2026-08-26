@@ -93,33 +93,44 @@ ColumnLayout {
             }
 
             RowLayout {
-                anchors.centerIn: parent
-                spacing: Theme.paddingMedium
+                anchors.fill: parent
+                anchors.margins: Theme.paddingSmall
+                spacing: Theme.paddingSmall
 
-                SourceIcon { iconName: "file" }
+                SourceIcon {
+                    implicitWidth: 38
+                    implicitHeight: 38
+                    radius: 19
+                    iconName: "file"
+                }
 
                 ColumnLayout {
-                    spacing: 3
+                    Layout.fillWidth: true
+                    spacing: 2
 
                     Text {
                         text: root.audioLabel
                         color: Theme.textPrimary
-                        font.pixelSize: Theme.fontMedium
+                        font.pixelSize: Theme.fontSmall
                         font.bold: true
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
                     }
 
                     Text {
                         text: root.audioHint
                         color: Theme.textSecondary
-                        font.pixelSize: Theme.fontSmall
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
                     }
                 }
 
                 PrimaryButton {
                     text: qsTr("Choose file")
                     iconName: "file"
-                    implicitWidth: 128
-                    implicitHeight: 34
+                    implicitWidth: 104
+                    implicitHeight: 32
                     enabled: !root.recording && !root.busy
                     onClicked: fileDialogLoader.active = true
                 }
@@ -206,13 +217,14 @@ ColumnLayout {
         signal toggleRecording()
 
         RowLayout {
-            anchors.centerIn: parent
-            spacing: Theme.paddingMedium
+            anchors.fill: parent
+            anchors.margins: Theme.paddingSmall
+            spacing: Theme.paddingSmall
 
             Rectangle {
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                radius: 22
+                Layout.preferredWidth: 38
+                Layout.preferredHeight: 38
+                radius: 19
                 color: recorderPane.recording ? Qt.rgba(0.94, 0.33, 0.31, 0.18) : Qt.rgba(0.49, 0.30, 1.0, 0.12)
                 border.color: recorderPane.recording ? Theme.danger : Qt.rgba(0.49, 0.30, 1.0, 0.35)
                 border.width: 1
@@ -222,8 +234,8 @@ ColumnLayout {
                     anchors.centerIn: parent
                     name: recorderPane.recording ? "stop" : recorderPane.iconName
                     color: recorderPane.recording ? Theme.danger : Theme.accentLight
-                    width: 19
-                    height: 19
+                    width: 17
+                    height: 17
                 }
 
                 TapHandler {
@@ -237,17 +249,21 @@ ColumnLayout {
             }
 
             ColumnLayout {
-                spacing: 6
+                Layout.fillWidth: true
+                spacing: 4
 
                 Text {
                     text: recorderPane.title
                     color: Theme.textPrimary
-                    font.pixelSize: Theme.fontMedium
+                    font.pixelSize: Theme.fontSmall
                     font.bold: true
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
                 }
 
                 Rectangle {
-                    Layout.preferredWidth: 260
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 200
                     Layout.preferredHeight: 4
                     radius: 2
                     color: Qt.rgba(1, 1, 1, 0.10)

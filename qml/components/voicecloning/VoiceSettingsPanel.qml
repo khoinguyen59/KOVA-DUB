@@ -239,17 +239,15 @@ ColumnLayout {
                 title: qsTr("Colab GPU Voice Cloning")
                 iconName: "cloud"
 
-                Text { Layout.fillWidth: true; text: qsTr("This direct temporary worker is independent of API Gateway. The notebook and worker must match the model selected in the gallery."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
-                Text { text: qsTr("Selected model"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
-                Text { Layout.fillWidth: true; text: AppController.colabVoiceClone.model; color: Theme.textPrimary; font.pixelSize: Theme.fontSmall; wrapMode: Text.WrapAnywhere }
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
-                    text: qsTr("Colab configuration: fixed exact-notebook configuration. Local CPU model files and variants do not change this GPU worker.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
+                    spacing: Theme.paddingSmall
+                    Text { text: qsTr("Model:"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    Text { Layout.fillWidth: true; text: AppController.colabVoiceClone.model; color: Theme.accentLight; font.pixelSize: Theme.fontSmall; font.bold: true; elide: Text.ElideRight }
                 }
+
                 ColabNotebookLink { notebookFile: AppController.colabVoiceClone.colabNotebookFile }
+
                 Text { text: qsTr("Worker URL"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                 ColabField {
                     id: colabUrl
@@ -257,6 +255,7 @@ ColumnLayout {
                     placeholderText: qsTr("https://…trycloudflare.com")
                     enabled: !root.locked
                 }
+
                 Text { text: qsTr("Session token"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                 ColabField {
                     id: colabToken
@@ -264,16 +263,11 @@ ColumnLayout {
                     placeholderText: AppController.colabVoiceClone.colabConnected ? qsTr("Connected — enter token to replace") : qsTr("Temporary token from Colab")
                     enabled: !root.locked
                 }
+
                 ColabSessionStatus {
                     session: AppController.colabVoiceCloneSession
                 }
-                Text {
-                    Layout.fillWidth: true
-                    text: qsTr("Set the reusable voice name beside Reference Voice. It is saved after a successful clone and can be selected in TTS.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
+
                 ConsentCheckBox {
                     id: colabConsentCheck
                     objectName: "voiceCloneConsent"
@@ -282,36 +276,28 @@ ColumnLayout {
                     enabled: !root.locked
                     onCheckedChanged: root.colabConsent = checked
                 }
+
                 PrimaryButton {
                     Layout.fillWidth: true
                     enabled: !root.locked
                              && AppController.colabVoiceClone.colabNotebookFile !== ""
                              && !AppController.colabVoiceCloneSession.checking
-                             && !(root.remoteFirstMode && AppController.colabVoiceClone.colabActive)
+                             && !AppController.colabVoiceClone.colabActive
                     text: AppController.colabVoiceCloneSession.checking
                           ? qsTr("Verifying CUDA and exact model...")
-                          : (root.remoteFirstMode
-                          ? (AppController.colabVoiceClone.colabActive ? qsTr("Direct Colab GPU selected") : (AppController.colabVoiceClone.colabConnected ? qsTr("Select direct Colab GPU route") : qsTr("Connect direct Colab GPU worker")))
-                          : (AppController.colabVoiceClone.colabActive ? qsTr("Switch to Local CPU voice cloning") : (AppController.colabVoiceClone.colabConnected ? qsTr("Select direct Colab GPU route") : qsTr("Connect direct Colab GPU worker"))))
-                    iconName: root.remoteFirstMode || !AppController.colabVoiceClone.colabActive ? "cloud" : "close"
+                          : (AppController.colabVoiceClone.colabActive
+                             ? qsTr("Colab GPU Worker Active")
+                             : (AppController.colabVoiceClone.colabConnected ? qsTr("Connect to Colab GPU Worker") : qsTr("Connect Colab GPU Worker")))
+                    iconName: AppController.colabVoiceClone.colabActive ? "check" : "cloud"
                     onClicked: {
-                        if (AppController.colabVoiceClone.colabActive && !root.remoteFirstMode) {
-                            AppController.colabVoiceClone.useLocal()
-                        } else if (AppController.colabVoiceClone.colabConnected) {
+                        if (AppController.colabVoiceClone.colabConnected) {
                             AppController.colabVoiceClone.useColab()
                         } else if (AppController.colabVoiceClone.connectColab(colabUrl.text.trim(), colabToken.text)) {
                             colabToken.text = ""
                         }
                     }
                 }
-                Text {
-                    Layout.fillWidth: true
-                    visible: AppController.colabVoiceClone.profileId !== ""
-                    text: qsTr("A voice profile is cached only in memory for this reference while the Colab session is active.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
+
                 PrimaryButton {
                     Layout.fillWidth: true
                     visible: AppController.colabVoiceClone.profileId !== ""

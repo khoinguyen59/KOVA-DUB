@@ -13,6 +13,7 @@ ColumnLayout {
     property var session: null
     property bool showDisconnected: true
     property bool showDisconnect: true
+    property bool showDetails: false
     // Dubbing handles these signals through its controller so the workflow
     // snapshot stays in sync; all other feature surfaces use their session.
     property bool useExternalActions: false
@@ -74,7 +75,7 @@ ColumnLayout {
 
     Text {
         Layout.fillWidth: true
-        visible: !!root.session && root.session.active && root.session.verified
+        visible: root.showDetails && !!root.session && root.session.active && root.session.verified
         text: {
             if (!root.session) return ""
             var checked = root.session.verifiedAt === ""
@@ -90,6 +91,8 @@ ColumnLayout {
         font.pixelSize: 10
         wrapMode: Text.WrapAnywhere
     }
+
+
 
     RowLayout {
         Layout.fillWidth: true

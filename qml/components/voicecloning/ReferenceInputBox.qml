@@ -123,7 +123,7 @@ ColumnLayout {
     Layout.fillHeight: false
 
     // Header
-    property string referenceMode: "saved" // "saved", "custom"
+    property string referenceMode: "custom" // "custom", "saved"
 
     Text {
         visible: root.showHeader
@@ -137,8 +137,8 @@ ColumnLayout {
         Layout.fillWidth: true
         activeId: root.referenceMode
         options: [
-            { id: "saved", label: qsTr("Saved Voices") + (root.savedVoices.length > 0 ? " (" + root.savedVoices.length + ")" : ""), icon: "users" },
-            { id: "custom", label: qsTr("Upload / Record"), icon: "mic" }
+            { id: "custom", label: qsTr("Upload / Record"), icon: "mic" },
+            { id: "saved", label: qsTr("Saved Voices") + (root.savedVoices.length > 0 ? " (" + root.savedVoices.length + ")" : ""), icon: "users" }
         ]
         onOptionSelected: function(id) { root.referenceMode = id }
     }
@@ -331,6 +331,7 @@ ColumnLayout {
 
         RowLayout {
             Layout.fillWidth: true
+            spacing: Theme.paddingSmall
             LineIcon {
                 name: "file"
                 color: Theme.textSecondary
@@ -338,11 +339,12 @@ ColumnLayout {
                 Layout.preferredHeight: 14
             }
             Text {
-                text: root.requiresExactTranscript ? "Reference Transcript" : "Reference Transcript (optional)"
+                text: root.requiresExactTranscript ? qsTr("Reference Transcript") : qsTr("Reference Transcript (optional)")
                 color: Theme.textPrimary
                 font.pixelSize: Theme.fontSmall
                 font.bold: true
                 Layout.fillWidth: true
+                elide: Text.ElideRight
             }
             Text {
                 visible: root.requiresExactTranscript
@@ -352,23 +354,25 @@ ColumnLayout {
                 font.bold: true
             }
             PrimaryButton {
-                text: "Import .txt"
+                text: qsTr("Import .txt")
                 iconName: "folder"
                 quiet: true
                 implicitHeight: 28
-                implicitWidth: 105
+                implicitWidth: 95
                 enabled: !root.locked
                 onClicked: txtFileDialogLoader.active = true
             }
         }
 
         Text {
+            Layout.fillWidth: true
             text: root.requiresExactTranscript
-                  ? "Required: type the exact words spoken in the reference audio."
+                  ? qsTr("Required: type the exact words spoken in the reference audio.")
                   : (root.transcriptHint !== "" ? root.transcriptHint
-                                                : "Optional: improves voice similarity when provided.")
+                                                : qsTr("Optional: improves voice similarity when provided."))
             color: Theme.textSecondary
             font.pixelSize: 11
+            wrapMode: Text.WordWrap
         }
 
         Rectangle {
