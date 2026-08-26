@@ -1506,16 +1506,20 @@ void DubbingController::refreshCloneVoicePresets()
         for (const QVariant &entry : m_voiceClonePresetsService->allPresets()) {
             QVariantMap preset = entry.toMap();
             const QString id = preset.value(QStringLiteral("id")).toString().trimmed();
-            const QString familyId = preset.value(QStringLiteral("familyId")).toString()
-                .trimmed().toLower();
+            QString familyId = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+            if (familyId.isEmpty()) {
+                familyId = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();
+            }
+            if (familyId.isEmpty()) {
+                familyId = QStringLiteral("omnivoice");
+            }
             const QString audioPath = PathUtils::urlToLocalPath(
                 preset.value(QStringLiteral("audioPath")).toString());
             if (id.isEmpty()) continue;
             preset.insert(QStringLiteral("audioPath"), audioPath);
             preset.insert(QStringLiteral("familyId"), familyId);
-            // A saved clone belongs to the exact voice-cloning worker which
-            // created it.  It is deliberately independent of the ordinary
-            // TTS model selected for non-clone synthesis.
+            preset.insert(QStringLiteral("valid"), preset.value(QStringLiteral("valid"), true).toBool());
+            // A saved clone belongs to the voice-cloning worker which created it or supports it
             preset.insert(QStringLiteral("compatible"),
                           DubbingColabModelRoutes::supports(
                               QStringLiteral("voice-cloning"), familyId));
@@ -1624,26 +1628,17 @@ QVariantList DubbingController::ttsVoiceOptions() const
     }
     if (!voice.isEmpty()) {
         result.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("builtin:") + voice},
-                                  {QStringLiteral("name"), QStringLiteral("Built-in TTS · %1").arg(voice)},
-                                  {QStringLiteral("group"), QStringLiteral("Built-in TTS voices")},
+                                  {QStringLiteral("name"), QStringLiteral("Mặc định · %1").arg(voice)},
+                                  {QStringLiteral("group"), QStringLiteral("Giọng hệ thống mặc định")},
                                   {QStringLiteral("kind"), QStringLiteral("builtin")},
                                   {QStringLiteral("valid"), true}});
     }
     for (const QVariant &entry : m_cloneVoicePresets) {
         QVariantMap option = entry.toMap();
-        option.insert(QStringLiteral("group"), QStringLiteral("Saved Voice Cloning voices"));
+        option.insert(QStringLiteral("group"), QStringLiteral("Thư viện giọng đọc (Voice Gallery)"));
         option.insert(QStringLiteral("kind"), QStringLiteral("saved-clone"));
         const QString savedVoiceName = option.value(QStringLiteral("name")).toString();
-        const QString family = option.value(QStringLiteral("familyId")).toString();
-        const bool compatible = option.value(QStringLiteral("compatible"), false).toBool();
-        const bool valid = option.value(QStringLiteral("valid"), false).toBool();
-        option.insert(QStringLiteral("name"), QStringLiteral("Saved voice · %1").arg(
-            option.value(QStringLiteral("name")).toString()));
-        option.insert(QStringLiteral("name"),
-                      QStringLiteral("Saved clone [%1] - %2 - %3 - %4").arg(
-                          savedVoiceName, family,
-                          compatible ? QStringLiteral("Exact worker available") : QStringLiteral("Unsupported worker"),
-                          valid ? QStringLiteral("Valid") : QStringLiteral("Needs repair")));
+        option.insert(QStringLiteral("name"), savedVoiceName);
         result.append(option);
     }
     return result;

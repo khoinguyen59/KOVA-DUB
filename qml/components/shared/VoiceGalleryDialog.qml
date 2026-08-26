@@ -716,7 +716,7 @@ Dialog {
                                                     return a || "Voice"
                                                 }
                                                 color: "#c7c2dc"
-                                                font.pixelSize: 9.5
+                                                font.pixelSize: 10
                                             }
                                         }
                                     }

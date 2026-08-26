@@ -214,54 +214,52 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Giọng nói")
+                        text: qsTr("Giọng đọc lồng tiếng (Voice)")
                         color: Theme.textSecondary
                         font.pixelSize: 10
                     }
-                    ComboBox {
-                        id: ttsVoiceSelector
+                    RowLayout {
                         Layout.fillWidth: true
-                        textRole: "name"
-                        model: root.dubbing.ttsVoiceOptions
-                        currentIndex: {
-                            for (var i = 0; i < model.length; ++i)
-                                if (model[i].id === root.dubbing.selectedTtsVoiceId) return i
-                            return -1
+                        spacing: 8
+
+                        ComboBox {
+                            id: ttsVoiceSelector
+                            Layout.fillWidth: true
+                            textRole: "name"
+                            model: root.dubbing.ttsVoiceOptions
+                            currentIndex: {
+                                for (var i = 0; i < model.length; ++i)
+                                    if (model[i].id === root.dubbing.selectedTtsVoiceId) return i
+                                return -1
+                            }
+                            enabled: !root.dubbing.processing && model.length > 0
+                            onActivated: function(index) { root.dubbing.selectTtsVoice(model[index].id) }
                         }
-                        enabled: !root.dubbing.processing && model.length > 0
-                        onActivated: function(index) { root.dubbing.selectTtsVoice(model[index].id) }
+
+                        PrimaryButton {
+                            text: qsTr("Bảng Giọng Nói")
+                            iconName: "users"
+                            buttonColor: Theme.accent
+                            implicitHeight: 38
+                            implicitWidth: 130
+                            onClicked: dubbingVoiceGalleryDialog.open()
+                        }
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Built-in TTS voices and valid saved voices from Voice Cloning Studio are listed here. One selected voice is applied to all segments and speakers.")
+                        text: qsTr("Hơn 60+ giọng đọc Tiếng Việt (CapCut TikTok, VieNeu 3 Miền, OmniVoice AI) và giọng clone cá nhân. Giọng đã chọn sẽ được áp dụng cho toàn bộ phân đoạn lồng tiếng.")
                         color: Theme.textSecondary
                         font.pixelSize: 10
                         wrapMode: Text.WordWrap
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Text {
-                            Layout.fillWidth: true
-                            visible: ttsVoiceSelector.model.length <= 1
-                            text: qsTr("No saved voice yet. Create one in the standalone Voice Cloning Studio, then refresh this list.")
-                            color: Theme.warning
-                            font.pixelSize: 10
-                            wrapMode: Text.WordWrap
-                        }
                         PrimaryButton {
-                            visible: ttsVoiceSelector.model.length <= 1
-                            text: qsTr("Open Voice Cloning Studio")
-                            iconName: "spark"
-                            quiet: true
-                            enabled: !root.dubbing.processing
-                            onClicked: AppController.workflows.openVoiceCloningStudio()
-                        }
-                        PrimaryButton {
-                            text: qsTr("Refresh voices")
+                            text: qsTr("Làm mới danh sách giọng")
                             iconName: "refresh"
                             quiet: true
                             enabled: !root.dubbing.processing
-                            onClicked: root.dubbing.refreshTtsVoices()
+                            onClicked: root.dubbing.refreshCloneVoicePresets()
                         }
                     }
                     Text {
@@ -631,6 +629,27 @@ Rectangle {
             }
             alignmentWorkerError.text = message
             if (!alignmentColabDialog.visible) alignmentColabDialog.open()
+        }
+    }
+
+    VoiceGalleryDialog {
+        id: dubbingVoiceGalleryDialog
+        parent: Overlay.overlay
+        onVoiceSelected: function(audioPath, referenceText, name, familyId) {
+            root.dubbing.refreshCloneVoicePresets()
+            var opts = root.dubbing.ttsVoiceOptions || []
+            for (var i = 0; i < opts.length; ++i) {
+                if (opts[i].name === name || opts[i].audioPath === audioPath || opts[i].id === ("builtin:" + name)) {
+                    root.dubbing.selectTtsVoice(opts[i].id)
+                    return
+                }
+            }
+            for (var j = 0; j < opts.length; ++j) {
+                if (opts[j].audioPath && opts[j].audioPath.indexOf(audioPath) !== -1) {
+                    root.dubbing.selectTtsVoice(opts[j].id)
+                    return
+                }
+            }
         }
     }
 }

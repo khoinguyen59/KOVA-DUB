@@ -127,7 +127,13 @@ inline QVariantList optionsForNode(const QString &nodeId)
 
 inline QString notebookForModel(const QString &nodeId, const QString &modelId)
 {
-    const QString normalized = modelId.trimmed().toLower();
+    QString normalized = modelId.trimmed().toLower();
+    if (normalized == QStringLiteral("vieneu-tts") || normalized == QStringLiteral("vieneu"))
+        normalized = QStringLiteral("vieneu-tts-v3-turbo");
+    if (normalized == QStringLiteral("qwen3-tts") || normalized == QStringLiteral("qwen3") || normalized == QStringLiteral("qwen3_tts"))
+        normalized = QStringLiteral("qwen3-tts-1.7b-base");
+    if (normalized == QStringLiteral("capcut") || normalized == QStringLiteral("tiktok"))
+        normalized = QStringLiteral("omnivoice");
     for (const QVariant &entry : optionsForNode(nodeId)) {
         const QVariantMap option = entry.toMap();
         if (option.value(QStringLiteral("modelId")).toString() == normalized)
