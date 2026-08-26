@@ -41,6 +41,11 @@
   - Các card thông số, panel tách giọng, waveform player hiển thị chuẩn xác, không vỡ layout, không tràn viền.
 
 ### 4. Kiểm tra Đóng gói & Tài nguyên Phụ trợ (Packaging & Assets Audit)
+* [ ] **Cấu trúc phẳng bắt buộc (Flat Release Root)**: File `.exe` (`LA-Studio-x.x.x.x.exe`), các file `.dll`, `vc_redist.x64.exe`, `yt-dlp.exe` **phải nằm trực tiếp tại thư mục gốc** `out\LA-Studio-x.x.x.x\`. **TUYỆT ĐỐI KHÔNG** lồng trong thư mục con `bin/`.
+  - Lệnh đóng gói chuẩn:
+    ```powershell
+    cmd /c "powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Preset windows-msvc-release -QtRoot .tools\Qt\6.9.3 -SkipInstaller -PortableInternalLayout -AllowUnsignedEspeakForInternalBuild"
+    ```
 * [ ] **File dịch thuật (`.qm`)**: Đã chạy `lupdate` và `lrelease` cập nhật `lastudio_vi.qm` vào thư mục phát hành.
 * [ ] **Thư mục Runtime đầy đủ**: Thư mục portable `out\LA-Studio-x.x.x.x\` phải có đầy đủ:
   - `subtitle-ocr/` (Tesseract runtime)
@@ -58,7 +63,7 @@
 | Mã lỗi | Ngày ghi nhận | Hiện tượng lỗi | Nguyên nhân gốc rễ (Root Cause) | Quy trình kiểm thử phòng ngừa |
 | :--- | :--- | :--- | :--- | :--- |
 | **INC-001** | 2026-08-26 | Mở file `.exe` không lên cửa sổ, ứng dụng thoát ngay lúc khởi động. | Tạo component mới `StudioOptionSwitcher.qml` nhưng quên khai báo trong `CMakeLists.txt` (`QML_FILES`) và thiếu import, khiến `QQmlApplicationEngine` ném lỗi `StudioOptionSwitcher is not a type`. CTest không bắt được vì CTest chỉ chạy unit tests C++ mà không khởi tạo `QApplication` render toàn bộ cây QML. | **Bắt buộc chạy Live Binary Smoke Test** (mục I.2): Khởi chạy trực tiếp file `.exe` từ command line và đọc console log trước khi bàn giao. |
-| **INC-002** | *(Ghi nhận sau)* | *(Mô tả lỗi gặp phải)* | *(Nguyên nhân)* | *(Bước kiểm tra bổ sung)* |
+| **INC-002** | 2026-08-26 | File `.exe` và các DLL bị đóng gói nhầm vào thư mục con `bin/` thay vì nằm trực tiếp ở root của `out\LA-Studio-x.x.x.x\`. | Chạy `package.ps1` với cờ `-StageDir` mà thiếu `-PortableInternalLayout`, khiến script mặc định cấu trúc installer (lồng `bin/`). | **Bắt buộc dùng cờ `-PortableInternalLayout -SkipInstaller`** khi build bản portable để giữ cấu trúc phẳng thống nhất từ các bản 0.0.7.9, 0.0.8.0, 0.0.8.1. |
 
 ---
 
