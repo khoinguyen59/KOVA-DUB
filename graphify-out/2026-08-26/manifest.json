@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.cpp": {
-    "mtime": 1787712537.8591285,
-    "seen": 1787721475.0939066,
-    "ast_hash": "08b6315c639e6fba8704db89d089b33a",
+    "mtime": 1787740774.1851895,
+    "seen": 1787740899.3912797,
+    "ast_hash": "bbad07cbb57ea2d7cef1d97ea8eea33e",
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.h": {
@@ -3276,9 +3276,9 @@
     "semantic_hash": ""
   },
   "CMakeLists.txt": {
-    "mtime": 1787720489.5770595,
-    "seen": 1787721475.157043,
-    "ast_hash": "871d1b33ac4176a0afdb1ec29e277ae8",
+    "mtime": 1787740027.8667145,
+    "seen": 1787740367.499555,
+    "ast_hash": "9ba925b66f20f5e42e7151a0cc625cf2",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787721461.0498035,
-    "seen": 1787721475.1572094,
-    "ast_hash": "d73c7aefe450b10d07e197a81034d5bb",
+    "mtime": 1787737607.915154,
+    "seen": 1787738964.6253412,
+    "ast_hash": "39f633269c109a50d7436b445dd5a5d6",
     "semantic_hash": ""
   },
   "data/presets/vieneu_voices.json": {
@@ -6246,9 +6246,9 @@
     "semantic_hash": ""
   },
   "data/presets/voice_clone_presets.json": {
-    "mtime": 1787720422.9572177,
-    "seen": 1787721475.0435667,
-    "ast_hash": "1df7ce06b309a0d880111031b950eab4",
+    "mtime": 1787739907.8264742,
+    "seen": 1787740367.43556,
+    "ast_hash": "cd6554ef72aba23ec637b117cf1c3b50",
     "semantic_hash": ""
   },
   "examples/voice-cloning/common/conversational-vi-qa.json": {
@@ -6656,6 +6656,204 @@
   "data/presets/voice_clone_refs/vn_xuan_vinh_nam_nam.wav": {
     "mtime": 1787564404.1182709,
     "seen": 1787721475.1696641,
+    "ast_hash": "e680cdf480b13fbdd25a51960f402b1b",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Alex_\u0110\u1ea1i_\u0110\u1ebf.mp3": {
+    "mtime": 1787738189.9306538,
+    "seen": 1787738964.6383727,
+    "ast_hash": "695db23a5b52488564d0fa68ba521924",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Ban_Mai.mp3": {
+    "mtime": 1787738097.482996,
+    "seen": 1787738964.638374,
+    "ast_hash": "a768bd3d195e095e45eeeedcb20a82cf",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_B\u1ea3n_Tin_1.mp3": {
+    "mtime": 1787738104.9988756,
+    "seen": 1787738964.6383758,
+    "ast_hash": "2a3cf0ace1f8ae365d4aa4717f1e072b",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_B\u1ea3n_Tin_n\u1eef.mp3": {
+    "mtime": 1787738145.291973,
+    "seen": 1787738964.6383772,
+    "ast_hash": "3dc416498fc12439b82ad4f4d8c68bbc",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_C\u00f4_G\u00e1i_Ho\u1ea1t_Ng\u00f4n.mp3": {
+    "mtime": 1787738074.624103,
+    "seen": 1787738964.6383796,
+    "ast_hash": "85237aa1176013306d826943b1b5c071",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Gi\u1ecdng_B\u00e9.mp3": {
+    "mtime": 1787738071.1004806,
+    "seen": 1787738964.6383808,
+    "ast_hash": "829d956cbb91d6b96225917733dbefad",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Gi\u1ecdng_G\u00e1i_M\u1edbi_L\u1edbn.mp3": {
+    "mtime": 1787738175.1306748,
+    "seen": 1787738964.6383817,
+    "ast_hash": "d34076d697ccedd32213ab53f605a777",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Gi\u1ecdng_Nam_Tr\u1ea7m.mp3": {
+    "mtime": 1787738171.5062335,
+    "seen": 1787738964.6383832,
+    "ast_hash": "9eba13c6ba61a3ae832ca2fd0f008350",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Gi\u1ecdng_N\u1eef_Ph\u1ed5_Th\u00f4ng.mp3": {
+    "mtime": 1787738065.266551,
+    "seen": 1787738964.6383843,
+    "ast_hash": "017e792a15a51e24c6f3be4f9aab3e57",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Kenny_\u0110\u1ea1i_\u0110\u1ebf.mp3": {
+    "mtime": 1787738162.0727673,
+    "seen": 1787738964.6383858,
+    "ast_hash": "8b7679d0b0e7faa68439fd6d0922aab9",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Mai.mp3": {
+    "mtime": 1787738093.948263,
+    "seen": 1787738964.6383867,
+    "ast_hash": "e1a986c4915bcdbe876a6395240d8577",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Nam_b\u1ea3n_tin.mp3": {
+    "mtime": 1787738178.7476938,
+    "seen": 1787738964.6383877,
+    "ast_hash": "a6f00760bfaff876270534e4d37a3f50",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Nh\u1ecf_Ng\u1ecdt_Ng\u00e0o.mp3": {
+    "mtime": 1787738061.4514108,
+    "seen": 1787738964.6383886,
+    "ast_hash": "445af40d9835af4e0447a3322870fb7c",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Qu\u00ean_T\u00ean_T\u1ef1_Test.mp3": {
+    "mtime": 1787738182.45598,
+    "seen": 1787738964.63839,
+    "ast_hash": "6884ffbb7fd99b9f8c6e294ffbbfd423",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Review_Phim_2.mp3": {
+    "mtime": 1787738152.590147,
+    "seen": 1787738964.638391,
+    "ast_hash": "d2835583d8cc42b0ad3da576e9f6ccf8",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Review_Phim_3.mp3": {
+    "mtime": 1787738148.8727007,
+    "seen": 1787738964.6383917,
+    "ast_hash": "daffcc95b2b01e32e1fbcde2be7ed22d",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Review_Phim_4.mp3": {
+    "mtime": 1787738108.6078768,
+    "seen": 1787738964.6383934,
+    "ast_hash": "08c4a12ead24db70b92a451812bd98a3",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Review_Phim_new.mp3": {
+    "mtime": 1787738101.2491252,
+    "seen": 1787738964.6383946,
+    "ast_hash": "a223cd3227db02675138510065242696",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Robot_VN.mp3": {
+    "mtime": 1787738167.9229953,
+    "seen": 1787738964.6383958,
+    "ast_hash": "965bc94daed4ac90e3c4c044e5ca752b",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Sunny_Idol.mp3": {
+    "mtime": 1787738156.166046,
+    "seen": 1787738964.638397,
+    "ast_hash": "52b627df238bf98b6549d842d99cadfd",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Thanh_Ni\u00ean_T\u1ef1_Tin.mp3": {
+    "mtime": 1787738186.1396067,
+    "seen": 1787738964.6383982,
+    "ast_hash": "32d98a228a92e0458d45ede239e90e5e",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/capcut_Vi\u1ec7t_M\u00e9o.mp3": {
+    "mtime": 1787738090.2283998,
+    "seen": 1787738964.638399,
+    "ast_hash": "1370f50f6fe3cf1c1dad909c517af666",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_D\u00e3y_S\u1ed1.wav": {
+    "mtime": 1787564404.1233718,
+    "seen": 1787738964.642667,
+    "ast_hash": "a60624153a7fe0ceb621232162a49a38",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Minh_\u0110\u1ee9c.wav": {
+    "mtime": 1787564404.1205156,
+    "seen": 1787738964.6426692,
+    "ast_hash": "e3515f74fafe676ca33962ab2f423d41",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Ng\u1ecdc_Huy\u1ec1n.wav": {
+    "mtime": 1787564404.1251175,
+    "seen": 1787738964.6426706,
+    "ast_hash": "a293d7b68e6fec081abf1dce94f85e7f",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Ng\u1ecdc_Linh.wav": {
+    "mtime": 1787564404.1441724,
+    "seen": 1787738964.642672,
+    "ast_hash": "9732d659d07305da571b4f781ecfc3ef",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Ph\u1ea1m_Tuy\u00ean.wav": {
+    "mtime": 1787564404.147088,
+    "seen": 1787738964.6426735,
+    "ast_hash": "c558d10b0c75db2d13738f8b894bb52a",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Thanh_B\u00ecnh.wav": {
+    "mtime": 1787564404.1395845,
+    "seen": 1787738964.6426756,
+    "ast_hash": "a36d19b7f0e23251d87baf459449e090",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Th\u1ee5c_\u0110oan.wav": {
+    "mtime": 1787564404.1521072,
+    "seen": 1787738964.642677,
+    "ast_hash": "2bdbed60b906c0c07d74233043d5076e",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Tr\u00fac_Ly.wav": {
+    "mtime": 1787564404.1418822,
+    "seen": 1787738964.6426787,
+    "ast_hash": "85e5465d6a6fda99bfc48ec004631536",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_T\u1ebft_Xu\u00e2n.wav": {
+    "mtime": 1787564404.1216538,
+    "seen": 1787738964.6426806,
+    "ast_hash": "da72548e9f33390280b76601ffd6b51d",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_V\u0129nh_Nam.wav": {
+    "mtime": 1787564404.1487474,
+    "seen": 1787738964.6426816,
+    "ast_hash": "9993a5cfd8e36a781714ed8a2d2d1fc1",
+    "semantic_hash": ""
+  },
+  "data/presets/voice_clone_refs/vieneu_Xu\u00e2n_V\u0129nh.wav": {
+    "mtime": 1787564404.1182709,
+    "seen": 1787738964.6426826,
     "ast_hash": "e680cdf480b13fbdd25a51960f402b1b",
     "semantic_hash": ""
   }

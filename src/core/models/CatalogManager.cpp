@@ -306,8 +306,12 @@ QVariantList CatalogManager::languageSet(const QString &setId)
         QStringLiteral(":/LAStudio") + relativePath,
         QStringLiteral(":") + relativePath,
         QCoreApplication::applicationDirPath() + relativePath,
+        PathUtils::dataDir() + relativePath,
         QDir::currentPath() + relativePath
     };
+#ifdef LASTUDIO_SOURCE_DIR
+    paths.append(QStringLiteral(LASTUDIO_SOURCE_DIR) + relativePath);
+#endif
 
     QByteArray data = readFirstAvailableFile(paths);
     if (data.isEmpty()) {

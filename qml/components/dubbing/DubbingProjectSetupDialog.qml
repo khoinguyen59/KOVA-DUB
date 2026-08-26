@@ -32,26 +32,29 @@ Dialog {
     y: parent ? Math.round((parent.height - height) / 2) : 0
 
     function languageIndex(value) {
+        if (!languageCatalog || !Array.isArray(languageCatalog) || languageCatalog.length === 0) return 0
         for (var i = 0; i < languageCatalog.length; ++i)
-            if (languageCatalog[i].value === value) return i
+            if (languageCatalog[i] && languageCatalog[i].value === value) return i
         return 0
     }
 
     function openFor(mode, startAfterApply) {
         selectedMode = mode === "automatic" ? "automatic" : "step"
         continueWorkflow = startAfterApply === true
-        selectedSourceLanguage = dubbing.sourceLanguage || "zh"
-        selectedTargetLanguage = dubbing.targetLanguage || "vi"
-        selectedQuality = dubbing.dubbingQuality || "adaptive"
+        selectedSourceLanguage = (dubbing && dubbing.sourceLanguage) ? dubbing.sourceLanguage : "zh"
+        selectedTargetLanguage = (dubbing && dubbing.targetLanguage) ? dubbing.targetLanguage : "vi"
+        selectedQuality = (dubbing && dubbing.dubbingQuality) ? dubbing.dubbingQuality : "adaptive"
         sourceLanguageBox.currentIndex = languageIndex(selectedSourceLanguage)
         targetLanguageBox.currentIndex = languageIndex(selectedTargetLanguage)
         open()
     }
 
     function applyConfiguration() {
-        dubbing.sourceLanguage = selectedSourceLanguage
-        dubbing.targetLanguage = selectedTargetLanguage
-        dubbing.dubbingQuality = selectedQuality
+        if (dubbing) {
+            dubbing.sourceLanguage = selectedSourceLanguage
+            dubbing.targetLanguage = selectedTargetLanguage
+            dubbing.dubbingQuality = selectedQuality
+        }
         var mode = selectedMode
         var startAfterApply = continueWorkflow
         close()
@@ -128,9 +131,9 @@ Dialog {
                     model: root.languageCatalog
                     textRole: "text"
                     secondaryTextRole: "detail"
-                    searchable: model.length > 6
+                    searchable: Boolean(model && model.length > 6)
                     onActivated: function(index) {
-                        if (index >= 0 && index < model.length)
+                        if (model && index >= 0 && index < model.length)
                             root.selectedSourceLanguage = model[index].value
                     }
                 }
@@ -141,9 +144,9 @@ Dialog {
                     model: root.languageCatalog
                     textRole: "text"
                     secondaryTextRole: "detail"
-                    searchable: model.length > 6
+                    searchable: Boolean(model && model.length > 6)
                     onActivated: function(index) {
-                        if (index >= 0 && index < model.length)
+                        if (model && index >= 0 && index < model.length)
                             root.selectedTargetLanguage = model[index].value
                     }
                 }

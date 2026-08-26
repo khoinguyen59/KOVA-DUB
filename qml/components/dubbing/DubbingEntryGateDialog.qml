@@ -71,7 +71,10 @@ Dialog {
                         id: automaticButton
                         objectName: "dubbingEntryAutomaticButton"
                         text: qsTr("Automatic"); Layout.fillWidth: true; iconName: "play"
-                        onClicked: root.automaticRequested()
+                        onClicked: {
+                            root.close()
+                            root.automaticRequested()
+                        }
                     }
                 }
             }
@@ -85,14 +88,25 @@ Dialog {
                     PrimaryButton {
                         objectName: "dubbingEntryStepByStepButton"
                         text: qsTr("Review one by one"); Layout.fillWidth: true; quiet: true; iconName: "workflow"
-                        onClicked: root.stepByStepRequested()
+                        onClicked: {
+                            root.close()
+                            root.stepByStepRequested()
+                        }
                     }
                 }
             }
         }
         RowLayout {
             Layout.fillWidth: true; Layout.margins: Theme.paddingLarge
-            PrimaryButton { text: qsTr("Leave Dubbing"); quiet: true; iconName: "arrow-left"; onClicked: root.leaveDubbingRequested() }
+            PrimaryButton {
+                text: qsTr("Leave Dubbing")
+                quiet: true
+                iconName: "arrow-left"
+                onClicked: {
+                    root.close()
+                    root.leaveDubbingRequested()
+                }
+            }
             Item { Layout.fillWidth: true }
         }
     }

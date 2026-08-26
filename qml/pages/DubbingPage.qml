@@ -136,12 +136,16 @@ Item {
     }
 
     function chooseDubbingEntryMode(mode) {
+        dubbingEntryGate.close()
+        if (root.dubbing) {
+            root.dubbing.chooseDubbingEntryMode(mode)
+            root.dubbing.setWorkflowMode(mode)
+        }
         if (mode === "automatic") {
-            dubbing.setWorkflowMode("automatic")
             projectSetupDialog.openFor("automatic", true)
         } else {
-            dubbing.setWorkflowMode("step")
-            projectSetupDialog.openFor("step", false)
+            root.reviewStepId = "import"
+            root.followRunningStep = false
         }
     }
 
@@ -383,7 +387,9 @@ Item {
     function openAlignmentStudioFromReview() {
         if (root.dubbing.normalizedAudioPath === "" || root.dubbing.segments.length === 0)
             return
-        AppController.sidebar.navigateToRoute("alignment")
+        if (ApplicationWindow.window && ApplicationWindow.window.requestStudioRoute) {
+            ApplicationWindow.window.requestStudioRoute("studio-alignment")
+        }
     }
 
     function ocrSetupEditable() {
@@ -830,6 +836,12 @@ Item {
         dubbing: root.dubbing
         onAutomaticRequested: root.chooseDubbingEntryMode("automatic")
         onStepByStepRequested: root.chooseDubbingEntryMode("step")
+        onLeaveDubbingRequested: {
+            dubbingEntryGate.close()
+            if (ApplicationWindow.window && ApplicationWindow.window.requestStudioRoute) {
+                ApplicationWindow.window.requestStudioRoute("welcome")
+            }
+        }
     }
 
     DubbingProjectSetupDialog {
@@ -837,6 +849,18 @@ Item {
         parent: Overlay.overlay
         dubbing: root.dubbing
         languageCatalog: root.languageCatalog
+        onConfigurationAccepted: function(mode, continueWorkflow) {
+            if (mode === "automatic" && continueWorkflow) {
+                automaticPreflightDialog.openPreflight()
+            } else {
+                root.reviewStepId = "import"
+            }
+        }
+        onConfigurationCancelled: function(continueWorkflow) {
+            if (continueWorkflow) {
+                dubbingEntryGate.openGate()
+            }
+        }
     }
 
     DubbingColabSetupDialog {
