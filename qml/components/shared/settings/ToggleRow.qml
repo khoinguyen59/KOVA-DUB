@@ -12,13 +12,19 @@ CheckBox {
     property string description: ""
 
     Layout.fillWidth: true
-    implicitHeight: Math.max(34, content.implicitHeight + Theme.paddingSmall)
+    implicitHeight: Math.max(36, content.implicitHeight + Theme.paddingSmall)
     focusPolicy: Qt.StrongFocus
+
+    leftPadding: 0
+    rightPadding: 48 // 38px indicator width + 10px buffer to prevent text overlap
+    topPadding: Math.round(Theme.paddingSmall / 2)
+    bottomPadding: Math.round(Theme.paddingSmall / 2)
+
     indicator: Rectangle {
         implicitWidth: 38
         implicitHeight: 20
         x: toggle.width - width
-        y: parent.height / 2 - height / 2
+        y: Math.round((toggle.height - height) / 2)
         radius: 10
         color: toggle.checked ? Qt.rgba(0.49, 0.30, 1.0, 0.22) : Qt.rgba(1, 1, 1, 0.04)
         border.color: toggle.checked ? Qt.rgba(0.49, 0.30, 1.0, 0.85) : Qt.rgba(1, 1, 1, 0.10)
@@ -38,11 +44,10 @@ CheckBox {
 
     contentItem: Column {
         id: content
-        width: Math.max(0, toggle.availableWidth - toggle.indicator.width - Theme.paddingMedium)
         spacing: 2
 
         Text {
-            width: parent.width
+            width: content.width
             text: toggle.text
             color: toggle.enabled ? Theme.textPrimary : Theme.textSecondary
             font.pixelSize: Theme.fontSmall
@@ -50,7 +55,7 @@ CheckBox {
         }
 
         Text {
-            width: parent.width
+            width: content.width
             visible: toggle.description !== ""
             text: toggle.description
             color: Theme.textSecondary

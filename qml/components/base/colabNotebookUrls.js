@@ -5,7 +5,7 @@
 // the selected model; this helper only turns that filename into a URL.  Do not
 // point this at a development branch: a model selection must open the notebook
 // that is committed on the repository's main release branch.
-var notebookBaseUrl = "https://colab.research.google.com/github/khoinguyen59/kova-video-studio/blob/main/notebooks/"
+var notebookBaseUrl = "https://colab.research.google.com/github/khoinguyen59/KOVA-DUB/blob/main/notebooks/"
 
 var notebookSubpaths = {
     // TTS
