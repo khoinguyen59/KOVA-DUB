@@ -23,8 +23,8 @@ Dialog {
 
     title: ""
     modal: true
-    width: Math.min(1080, parent ? parent.width - 32 : 1080)
-    height: Math.min(780, parent ? parent.height - 32 : 780)
+    width: Math.min(1120, parent ? parent.width - 32 : 1120)
+    height: Math.min(800, parent ? parent.height - 32 : 800)
     x: parent ? Math.round((parent.width - width) / 2) : 0
     y: parent ? Math.round((parent.height - height) / 2) : 0
     padding: 0
@@ -34,13 +34,8 @@ Dialog {
     property string activeGender: "all"
     property string searchFilter: ""
 
-    property var filteredVoices: {
-        var _v = root.allVoices
-        var _c = root.activeCategory
-        var _g = root.activeGender
-        var _q = root.searchFilter.trim().toLowerCase()
-        return root.calculateFilteredVoices(_v, _c, _g, _q)
-    }
+    // Fully reactive filtered list
+    property var filteredVoices: calculateFilteredVoices(root.allVoices, root.activeCategory, root.activeGender, root.searchFilter)
 
     Component.onCompleted: {
         refreshVoices()
@@ -84,30 +79,44 @@ Dialog {
         root.allVoices = list
     }
 
+    function resolveAudioPath(item) {
+        if (!item) return ""
+        var path = item.audioPath || item.referenceAudio || item.refAudio || ""
+        if (AppController.files && AppController.files.urlToLocalPath) {
+            path = AppController.files.urlToLocalPath(path)
+        }
+        return path
+    }
+
     function togglePlayVoice(item) {
-        if (!item || !item.audioPath) return
-        var path = item.audioPath
+        if (!item) return
+        var path = resolveAudioPath(item)
+        if (!path) return
         
         if (root.currentPlayingPath === path) {
-            if (AppController.player.playing && !AppController.player.paused) {
+            if (AppController.player && AppController.player.playing && !AppController.player.paused) {
                 AppController.player.pause()
-            } else if (AppController.player.paused) {
+            } else if (AppController.player && AppController.player.paused) {
                 AppController.player.resume()
-            } else {
+            } else if (AppController.player) {
                 AppController.player.playFile(path)
             }
         } else {
             root.currentPlayingPath = path
-            AppController.player.playFile(path)
+            if (AppController.player) {
+                AppController.player.playFile(path)
+            }
         }
     }
 
     function isVoicePlaying(item) {
-        return item && item.audioPath && root.currentPlayingPath === item.audioPath && AppController.player && AppController.player.playing && !AppController.player.paused
+        var path = resolveAudioPath(item)
+        return path && root.currentPlayingPath === path && AppController.player && AppController.player.playing && !AppController.player.paused
     }
 
     function isVoicePaused(item) {
-        return item && item.audioPath && root.currentPlayingPath === item.audioPath && AppController.player && AppController.player.paused
+        var path = resolveAudioPath(item)
+        return path && root.currentPlayingPath === path && AppController.player && AppController.player.paused
     }
 
     function selectVoice(item) {
@@ -115,7 +124,7 @@ Dialog {
         if (AppController.player && AppController.player.playing) {
             AppController.player.stop()
         }
-        root.selectedAudioPath = item.audioPath || ""
+        root.selectedAudioPath = resolveAudioPath(item)
         root.selectedReferenceText = item.referenceTranscript || item.referenceText || ""
         root.selectedVoiceName = (item.name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
         root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText, root.selectedVoiceName, item.modelFamily || "")
@@ -152,8 +161,9 @@ Dialog {
         return count
     }
 
-    function calculateFilteredVoices(voicesList, cat, gender, query) {
+    function calculateFilteredVoices(voicesList, cat, gender, queryRaw) {
         if (!voicesList || voicesList.length === 0) return []
+        var query = (queryRaw || "").trim().toLowerCase()
         var res = []
         for (var i = 0; i < voicesList.length; ++i) {
             var v = voicesList[i]
@@ -164,10 +174,12 @@ Dialog {
 
             // Gender match
             var vGender = String(v.gender || "").toLowerCase()
-            if (gender === "male" && vGender !== "male") continue
-            if (gender === "female" && vGender !== "female") continue
+            if (gender !== "all") {
+                if (gender === "male" && vGender !== "male") continue
+                if (gender === "female" && vGender !== "female") continue
+            }
 
-            // Search filter match
+            // Search query match
             if (query !== "") {
                 var vName = String(v.name || "").toLowerCase()
                 var vDesc = String(v.description || "").toLowerCase()
@@ -191,7 +203,7 @@ Dialog {
 
     // Modal Background
     background: Rectangle {
-        color: "#13121d"
+        color: "#12111d"
         radius: 16
         border.color: "#302d47"
         border.width: 1
@@ -202,7 +214,7 @@ Dialog {
         id: confirmDeleteDialog
         parent: Overlay.overlay
         titleText: qsTr("Xóa Giọng Clone")
-        messageText: qsTr("Bạn có chắc chắn muốn xóa giọng '%1' khỏi thư viện giọng clone cá nhân? Hành động này không thể hoàn tác.").arg(root.pendingDeleteName)
+        messageText: qsTr("Bạn có chắc chắn muốn xóa giọng '%1' khỏi thư viện cá nhân? Hành động này không thể hoàn tác.").arg(root.pendingDeleteName)
         confirmText: qsTr("Xóa vĩnh viễn")
         isDestructive: true
         onConfirmed: {
@@ -219,7 +231,7 @@ Dialog {
         spacing: 0
 
         // ==========================================
-        // 1. MODAL HEADER
+        // 1. MODAL HEADER (Top Title Bar)
         // ==========================================
         Rectangle {
             Layout.fillWidth: true
@@ -241,6 +253,7 @@ Dialog {
                 anchors.rightMargin: 24
                 spacing: 16
 
+                // Header Icon Glow Box
                 Rectangle {
                     width: 42
                     height: 42
@@ -261,6 +274,7 @@ Dialog {
                     }
                 }
 
+                // Title & Subtitle
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 2
@@ -297,6 +311,7 @@ Dialog {
                     }
                 }
 
+                // Close Button
                 PrimaryButton {
                     text: qsTr("Đóng")
                     quiet: true
@@ -326,6 +341,7 @@ Dialog {
                     Layout.fillWidth: true
                     spacing: 12
 
+                    // Custom Search Input Box
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: 40
@@ -386,6 +402,7 @@ Dialog {
                         }
                     }
 
+                    // Gender Filter Switcher (Segmented Control)
                     Rectangle {
                         implicitHeight: 40
                         implicitWidth: genderRow.implicitWidth + 8
@@ -521,15 +538,16 @@ Dialog {
             Layout.fillHeight: true
             clip: true
 
+            // GridView displaying all cards
             GridView {
                 id: voiceGrid
                 anchors.fill: parent
                 anchors.margins: 16
                 clip: true
-                cellWidth: Math.floor((width - 32) / Math.max(1, Math.floor((width - 32) / 330)))
-                cellHeight: 190
+                cellWidth: Math.floor((width - 32) / Math.max(1, Math.floor((width - 32) / 340)))
+                cellHeight: 215
                 model: root.filteredVoices
-                visible: root.filteredVoices.length > 0
+                visible: root.filteredVoices && root.filteredVoices.length > 0
 
                 ScrollBar.vertical: ScrollBar {
                     policy: ScrollBar.AsNeeded
@@ -559,128 +577,180 @@ Dialog {
 
                         ColumnLayout {
                             anchors.fill: parent
-                            anchors.margins: 14
+                            anchors.margins: 12
                             spacing: 8
 
-                            // 1. Card Top Bar
+                            // 1. Card Top Bar: AVATAR ICON + NAME & BADGES + DELETE BUTTON
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: 10
 
+                                // AVATAR ICON CIRCLE
                                 Rectangle {
-                                    radius: 4
-                                    implicitWidth: sourceBadgeText.implicitWidth + 10
-                                    implicitHeight: 22
-                                    color: cardRect.isCustomVoice ? "#d97706"
-                                                                  : (cardRect.isCapcut ? "#ff0055"
-                                                                                       : (cardRect.isVieNeu ? "#059669" : "#7c4dff"))
-
-                                    Text {
-                                        id: sourceBadgeText
-                                        anchors.centerIn: parent
-                                        text: cardRect.isCustomVoice ? qsTr("Giọng của tôi")
-                                                                     : (cardRect.isCapcut ? "CapCut"
-                                                                                          : (cardRect.isVieNeu ? "VieNeu" : "OmniVoice"))
-                                        color: "#ffffff"
-                                        font.pixelSize: 10
-                                        font.bold: true
+                                    width: 44
+                                    height: 44
+                                    radius: 22
+                                    gradient: Gradient {
+                                        GradientStop {
+                                            position: 0.0
+                                            color: cardRect.isCustomVoice ? "#f59e0b"
+                                                                          : (cardRect.isCapcut ? "#ff0055"
+                                                                                               : (cardRect.isVieNeu ? "#059669" : "#7c4dff"))
+                                        }
+                                        GradientStop {
+                                            position: 1.0
+                                            color: cardRect.isCustomVoice ? "#b45309"
+                                                                          : (cardRect.isCapcut ? "#be123c"
+                                                                                               : (cardRect.isVieNeu ? "#065f46" : "#4c1d95"))
+                                        }
                                     }
-                                }
-
-                                Rectangle {
-                                    radius: 4
-                                    implicitWidth: detailBadgeText.implicitWidth + 8
-                                    implicitHeight: 22
-                                    color: "#252238"
-                                    border.color: "#35314f"
+                                    border.color: Qt.rgba(1, 1, 1, 0.25)
                                     border.width: 1
 
                                     Text {
-                                        id: detailBadgeText
                                         anchors.centerIn: parent
                                         text: {
-                                            var g = modelData.gender === "female" ? qsTr("Nữ") : (modelData.gender === "male" ? qsTr("Nam") : "")
-                                            var acc = modelData.accent || ""
-                                            if (g && acc) return g + " · " + acc
-                                            if (g) return g
-                                            if (acc) return acc
-                                            return qsTr("Giọng đọc")
+                                            var n = (modelData.name || "").toLowerCase()
+                                            if (cardRect.isCustomVoice) return "⭐"
+                                            if (n.indexOf("bé") !== -1 || n.indexOf("mới lớn") !== -1) return "👶"
+                                            if (n.indexOf("robot") !== -1) return "🤖"
+                                            if (n.indexOf("quacks") !== -1) return "🦆"
+                                            if (n.indexOf("villain") !== -1 || n.indexOf("crusty") !== -1) return "🎭"
+                                            if (modelData.gender === "female") return "👩"
+                                            if (modelData.gender === "male") return "👨"
+                                            return "🎙️"
                                         }
-                                        color: "#c7c2dc"
-                                        font.pixelSize: 10
+                                        font.pixelSize: 20
                                     }
                                 }
 
-                                Item { Layout.fillWidth: true }
+                                // Voice Name and Tag Pills
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 3
 
-                                // Delete Button (ONLY FOR USER CUSTOM/CLONED VOICES)
-                                Rectangle {
-                                    visible: cardRect.isCustomVoice
-                                    width: 24
-                                    height: 24
-                                    radius: 4
-                                    color: trashHover.containsMouse ? "#7f1d1d" : "#381720"
-                                    border.color: trashHover.containsMouse ? "#ef4444" : "#5c202a"
-                                    border.width: 1
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
 
-                                    LineIcon {
-                                        anchors.centerIn: parent
-                                        name: "trash"
-                                        color: "#f87171"
-                                        implicitWidth: 14
-                                        implicitHeight: 14
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: (modelData.name || qsTr("Giọng đọc mẫu")).replace("CapCut: ", "").replace("OmniVoice: ", "")
+                                            color: cardRect.isPlayingThis ? "#a27eff" : "#ffffff"
+                                            font.pixelSize: 14
+                                            font.bold: true
+                                            elide: Text.ElideRight
+                                        }
+
+                                        // DELETE BUTTON (ONLY FOR CUSTOM/CLONED VOICES)
+                                        Rectangle {
+                                            visible: cardRect.isCustomVoice
+                                            width: 24
+                                            height: 24
+                                            radius: 4
+                                            color: trashHover.containsMouse ? "#7f1d1d" : "#381720"
+                                            border.color: trashHover.containsMouse ? "#ef4444" : "#5c202a"
+                                            border.width: 1
+
+                                            LineIcon {
+                                                anchors.centerIn: parent
+                                                name: "trash"
+                                                color: "#f87171"
+                                                implicitWidth: 14
+                                                implicitHeight: 14
+                                            }
+
+                                            MouseArea {
+                                                id: trashHover
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    root.pendingDeleteId = modelData.id || ""
+                                                    root.pendingDeleteName = modelData.name || qsTr("Giọng clone")
+                                                    confirmDeleteDialog.open()
+                                                }
+                                            }
+                                        }
                                     }
 
-                                    MouseArea {
-                                        id: trashHover
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            root.pendingDeleteId = modelData.id || ""
-                                            root.pendingDeleteName = modelData.name || qsTr("Giọng clone")
-                                            confirmDeleteDialog.open()
+                                    // Source & Gender/Accent Pills
+                                    RowLayout {
+                                        spacing: 4
+
+                                        Rectangle {
+                                            radius: 3
+                                            implicitWidth: bTxt.implicitWidth + 8
+                                            implicitHeight: 18
+                                            color: cardRect.isCustomVoice ? "#d97706"
+                                                                          : (cardRect.isCapcut ? "#e11d48"
+                                                                                               : (cardRect.isVieNeu ? "#059669" : "#6d28d9"))
+                                            Text {
+                                                id: bTxt
+                                                anchors.centerIn: parent
+                                                text: cardRect.isCustomVoice ? "Cá nhân"
+                                                                             : (cardRect.isCapcut ? "CapCut"
+                                                                                                  : (cardRect.isVieNeu ? "VieNeu" : "OmniVoice"))
+                                                color: "#ffffff"
+                                                font.pixelSize: 9
+                                                font.bold: true
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            radius: 3
+                                            implicitWidth: gTxt.implicitWidth + 8
+                                            implicitHeight: 18
+                                            color: "#252238"
+                                            border.color: "#35314f"
+                                            border.width: 1
+
+                                            Text {
+                                                id: gTxt
+                                                anchors.centerIn: parent
+                                                text: {
+                                                    var g = modelData.gender === "female" ? "Nữ" : (modelData.gender === "male" ? "Nam" : "")
+                                                    var a = modelData.accent || ""
+                                                    if (g && a) return g + " · " + a
+                                                    if (g) return g
+                                                    return a || "Voice"
+                                                }
+                                                color: "#c7c2dc"
+                                                font.pixelSize: 9.5
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            // 2. Card Middle
-                            Text {
-                                Layout.fillWidth: true
-                                text: (modelData.name || qsTr("Giọng đọc mẫu")).replace("CapCut: ", "").replace("OmniVoice: ", "")
-                                color: cardRect.isPlayingThis ? "#a27eff" : "#ffffff"
-                                font.pixelSize: 15
-                                font.bold: true
-                                elide: Text.ElideRight
-                            }
-
+                            // 2. Card Middle: Transcript Preview Text
                             Text {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                text: modelData.referenceTranscript || modelData.description || modelData.referenceText || qsTr("Giọng đọc tự nhiên, sẵn sàng sử dụng cho Voice Cloning và TTS.")
-                                color: "#c7c2dc"
-                                font.pixelSize: 12
+                                text: modelData.referenceTranscript || modelData.referenceText || modelData.description || qsTr("Giọng đọc tự nhiên, sẵn sàng sử dụng cho Voice Cloning và TTS.")
+                                color: "#aea8d1"
+                                font.pixelSize: 11
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 elide: Text.ElideRight
                             }
 
-                            // 3. Card Bottom: Play/Pause Button + Select Button
+                            // 3. Card Bottom: PLAY/PAUSE BUTTON + SELECT BUTTON
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: 8
 
+                                // PLAY / PAUSE BUTTON
                                 Rectangle {
-                                    id: playBtn
+                                    id: playBtnRect
                                     Layout.fillWidth: true
-                                    implicitHeight: 34
+                                    implicitHeight: 36
                                     radius: 6
                                     color: cardRect.isPlayingThis ? "#7c4dff"
                                                                  : (playMouse.containsMouse ? "#322f4d" : "#242236")
-                                    border.color: cardRect.isPlayingThis ? "#a27eff"
+                                    border.color: cardRect.isPlayingThis ? "#c084fc"
                                                                         : (playMouse.containsMouse ? "#a27eff" : "#3a3658")
-                                    border.width: 1
+                                    border.width: cardRect.isPlayingThis ? 1.5 : 1
 
                                     RowLayout {
                                         anchors.centerIn: parent
@@ -699,6 +769,7 @@ Dialog {
                                                 implicitHeight: 14
                                             }
 
+                                            // 3 Animated Equalizer Bars when Playing
                                             Row {
                                                 anchors.centerIn: parent
                                                 spacing: 2
@@ -751,10 +822,11 @@ Dialog {
                                     }
                                 }
 
+                                // SELECT BUTTON
                                 PrimaryButton {
                                     text: qsTr("Chọn")
-                                    implicitHeight: 34
-                                    implicitWidth: 68
+                                    implicitHeight: 36
+                                    implicitWidth: 70
                                     buttonColor: "#7c4dff"
                                     onClicked: root.selectVoice(modelData)
                                 }
@@ -772,10 +844,10 @@ Dialog {
                 }
             }
 
-            // Empty State
+            // Empty State Display
             Item {
                 anchors.fill: parent
-                visible: root.filteredVoices.length === 0
+                visible: !root.filteredVoices || root.filteredVoices.length === 0
 
                 ColumnLayout {
                     anchors.centerIn: parent

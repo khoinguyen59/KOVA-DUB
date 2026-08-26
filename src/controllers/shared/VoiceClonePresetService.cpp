@@ -200,14 +200,21 @@ bool VoiceClonePresetService::isStoredReferenceAudio(const QString &audioPath) c
     if (localPath.isEmpty()) return false;
     const QString storagePath = QDir::cleanPath(QFileInfo(audioStorageDir()).absoluteFilePath());
     const QString absolutePath = QDir::cleanPath(QFileInfo(localPath).absoluteFilePath());
-    if (!absolutePath.isEmpty() && absolutePath.startsWith(storagePath + QLatin1Char('/')))
+
+#if defined(Q_OS_WIN)
+    const auto cs = Qt::CaseInsensitive;
+#else
+    const auto cs = Qt::CaseSensitive;
+#endif
+
+    if (!absolutePath.isEmpty() && (absolutePath.compare(storagePath, cs) == 0 || absolutePath.startsWith(storagePath + QLatin1Char('/'), cs)))
         return true;
     const QString bundledPath = QDir::cleanPath(QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
-    if (!absolutePath.isEmpty() && (absolutePath == bundledPath || absolutePath.startsWith(bundledPath + QLatin1Char('/'))))
+    if (!absolutePath.isEmpty() && (absolutePath.compare(bundledPath, cs) == 0 || absolutePath.startsWith(bundledPath + QLatin1Char('/'), cs)))
         return true;
 #ifdef LASTUDIO_SOURCE_DIR
     const QString sourceBundled = QDir::cleanPath(QFileInfo(QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
-    if (!absolutePath.isEmpty() && (absolutePath == sourceBundled || absolutePath.startsWith(sourceBundled + QLatin1Char('/'))))
+    if (!absolutePath.isEmpty() && (absolutePath.compare(sourceBundled, cs) == 0 || absolutePath.startsWith(sourceBundled + QLatin1Char('/'), cs)))
         return true;
 #endif
     return false;
