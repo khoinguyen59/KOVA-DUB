@@ -39,48 +39,70 @@ QString VoiceClonePresetService::audioStorageDir() const
 
 QVariantList VoiceClonePresetService::loadAllPresets() const
 {
-    QVariantList list;
-    QString targetFile = presetsFilePath();
-    if (!QFile::exists(targetFile)) {
-        const QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_presets.json");
-        if (QFile::exists(bundled)) targetFile = bundled;
+    QVariantList combined;
+    QSet<QString> loadedIds;
+
+    // 1. Always load system built-in presets (61 master voices) from bundled resources
+    QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_presets.json");
+    if (!QFile::exists(bundled)) {
 #ifdef LASTUDIO_SOURCE_DIR
-        else {
-            const QString sourceBundled = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_presets.json");
-            if (QFile::exists(sourceBundled)) targetFile = sourceBundled;
-        }
+        const QString sourceBundled = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_presets.json");
+        if (QFile::exists(sourceBundled)) bundled = sourceBundled;
 #endif
     }
-    QFile file(targetFile);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return list;
+
+    QFile bundledFile(bundled);
+    if (bundledFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QJsonDocument doc = QJsonDocument::fromJson(bundledFile.readAll());
+        QJsonArray arr;
+        if (doc.isArray()) {
+            arr = doc.array();
+        } else if (doc.isObject()) {
+            arr = doc.object().value(QLatin1String(kVoiceClonePresetItemsKey)).toArray();
+        }
+        for (const QJsonValue &val : arr) {
+            if (val.isObject()) {
+                QVariantMap map = val.toObject().toVariantMap();
+                map.insert(QStringLiteral("isBuiltin"), true);
+                map.insert(QStringLiteral("canDelete"), false);
+                const QString id = map.value(QStringLiteral("id")).toString();
+                if (!id.isEmpty()) {
+                    loadedIds.insert(id);
+                }
+                combined.append(map);
+            }
+        }
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    QJsonArray arr;
-    if (doc.isArray()) {
-        // Preserve libraries created before the metadata envelope existed.
-        // The next successful edit rewrites them in the current schema.
-        arr = doc.array();
-    } else if (doc.isObject()) {
-        const QJsonObject root = doc.object();
-        const QJsonValue entries = root.value(QLatin1String(kVoiceClonePresetItemsKey));
-        if (entries.isArray()) {
-            arr = entries.toArray();
-        } else if (root.value(QLatin1String(kVoiceClonePresetSchemaKey)).toInt() != kVoiceClonePresetSchemaVersion) {
-            Logger::warning("VoiceClonePresetService", "Unsupported voice preset metadata schema.");
-            return list;
+    // 2. Load user-saved custom presets from PathUtils::dataDir() (~/.lastudio/presets/voice_clone_presets.json)
+    const QString userFile = presetsFilePath();
+    if (QFile::exists(userFile)) {
+        QFile file(userFile);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+            QJsonArray arr;
+            if (doc.isArray()) {
+                arr = doc.array();
+            } else if (doc.isObject()) {
+                arr = doc.object().value(QLatin1String(kVoiceClonePresetItemsKey)).toArray();
+            }
+            for (const QJsonValue &val : arr) {
+                if (val.isObject()) {
+                    QVariantMap map = val.toObject().toVariantMap();
+                    const QString id = map.value(QStringLiteral("id")).toString();
+                    if (!id.isEmpty() && loadedIds.contains(id)) {
+                        continue;
+                    }
+                    map.insert(QStringLiteral("isBuiltin"), false);
+                    map.insert(QStringLiteral("canDelete"), true);
+                    map.insert(QStringLiteral("isUserPreset"), true);
+                    combined.prepend(map);
+                }
+            }
         }
-    } else {
-        return list;
     }
-    list.reserve(arr.size());
-    for (const QJsonValue &val : arr) {
-        if (val.isObject()) {
-            list.append(val.toObject().toVariantMap());
-        }
-    }
-    return list;
+
+    return combined;
 }
 
 bool VoiceClonePresetService::saveAllPresets(const QVariantList &presets)
@@ -97,7 +119,11 @@ bool VoiceClonePresetService::saveAllPresets(const QVariantList &presets)
 
     QJsonArray arr;
     for (const QVariant &item : presets) {
-        arr.append(QJsonObject::fromVariantMap(item.toMap()));
+        QVariantMap map = item.toMap();
+        if (map.value(QStringLiteral("isBuiltin")).toBool() || !map.value(QStringLiteral("canDelete"), true).toBool()) {
+            continue;
+        }
+        arr.append(QJsonObject::fromVariantMap(map));
     }
 
     QJsonObject root;
@@ -190,7 +216,14 @@ bool VoiceClonePresetService::isStoredReferenceAudio(const QString &audioPath) c
 QVariantMap VoiceClonePresetService::validatePreset(const QVariantMap &preset) const
 {
     QVariantMap result = preset;
-    QString audioPath = PathUtils::urlToLocalPath(preset.value(QStringLiteral("audioPath")).toString());
+    QString audioPathStr = preset.value(QStringLiteral("audioPath")).toString();
+    if (audioPathStr.isEmpty()) {
+        audioPathStr = preset.value(QStringLiteral("referenceAudio")).toString();
+    }
+    if (audioPathStr.isEmpty()) {
+        audioPathStr = preset.value(QStringLiteral("refAudio")).toString();
+    }
+    QString audioPath = PathUtils::urlToLocalPath(audioPathStr);
     if (!QFileInfo(audioPath).isAbsolute() || !QFile::exists(audioPath)) {
         const QString fileName = QFileInfo(audioPath).fileName();
         const QString candidateInStorage = QDir(audioStorageDir()).filePath(fileName);
@@ -395,6 +428,10 @@ bool VoiceClonePresetService::deletePreset(const QString &id)
     for (const QVariant &val : all) {
         QVariantMap preset = val.toMap();
         if (preset.value(QStringLiteral("id")).toString() == id) {
+            if (preset.value(QStringLiteral("isBuiltin")).toBool() || !preset.value(QStringLiteral("canDelete"), true).toBool()) {
+                Logger::warning("VoiceClonePresetService", "Cannot delete system built-in voice preset: " + id);
+                return false;
+            }
             familyId = preset.value(QStringLiteral("familyId")).toString();
             audioPath = preset.value(QStringLiteral("audioPath")).toString();
             found = true;

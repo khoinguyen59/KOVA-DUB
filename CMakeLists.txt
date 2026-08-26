@@ -1086,6 +1086,11 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/notebooks/workers/"
 )
 install(FILES "${CMAKE_SOURCE_DIR}/docs/REMOTE_WORKERS.md" DESTINATION "docs")
 
+# Install application preset library and voice clone reference audio assets
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
+    DESTINATION "data"
+)
+
 # Note: Runtime DLLs (Whisper, etc.) and windeployqt will be handled 
 # by the CI/CD script or a post-install step.
 
