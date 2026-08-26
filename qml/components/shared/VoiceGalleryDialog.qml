@@ -34,6 +34,18 @@ Dialog {
     property string activeGender: "all"
     property string searchFilter: ""
 
+    property var filteredVoices: {
+        var _v = root.allVoices
+        var _c = root.activeCategory
+        var _g = root.activeGender
+        var _q = root.searchFilter.trim().toLowerCase()
+        return root.calculateFilteredVoices(_v, _c, _g, _q)
+    }
+
+    Component.onCompleted: {
+        refreshVoices()
+    }
+
     onOpened: {
         refreshVoices()
     }
@@ -115,7 +127,7 @@ Dialog {
         var vName = String(v.name || "").toLowerCase()
         var vAccent = String(v.accent || "").toLowerCase()
         var vFam = String(v.modelFamily || v.familyId || "").toLowerCase()
-        var vTags = (v.tags || []).join(" ").toLowerCase()
+        var vTags = Array.isArray(v.tags) ? v.tags.join(" ").toLowerCase() : String(v.tags || "").toLowerCase()
         var isCustom = v.isUserPreset === true || v.canDelete === true || v.isBuiltin === false
 
         if (cat === "all") return true
@@ -140,14 +152,11 @@ Dialog {
         return count
     }
 
-    function getFilteredVoices() {
-        var result = []
-        var query = root.searchFilter.trim().toLowerCase()
-        var cat = root.activeCategory
-        var gender = root.activeGender
-
-        for (var i = 0; i < root.allVoices.length; ++i) {
-            var v = root.allVoices[i]
+    function calculateFilteredVoices(voicesList, cat, gender, query) {
+        if (!voicesList || voicesList.length === 0) return []
+        var res = []
+        for (var i = 0; i < voicesList.length; ++i) {
+            var v = voicesList[i]
             if (!v || !v.name) continue
 
             // Category match
@@ -155,27 +164,29 @@ Dialog {
 
             // Gender match
             var vGender = String(v.gender || "").toLowerCase()
-            if (gender !== "all") {
-                if (gender === "male" && vGender !== "male") continue
-                if (gender === "female" && vGender !== "female") continue
-            }
+            if (gender === "male" && vGender !== "male") continue
+            if (gender === "female" && vGender !== "female") continue
 
             // Search filter match
             if (query !== "") {
                 var vName = String(v.name || "").toLowerCase()
                 var vDesc = String(v.description || "").toLowerCase()
                 var vAccent = String(v.accent || "").toLowerCase()
-                var vTags = (v.tags || []).join(" ").toLowerCase()
+                var vTags = Array.isArray(v.tags) ? v.tags.join(" ").toLowerCase() : String(v.tags || "").toLowerCase()
                 var vTranscript = String(v.referenceTranscript || v.referenceText || "").toLowerCase()
 
-                if (vName.indexOf(query) === -1 && vDesc.indexOf(query) === -1 && vAccent.indexOf(query) === -1 && vTags.indexOf(query) === -1 && vTranscript.indexOf(query) === -1) {
+                if (vName.indexOf(query) === -1 && 
+                    vDesc.indexOf(query) === -1 && 
+                    vAccent.indexOf(query) === -1 && 
+                    vTags.indexOf(query) === -1 && 
+                    vTranscript.indexOf(query) === -1) {
                     continue
                 }
             }
 
-            result.push(v)
+            res.push(v)
         }
-        return result
+        return res
     }
 
     // Modal Background
@@ -207,7 +218,9 @@ Dialog {
     contentItem: ColumnLayout {
         spacing: 0
 
+        // ==========================================
         // 1. MODAL HEADER
+        // ==========================================
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 70
@@ -294,7 +307,9 @@ Dialog {
             }
         }
 
+        // ==========================================
         // 2. SEARCH & FILTER SHELF
+        // ==========================================
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: filterColumn.implicitHeight + 24
@@ -498,54 +513,27 @@ Dialog {
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#28253d" }
 
+        // ==========================================
         // 3. MAIN BENTO GRID VIEW
-        ScrollView {
+        // ==========================================
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-
-            property var displayedVoices: root.getFilteredVoices()
-
-            Item {
-                anchors.fill: parent
-                visible: parent.displayedVoices.length === 0
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 12
-
-                    LineIcon {
-                        Layout.alignment: Qt.AlignHCenter
-                        name: "volume"
-                        color: "#5b567a"
-                        implicitWidth: 48
-                        implicitHeight: 48
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Không tìm thấy giọng đọc phù hợp")
-                        color: "#ffffff"
-                        font.pixelSize: 16
-                        font.bold: true
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác.")
-                        color: "#aea8d1"
-                        font.pixelSize: 12
-                    }
-                }
-            }
 
             GridView {
                 id: voiceGrid
                 anchors.fill: parent
                 anchors.margins: 16
-                cellWidth: Math.floor((voiceGrid.width - 32) / Math.max(1, Math.floor((voiceGrid.width - 32) / 330)))
+                clip: true
+                cellWidth: Math.floor((width - 32) / Math.max(1, Math.floor((width - 32) / 330)))
                 cellHeight: 190
-                model: parent.displayedVoices
+                model: root.filteredVoices
+                visible: root.filteredVoices.length > 0
+
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
 
                 delegate: Item {
                     width: voiceGrid.cellWidth
@@ -560,8 +548,8 @@ Dialog {
                         readonly property bool isPlayingThis: root.isVoicePlaying(modelData)
                         readonly property bool isPausedThis: root.isVoicePaused(modelData)
                         readonly property bool isCustomVoice: modelData.canDelete === true || modelData.isUserPreset === true || modelData.isBuiltin === false
-                        readonly property bool isCapcut: (modelData.name || "").toLowerCase().indexOf("capcut") !== -1 || (modelData.tags || []).indexOf("CapCut") !== -1
-                        readonly property bool isVieNeu: (modelData.modelFamily === "vieneu-tts") || (modelData.tags || []).indexOf("VieNeu-TTS") !== -1
+                        readonly property bool isCapcut: (modelData.name || "").toLowerCase().indexOf("capcut") !== -1 || (Array.isArray(modelData.tags) && modelData.tags.indexOf("CapCut") !== -1)
+                        readonly property bool isVieNeu: (modelData.modelFamily === "vieneu-tts") || (Array.isArray(modelData.tags) && modelData.tags.indexOf("VieNeu-TTS") !== -1)
 
                         color: isPlayingThis ? "#231f38"
                                              : (cardHover.containsMouse ? "#27243c" : "#1b1929")
@@ -780,6 +768,40 @@ Dialog {
                             z: -1
                             onDoubleClicked: root.selectVoice(modelData)
                         }
+                    }
+                }
+            }
+
+            // Empty State
+            Item {
+                anchors.fill: parent
+                visible: root.filteredVoices.length === 0
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    LineIcon {
+                        Layout.alignment: Qt.AlignHCenter
+                        name: "volume"
+                        color: "#5b567a"
+                        implicitWidth: 48
+                        implicitHeight: 48
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: qsTr("Không tìm thấy giọng đọc phù hợp")
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: qsTr("Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác.")
+                        color: "#aea8d1"
+                        font.pixelSize: 12
                     }
                 }
             }
