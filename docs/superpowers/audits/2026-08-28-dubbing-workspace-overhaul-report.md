@@ -189,6 +189,8 @@ git diff --check
 
 Package verification PASS bằng `scripts/package.ps1` với `-SkipInstaller -PortableInternalLayout`: `out/LA-Studio-0.0.8.5/LA-Studio-0.0.8.5.exe` có File/ProductVersion `0.0.8.5`; `platforms/qwindows.dll`, `Qt6Core.dll`, `media-tools/ffmpeg.exe`, `subtitle-ocr/tesseract.exe`, notebook Colab và `data/presets/voice_clone_refs/vieneu_Minh_Đức.wav` đều tồn tại. Package script cũng xác nhận staging manifest/license manifest và portable QML smoke exit code 0. Đây là internal package vì lệnh cho phép eSpeak payload unsigned đã SHA-256-verify; live Colab E2E vẫn là release boundary bên ngoài môi trường này.
 
+GitHub delivery PASS: branch `main` đã push thành công tới `origin` (`https://github.com/khoinguyen59/KOVA-DUB.git`), remote head `2207447101d1fc1271cd1dca427d49cf770dc586`.
+
 ## 10. Tiêu chí chấp nhận trước khi gọi là production-ready
 
 Chỉ đánh dấu release-ready sau khi tất cả điều kiện sau có log/artifact chứng minh:
