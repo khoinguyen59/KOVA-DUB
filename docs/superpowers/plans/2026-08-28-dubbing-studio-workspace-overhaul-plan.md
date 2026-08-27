@@ -285,7 +285,7 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 - [x] **Step 3: Verify the package.** Root EXE File/ProductVersion `0.0.8.5`, required runtime folders/artifacts exist, the package staging manifests pass, and portable QML smoke exits with code 0.
 
-- [ ] **Step 4: Commit the implementation.** Use a focused commit message such as `feat: overhaul dubbing workspace interactions` after the report, tests and package evidence are present.
+- [x] **Step 4: Commit the implementation.** Implementation, tests, package evidence and the indexed report were committed as `c9c795d5` (`feat: complete dubbing workspace overhaul`).
 
 - [ ] **Step 5: Push the current branch to its configured GitHub remote.** Capture `git rev-parse HEAD`, `git branch --show-current`, `git remote -v` and the push result in the report. If the remote rejects the push, report the exact rejection and leave the local commit intact.
 
