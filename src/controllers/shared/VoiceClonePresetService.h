@@ -37,6 +37,7 @@ signals:
 private:
     QString presetsFilePath() const;
     QString audioStorageDir() const;
+    QVariantMap normalizePresetMetadata(const QVariantMap &preset) const;
     QVariantList loadAllPresets() const;
     bool saveAllPresets(const QVariantList &presets);
     QVariantMap persistReferenceAudio(const QString &id, const QString &audioPath);

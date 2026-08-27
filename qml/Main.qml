@@ -119,6 +119,20 @@ ApplicationWindow {
                 ? page.qmlPreviewContextDrawer() : null
     }
 
+    function qmlPreviewCloseDubbingContext() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewCloseContextDrawer
+                ? page.qmlPreviewCloseContextDrawer() : false
+    }
+
+    function qmlPreviewSelectDubbingStep(stepId) {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        if (!page || !page.selectStep)
+            return false
+        page.selectStep(stepId || "import")
+        return true
+    }
+
     function requestStudioRoute(routeId, familyId) {
         workflowsPopup.close()
         downloadsPopup.close()

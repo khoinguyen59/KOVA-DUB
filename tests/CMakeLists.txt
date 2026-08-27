@@ -44,6 +44,7 @@ set(TEST_SOURCES
     dubbing/test_AlignmentTranscriptMatcher.cpp
     dubbing/test_AlignmentWorkflow.cpp
     dubbing/test_DubbingProject.cpp
+    dubbing/test_DubbingWorkspaceContract.cpp
     dubbing/test_TranslationProject.cpp
     dubbing/test_WorkflowGraph.cpp
     core/test_SourceSeparation.cpp
@@ -331,6 +332,7 @@ set(TEST_SOURCES
     core/test_HardwareManager.h
     core/test_AppErrorCatalog.h
     dubbing/test_TranslationProject.h
+    dubbing/test_DubbingWorkspaceContract.h
     ../src/controllers/separation/VoiceIsolatorController.h
 )
 
@@ -499,6 +501,7 @@ set(LASTUDIO_TEST_SUITES
     TestAlignmentTranscriptMatcher
     TestAlignmentWorkflow
     TestDubbingProject
+    TestDubbingWorkspaceContract
     TestTranslationProject
     TestWorkflowGraph
     TestSourceSeparation

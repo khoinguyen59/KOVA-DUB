@@ -1572,15 +1572,15 @@
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.cpp": {
-    "mtime": 1787821415.6475217,
-    "seen": 1787863374.8382142,
-    "ast_hash": "43348390cef11ac406ce4812f1916d53",
+    "mtime": 1787866323.9194975,
+    "seen": 1787867160.654811,
+    "ast_hash": "ee864ebf4204600ab04aba5242db956b",
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.h": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.778934,
-    "ast_hash": "71fe6e3231b680ca5b6a56b94775ae30",
+    "mtime": 1787866323.9184916,
+    "seen": 1787867160.6548123,
+    "ast_hash": "fe738115bb61dbf4e14d6a92c13ea26c",
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceDesignPresetService.cpp": {
@@ -2088,9 +2088,9 @@
     "semantic_hash": ""
   },
   "tests/main.cpp": {
-    "mtime": 1787842470.3263667,
-    "seen": 1787863374.8740804,
-    "ast_hash": "c16470d6951fc9d94ff7c8652e988d10",
+    "mtime": 1787866323.9224548,
+    "seen": 1787867160.6958838,
+    "ast_hash": "481581c643553a1599cbf85262d6904b",
     "semantic_hash": ""
   },
   "tests/mocks/AppController.cpp": {
@@ -3864,9 +3864,9 @@
     "semantic_hash": ""
   },
   "tests/CMakeLists.txt": {
-    "mtime": 1787842776.2278118,
-    "seen": 1787863374.9040356,
-    "ast_hash": "ee4824f13a0a9402ce1dea334b9d2111",
+    "mtime": 1787866323.9215019,
+    "seen": 1787867160.7300506,
+    "ast_hash": "ab62a210052d822744d2745dbad98f75",
     "semantic_hash": ""
   },
   "catalog-src/hub/models/Qwen/Qwen3-ASR-0.6B/thumbnail.webp": {
@@ -6858,9 +6858,9 @@
     "semantic_hash": ""
   },
   "scripts/preview_dubbing_ui.ps1": {
-    "mtime": 1787860990.6737726,
-    "seen": 1787863374.8263068,
-    "ast_hash": "a7c996f887910eda7e7f144cf3acc08f",
+    "mtime": 1787866397.4242768,
+    "seen": 1787867160.640697,
+    "ast_hash": "ac8724d484eb54e1409e19468e09c1e2",
     "semantic_hash": ""
   },
   "src/controllers/app/AppErrorCatalog.cpp": {
@@ -6888,21 +6888,21 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-27-comprehensive-technical-recheck.md": {
-    "mtime": 1787848028.816421,
-    "seen": 1787863374.9031231,
-    "ast_hash": "a29c96da773db643039d8a13ac41efb4",
+    "mtime": 1787865136.2033846,
+    "seen": 1787867160.7286456,
+    "ast_hash": "c6e57cce44c5554aa6b990c23bbc3cd5",
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787864420.7588706,
-    "seen": 1787864730.8124874,
-    "ast_hash": "adcf816d7668895f0df6d05b9863628b",
+    "mtime": 1787868020.4053917,
+    "seen": 1787868077.5081973,
+    "ast_hash": "19ae870698a6bfc5f4e8526d597cc22b",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {
-    "mtime": 1787845874.8830156,
-    "seen": 1787863374.9031272,
-    "ast_hash": "36b385ae23dfccfb3085abec2f502586",
+    "mtime": 1787865136.205516,
+    "seen": 1787867160.7286487,
+    "ast_hash": "165111a835e23c0f4c5340b732e381cd",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-user-facing-error-guidance.md": {
@@ -6912,9 +6912,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-28-dubbing-studio-workspace-overhaul-plan.md": {
-    "mtime": 1787856366.9909713,
-    "seen": 1787863374.9031298,
-    "ast_hash": "945ee82b33950b30498c7eeb04b69876",
+    "mtime": 1787868020.406392,
+    "seen": 1787868077.5083935,
+    "ast_hash": "01efdcf60d8401ca90c9fdd0a41d2ab2",
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-08-27-unified-colab-10-10-design.md": {
@@ -7449,6 +7449,18 @@
     "mtime": 1787564404.1182709,
     "seen": 1787863374.9150808,
     "ast_hash": "e680cdf480b13fbdd25a51960f402b1b",
+    "semantic_hash": ""
+  },
+  "tests/dubbing/test_DubbingWorkspaceContract.cpp": {
+    "mtime": 1787866637.756724,
+    "seen": 1787867160.6954849,
+    "ast_hash": "74ed1d98952dfbe6033548ff681bfb10",
+    "semantic_hash": ""
+  },
+  "tests/dubbing/test_DubbingWorkspaceContract.h": {
+    "mtime": 1787866323.9194975,
+    "seen": 1787867160.6954877,
+    "ast_hash": "226794c97ac2b5413b674d7f50848e29",
     "semantic_hash": ""
   }
 }

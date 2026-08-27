@@ -1,5 +1,8 @@
 param(
-    [switch]$Capture
+    [switch]$Capture,
+    [int]$Width = 1280,
+    [int]$Height = 720,
+    [string]$CaptureSuffix = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +31,11 @@ if ($Capture) {
     if (-not (Test-Path -LiteralPath $captureFile)) {
         throw "Capture harness not found: $captureFile"
     }
-    & $qmlRuntime -I $previewRoot $captureFile
+    if ([string]::IsNullOrWhiteSpace($CaptureSuffix)) {
+        $CaptureSuffix = "${Width}x${Height}"
+    }
+    & $qmlRuntime -I $previewRoot $captureFile -- `
+        --width $Width --height $Height --suffix $CaptureSuffix
 } else {
     & $qmlRuntime -I $previewRoot $previewFile
 }

@@ -24,7 +24,10 @@ Rectangle {
     property real pendingPosition: -1
     property bool pendingPlayback: false
     property int sourceSwitchAttempts: 0
-    property var draftOcrRoi: root.dubbing.dubbingOcrRoi || ({ x: 0.08, y: 0.80, width: 0.84, height: 0.16 })
+    // Keep the workspace fallback aligned with SubtitleOcrPipeline's lower
+    // region preset. This leaves room for playback controls while keeping
+    // the default caption inside the OCR scan area.
+    property var draftOcrRoi: root.dubbing.dubbingOcrRoi || ({ x: 0.10, y: 0.72, width: 0.80, height: 0.22 })
     property bool ocrRoiDragging: false
     property bool ocrRoiEditMode: false
     // The Dubbing workspace can give the video canvas its own focused view
@@ -211,6 +214,10 @@ Rectangle {
                 && subtitlePreviewOverlay.width > 0
                 && previewFrame.width > 0
                 && previewFrame.height > 0
+                && (!subtitlePreviewOverlay.visible
+                    || subtitlePreviewOverlay.y + subtitlePreviewOverlay.height
+                       <= previewFrame.y + previewFrame.height
+                          - subtitlePreviewOverlay.lowerControlsClearance + 1)
                 && (!root.hasLoadedSource || !sourceSetupPanel.visible)
     }
 
@@ -674,6 +681,12 @@ Rectangle {
                 objectName: "dubbingSubtitlePreviewOverlay"
                 readonly property string alignment: root.subtitleStyle.alignment || "bottom"
                 readonly property real safeMargin: Number(root.subtitleStyle.safeMargin || 0.06)
+                // Keep captions above the seek/playback controls even when
+                // the OCR ROI was placed at the very bottom of the source.
+                // The extra padding prevents glyph descenders from being
+                // visually swallowed by the control gradient.
+                readonly property real lowerControlsClearance:
+                    previewControls.height + Theme.paddingMedium
                 readonly property bool followsOcrRegion: root.showOcrTools
                                                         && root.dubbing.dubbingOcrRoiVisible
                                                         && root.isVideoSource
@@ -688,10 +701,15 @@ Rectangle {
                    ? previewFrame.x + previewFrame.width * Number(root.subtitleStyle.positionX || 0.5) - width / 2
                    : previewFrame.x + (previewFrame.width - width) / 2
                 y: followsOcrRegion
-                  ? dubbingOcrRoiOverlay.content.y + dubbingOcrRoiOverlay.content.height - height - Theme.paddingSmall
+                  ? Math.min(
+                        dubbingOcrRoiOverlay.content.y + dubbingOcrRoiOverlay.content.height
+                            - height - Theme.paddingSmall,
+                        previewFrame.y + previewFrame.height - height - lowerControlsClearance)
                   : alignment === "top" ? previewFrame.y + previewFrame.height * safeMargin
                     : alignment === "custom" ? previewFrame.y + previewFrame.height * Number(root.subtitleStyle.positionY || 0.90) - height / 2
-                                               : previewFrame.y + previewFrame.height - height - previewFrame.height * safeMargin - previewControls.height
+                                               : previewFrame.y + previewFrame.height - height
+                                                   - Math.max(previewFrame.height * safeMargin,
+                                                              lowerControlsClearance)
                 radius: Theme.radiusSmall
                 color: "transparent"
                 z: 2

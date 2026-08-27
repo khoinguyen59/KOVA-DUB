@@ -37,6 +37,55 @@ QString VoiceClonePresetService::audioStorageDir() const
     return PathUtils::dataDir() + QStringLiteral("/presets/voice_clone_refs");
 }
 
+QVariantMap VoiceClonePresetService::normalizePresetMetadata(const QVariantMap &input) const
+{
+    QVariantMap preset = input;
+    QString familyId = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+    if (familyId.isEmpty())
+        familyId = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();
+    if (familyId.isEmpty())
+        familyId = QStringLiteral("omnivoice");
+
+    QString name = preset.value(QStringLiteral("name")).toString().trimmed();
+    if (name.isEmpty())
+        name = preset.value(QStringLiteral("displayName")).toString().trimmed();
+    if (name.isEmpty())
+        name = preset.value(QStringLiteral("id")).toString().trimmed();
+
+    QString referenceText = preset.value(QStringLiteral("referenceText")).toString();
+    if (referenceText.trimmed().isEmpty())
+        referenceText = preset.value(QStringLiteral("referenceTranscript")).toString();
+
+    QVariantList compatibleFamilies = preset.value(
+        QStringLiteral("compatibleModelFamilies")).toList();
+    auto addCompatibleFamily = [&compatibleFamilies](const QString &family) {
+        if (family.isEmpty()) return;
+        for (const QVariant &entry : compatibleFamilies) {
+            if (entry.toString().trimmed().toLower() == family) return;
+        }
+        compatibleFamilies.append(family);
+    };
+    addCompatibleFamily(familyId);
+    // VieNeu reference recordings are accepted by the OmniVoice zero-shot
+    // clone worker. Keep the source family in the catalog while publishing
+    // the exact compatible worker family separately.
+    if (familyId.startsWith(QStringLiteral("vieneu")))
+        addCompatibleFamily(QStringLiteral("omnivoice"));
+
+    preset.insert(QStringLiteral("displayName"), name);
+    preset.insert(QStringLiteral("familyId"), familyId);
+    preset.insert(QStringLiteral("category"), preset.value(
+        QStringLiteral("category"), familyId).toString().trimmed());
+    preset.insert(QStringLiteral("language"), preset.value(
+        QStringLiteral("language"), QStringLiteral("auto")).toString().trimmed());
+    preset.insert(QStringLiteral("referenceText"), referenceText);
+    preset.insert(QStringLiteral("compatibleModelFamilies"), compatibleFamilies);
+    preset.insert(QStringLiteral("isCustomVoice"),
+                  preset.value(QStringLiteral("isUserPreset")).toBool()
+                      || !preset.value(QStringLiteral("isBuiltin"), false).toBool());
+    return preset;
+}
+
 QVariantList VoiceClonePresetService::loadAllPresets() const
 {
     QVariantList combined;
@@ -100,6 +149,8 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
                     map.insert(QStringLiteral("referenceAudio"), resolvedAudio);
                 }
 
+                map = normalizePresetMetadata(map);
+
                 const QString id = map.value(QStringLiteral("id")).toString();
                 if (!id.isEmpty()) {
                     loadedIds.insert(id);
@@ -138,6 +189,8 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
                         map.insert(QStringLiteral("audioPath"), resolvedAudio);
                         map.insert(QStringLiteral("referenceAudio"), resolvedAudio);
                     }
+
+                    map = normalizePresetMetadata(map);
 
                     combined.prepend(map);
                 }

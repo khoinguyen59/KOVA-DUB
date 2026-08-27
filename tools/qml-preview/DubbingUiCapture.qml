@@ -3,8 +3,18 @@ import LAStudio
 
 Main {
     id: previewRoot
-    width: 1280
-    height: 720
+    function argumentValue(name, fallback) {
+        var args = Qt.application.arguments || []
+        var index = args.indexOf(name)
+        return index >= 0 && index + 1 < args.length ? args[index + 1] : fallback
+    }
+
+    readonly property int captureWidth: Math.max(960, parseInt(argumentValue("--width", "1280")))
+    readonly property int captureHeight: Math.max(600, parseInt(argumentValue("--height", "720")))
+    readonly property string captureSuffix: argumentValue("--suffix", "1280x720")
+
+    width: captureWidth
+    height: captureHeight
     minimumWidth: 960
     minimumHeight: 600
     initialPreviewRouteId: "studio-dubbing"
@@ -36,6 +46,11 @@ Main {
         return false
     }
 
+    function outputPath(name) {
+        return "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/ui-demo/dubbing-"
+                + name + "-" + previewRoot.captureSuffix + ".png"
+    }
+
     function captureDrawer(path) {
         var drawer = previewRoot.qmlPreviewDubbingDrawer
                 ? previewRoot.qmlPreviewDubbingDrawer() : null
@@ -55,7 +70,7 @@ Main {
         running: true
         repeat: false
         onTriggered: {
-            previewRoot.capture("C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/ui-demo/dubbing-preview-1280x720.png")
+            previewRoot.capture(previewRoot.outputPath("preview"))
             if (previewRoot.qmlPreviewOpenDubbingContext
                     && previewRoot.qmlPreviewOpenDubbingContext("results")) {
                 drawerCaptureTimer.start()
@@ -71,7 +86,7 @@ Main {
         repeat: false
         onTriggered: {
             if (!previewRoot.captureDrawer(
-                        "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/ui-demo/dubbing-drawer-results-1280x720.png"))
+                        previewRoot.outputPath("drawer-results")))
                 console.warn("Unable to capture Dubbing context drawer")
             settingsOpenTimer.start()
         }
@@ -96,8 +111,34 @@ Main {
         repeat: false
         onTriggered: {
             if (!previewRoot.captureDrawer(
-                        "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/ui-demo/dubbing-drawer-settings-1280x720.png"))
+                        previewRoot.outputPath("drawer-settings")))
                 console.warn("Unable to capture Dubbing settings drawer")
+            ocrTimer.start()
+        }
+    }
+
+    Timer {
+        id: ocrTimer
+        interval: 450
+        repeat: false
+        onTriggered: {
+            if (previewRoot.qmlPreviewCloseDubbingContext)
+                previewRoot.qmlPreviewCloseDubbingContext()
+            if (previewRoot.qmlPreviewSelectDubbingStep)
+                previewRoot.qmlPreviewSelectDubbingStep("transcribe")
+            if (AppController.dubbing)
+                AppController.dubbing.dubbingOcrRoiVisible = true
+            ocrCaptureTimer.start()
+        }
+    }
+
+    Timer {
+        id: ocrCaptureTimer
+        interval: 700
+        repeat: false
+        onTriggered: {
+            if (!previewRoot.capture(previewRoot.outputPath("transcribe-ocr")))
+                console.warn("Unable to capture Dubbing Transcribe/OCR state")
             quitTimer.start()
         }
     }

@@ -175,6 +175,11 @@ Item {
         return dubbingContextDrawer
     }
 
+    function qmlPreviewCloseContextDrawer() {
+        dubbingContextDrawer.close()
+        return true
+    }
+
     function openOcrColabSetup() {
         dubbingColabSetupDialog.stageIds = ["subtitle-ocr"]
         dubbingColabSetupDialog.open() // Set up OCR Colab GPU

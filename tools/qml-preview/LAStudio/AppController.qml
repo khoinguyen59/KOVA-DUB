@@ -153,8 +153,11 @@ QtObject {
         property bool hasProject: true
         property string projectPath: "C:/Users/Nguyen Trong Khoi/Downloads/LAStudio-preview.json"
         property string projectName: "LA Studio Preview"
-        property string sourceMediaPath: "C:/Users/Nguyen Trong Khoi/Downloads/1.mp4"
-        property string sourceMediaUrl: ""
+        // Use the checked-in live-walkthrough fixture so the preview verifies
+        // the real VideoOutput/thumbnail path instead of rendering an empty
+        // black canvas with a fabricated source path.
+        property string sourceMediaPath: "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/dubbing-live-test/dubbing_live_walkthrough.mp4"
+        property string sourceMediaUrl: "file:///C:/Users/Nguyen%20Trong%20Khoi/Downloads/TTS/LA-Studio/out/dubbing-live-test/dubbing_live_walkthrough.mp4"
         property string playbackMediaUrl: ""
         property string normalizedAudioPath: "C:/Users/Nguyen Trong Khoi/AppData/Local/LAStudio/cache/analysis.wav"
         property string vocalsPath: "C:/Users/Nguyen Trong Khoi/AppData/Local/LAStudio/cache/vocals.wav"
@@ -210,7 +213,7 @@ QtObject {
         property bool subtitleOcrProcessing: false
         property bool sttCanRunAlongsideSubtitleOcr: true
         property bool subtitleOcrCanRunAlongsideStt: true
-        property var dubbingOcrRoi: ({ x: 0.08, y: 0.80, width: 0.84, height: 0.16 })
+        property var dubbingOcrRoi: ({ x: 0.10, y: 0.72, width: 0.80, height: 0.22 })
         property bool dubbingOcrRoiVisible: false
         property var subtitleConfiguration: ({ textSource: "target", burnIn: true, style: ({}) })
         property var timingConfiguration: ({ mode: "fit", minimumGapMs: 80 })

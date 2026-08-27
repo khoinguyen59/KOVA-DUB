@@ -27,14 +27,14 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | Kiểm tra | Kết quả |
 |---|---|
 | Build source bằng Qt 6.9.3/MSVC release preset | PASS; `LA-Studio-0.0.8.5.exe` trong `out/build/windows-msvc-release` |
-| CTest toàn bộ | PASS 40/40, 0 fail |
+| CTest toàn bộ | PASS 41/41, 0 fail |
 | QML route/smoke contract | PASS trong CTest và preview harness |
-| QML preview capture | PASS; đã chụp workspace 1280×720 logical và drawer Results/Settings |
+| QML preview capture | PASS; đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 1920×1080, 3840×2160 logical |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
 | Graphify | cập nhật sau source/docs cuối cùng; xem mục 9 |
 | Live Colab GPU | Chưa chạy trong lần recheck |
 | Full media E2E 1→8 bằng model thật | Chưa chạy trong lần recheck |
-| Packaging/EXE mới | Không đóng gói theo yêu cầu “không build exe” |
+| Packaging/EXE mới | PASS; package 8.4-style tại `out/LA-Studio-0.0.8.5/`, EXE File/ProductVersion `0.0.8.5`, portable QML smoke exit 0 |
 
 Điểm 10/10 trong bảng dưới là điểm đối soát contract/static regression của từng tài liệu, không phải cam kết rằng mọi remote runtime bên ngoài máy luôn sẵn sàng.
 
@@ -59,7 +59,7 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | `doc/back/07_backend_synthesize_flow.md` | 10/10 | 10/10 | 10/10 | 10/10 | Synthesis/preset/player contract đúng |
 | `doc/back/08_backend_mix_export_flow.md` | 10/10 | 10/10 | 10/10 | 10/10 | DSP, FFmpeg mux, ffprobe validation, atomic commit đúng |
 
-Các file 16 mục đã được đổi evidence từ CTest 39/39 sang 40/40, cập nhật ngày kiểm tra và sửa các mô tả không còn đúng. `doc/README.md` cũng dùng relative links và tên module có thật; các tên như `VoiceSeparationService`, `AudioNormalizationService`, `FFmpegAudioProcess`, `SpeechToTextService`, `TranslationService`, `AudioMixingService` không còn được dùng như class implementation.
+Các file 16 mục đã được đổi evidence từ CTest 39/39 sang 41/41, cập nhật ngày kiểm tra và sửa các mô tả không còn đúng. `doc/README.md` cũng dùng relative links và tên module có thật; các tên như `VoiceSeparationService`, `AudioNormalizationService`, `FFmpegAudioProcess`, `SpeechToTextService`, `TranslationService`, `AudioMixingService` không còn được dùng như class implementation.
 
 ## 4. Đối soát source và các điểm đã fix
 
@@ -81,13 +81,13 @@ Kết quả visual preview 1280×720: task rail, shelf, video canvas, timeline v
 
 `qml/components/dubbing/DubbingSourceMediaPanel.qml:35` có `showOcrTools`; `DubbingPage.qml:832` chỉ bật nó cho `transcribe`, `review-transcript` và `subtitle-ocr`. `DubbingSourceMediaPanel.qml:567` có thumbnail poster `dubbingVideoThumbnail`, `VideoOutput.PreserveAspectFit` và `previewFrameAspectRatio` cố định 16:9. Source 9:16/1:1 vẫn nằm gọn trong viewport, không bị stretch/crop.
 
-Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và được chuyển về shelf. Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle xuống ROI. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
+Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và được chuyển về shelf. Fallback/preset ROI của workspace đồng bộ với `SubtitleOcrPipeline` (`x=0.10, y=0.72, w=0.80, h=0.22`). Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle vào ROI nhưng vẫn có `lowerControlsClearance` để không chạm seek/playback controls. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
 
 ### 4.4 Voice catalog và OmniVoice/VieNeu
 
-`qml/components/shared/VoiceGalleryDialog.qml` phát signal 5 tham số gồm `voiceId`; không còn số lượng hard-code trong phần UI. `DubbingSynthesizeStep.qml:78-94` chọn voice trước, sau đó yêu cầu model theo source family/model family. Nút Colab trong cùng file cũng phát `voiceModelRequested("synthesize")`, không gọi `Qt.openUrlExternally()` tới một notebook cố định. `WorkflowNodeModelDialog.qml` ưu tiên preset `voiceCloneModelId` đã lưu.
+`qml/components/shared/VoiceGalleryDialog.qml` phát signal 5 tham số gồm `voiceId`; không còn số lượng hard-code trong phần UI. `VoiceClonePresetService` chuẩn hóa `displayName`, `familyId`, `category`, `language`, `referenceText`, `compatibleModelFamilies` và `isCustomVoice` ngay khi load catalog. `DubbingSynthesizeStep.qml:78-94` chọn voice trước, sau đó yêu cầu model theo source family/model family. Nút Colab trong cùng file cũng phát `voiceModelRequested("synthesize")`, không gọi `Qt.openUrlExternally()` tới một notebook cố định. `WorkflowNodeModelDialog.qml` ưu tiên preset `voiceCloneModelId` đã lưu.
 
-`src/controllers/dubbing/DubbingController.cpp` chuẩn hóa worker family: VieNeu reference có thể được dùng cho worker OmniVoice mà vẫn giữ source family cho UI/persistence. Đây là route cloning có chủ đích, không tuyên bố VieNeu và OmniVoice là cùng một model binary.
+`src/controllers/dubbing/DubbingController.cpp` chuẩn hóa worker family: VieNeu reference có thể được dùng cho worker OmniVoice mà vẫn giữ source family cho UI/persistence. Đây là route cloning có chủ đích, không tuyên bố VieNeu và OmniVoice là cùng một model binary. Contract test mới kiểm tra alias `vieneu` map đúng notebook exact của OmniVoice/VieNeu route.
 
 Comment cũ trong `VoiceClonePresetService.cpp` từng ghi số lượng master voice cố định; đã đổi thành mô tả catalog-driven để không tạo “code truth” giả khi số preset thay đổi.
 
@@ -155,34 +155,39 @@ Hiện `core.review-gate` ở automatic mode được đặt `never` theo policy
 - `doc/back/01_backend_media_ingest_flow.md` … `doc/back/08_backend_mix_export_flow.md`
 - `doc/README.md`
 
-Nội dung đã đồng bộ: ngày kiểm tra 2026-08-28, CTest 40/40, right context drawer, compact shelf, `vocalsAudioPath` schema 14, STT artifact preference và tên module C++ thực tế.
+Nội dung đã đồng bộ: ngày kiểm tra 2026-08-28, CTest 41/41, right context drawer, compact shelf, `vocalsAudioPath` schema 14, STT artifact preference, đồng bộ ROI với OCR preset và tên module C++ thực tế.
 
 ## 8. Visual evidence
 
 Preview harness: `scripts/preview_dubbing_ui.ps1 -Capture`.
 
-Ảnh đã tạo:
+Ảnh đã tạo bằng fixture MP4 có thật (`out/dubbing-live-test/dubbing_live_walkthrough.mp4`):
 
 - `out/ui-demo/dubbing-preview-1280x720.png`
 - `out/ui-demo/dubbing-drawer-results-1280x720.png`
 - `out/ui-demo/dubbing-drawer-settings-1280x720.png`
+- `out/ui-demo/dubbing-transcribe-ocr-1280x720.png`
+- Các bản responsive tương ứng `dubbing-preview-*`, `dubbing-drawer-results-*`, `dubbing-drawer-settings-*`, `dubbing-transcribe-ocr-*` cho `1600x900`, `1920x1080`, `3840x2160`.
 
-Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, compact shelf, preview, timeline và drawer. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
+Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, compact shelf, preview, timeline và drawer. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance và capture 1280×720 được chạy lại, không còn glyph bị che. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
 
 ## 9. Graphify và release hygiene
 
-Graphify đã được cập nhật cho code graph sau các thay đổi source/docs: 18.018 nodes, 31.417 edges sau clustering và 922 communities; `graph.html` aggregated có 922 community nodes và 2.140 cross-community edges. Graph health không có dangling/missing endpoint, self-loop hoặc collapsed edge. Semantic extraction đầy đủ của 315 docs/31 images bị timeout ở backend LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
+Graphify đã được cập nhật cho code graph sau các thay đổi source/docs: 18.035 nodes, 31.450 edges sau clustering và 923 communities; `graph.html` aggregated có 923 community nodes và 2.137 cross-community edges. Graph health không có dangling/missing endpoint, self-loop hoặc collapsed edge; producer suppression vẫn được ghi chú bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
 
 Trước khi merge/push, chạy lại:
 
 ```powershell
 & '.\scripts\build.ps1' -Preset 'windows-msvc-release' -QtRoot '.tools\Qt\6.9.3' -Version '0.0.8.5' -MaxParallelJobs 4 -SkipDeploy -AllowUnsignedEspeakForInternalBuild
-ctest --test-dir out\build\windows-msvc-release --output-on-failure
+    ctest --test-dir out\build\windows-msvc-release -C Release --output-on-failure
 & '.\scripts\preview_dubbing_ui.ps1' -Capture
+& '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 1600 -Height 900
+& '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 1920 -Height 1080
+& '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 3840 -Height 2160
 git diff --check
 ```
 
-Không thực hiện đóng gói EXE mới trong đợt recheck này. Binary verification output chỉ được dùng để kiểm tra source/test; nếu cần phát hành, phải tạo package riêng sau khi live Colab E2E pass.
+Package verification PASS bằng `scripts/package.ps1` với `-SkipInstaller -PortableInternalLayout`: `out/LA-Studio-0.0.8.5/LA-Studio-0.0.8.5.exe` có File/ProductVersion `0.0.8.5`; `platforms/qwindows.dll`, `Qt6Core.dll`, `media-tools/ffmpeg.exe`, `subtitle-ocr/tesseract.exe`, notebook Colab và `data/presets/voice_clone_refs/vieneu_Minh_Đức.wav` đều tồn tại. Package script cũng xác nhận staging manifest/license manifest và portable QML smoke exit code 0. Đây là internal package vì lệnh cho phép eSpeak payload unsigned đã SHA-256-verify; live Colab E2E vẫn là release boundary bên ngoài môi trường này.
 
 ## 10. Tiêu chí chấp nhận trước khi gọi là production-ready
 
