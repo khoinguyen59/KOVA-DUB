@@ -59,7 +59,7 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | `doc/back/07_backend_synthesize_flow.md` | 10/10 | 10/10 | 10/10 | 10/10 | Synthesis/preset/player contract đúng |
 | `doc/back/08_backend_mix_export_flow.md` | 10/10 | 10/10 | 10/10 | 10/10 | DSP, FFmpeg mux, ffprobe validation, atomic commit đúng |
 
-Các file 16 mục đã được đổi evidence từ CTest 39/39 sang 41/41, cập nhật ngày kiểm tra và sửa các mô tả không còn đúng. `doc/README.md` cũng dùng relative links và tên module có thật; các tên như `VoiceSeparationService`, `AudioNormalizationService`, `FFmpegAudioProcess`, `SpeechToTextService`, `TranslationService`, `AudioMixingService` không còn được dùng như class implementation.
+Các file 16 mục hiện dùng evidence CTest 41/41, cập nhật ngày kiểm tra và các mô tả bám source hiện tại. `doc/README.md` cũng dùng relative links và tên module có thật; các tên như `VoiceSeparationService`, `AudioNormalizationService`, `FFmpegAudioProcess`, `SpeechToTextService`, `TranslationService`, `AudioMixingService` không còn được dùng như class implementation.
 
 ## 4. Đối soát source và các điểm đã fix
 
