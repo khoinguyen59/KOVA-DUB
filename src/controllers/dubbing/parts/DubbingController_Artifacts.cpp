@@ -21,7 +21,7 @@ bool DubbingController::exportPackage(const QString &directoryPath)
         || !replaceCopy(m_project.projectPath, directory.filePath(QStringLiteral("project.ladub.json")), &error)
         || !replaceCopy(previewPath(), directory.filePath(QStringLiteral("dubbed-mix.wav")), &error)
         || !replaceCopy(dubbedVocalPath(), directory.filePath(QStringLiteral("dubbed-vocals.wav")), &error)
-        || !replaceCopy(m_project.analysisAudioPath, directory.filePath(QStringLiteral("source-vocals.wav")), &error)
+        || !replaceCopy(m_project.vocalsAudioPath, directory.filePath(QStringLiteral("source-vocals.wav")), &error)
         || !replaceCopy(m_project.backgroundAudioPath, directory.filePath(QStringLiteral("background.wav")), &error)) {
         setError(error);
         return false;
@@ -388,6 +388,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         cancelMatchingWorker();
         m_project.masterAudioPath = copiedPaths.constFirst();
         m_project.analysisAudioPath = copiedPaths.constFirst();
+        m_project.vocalsAudioPath.clear();
         m_project.backgroundAudioPath.clear();
         m_runner->setBackgroundAudioPath(QString());
         m_stepOutputs.insert(id, QVariantMap{{QStringLiteral("manualUpload"), true},
@@ -405,7 +406,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
                 backgroundPath = path;
         }
         cancelMatchingWorker();
-        m_project.analysisAudioPath = vocalsPath;
+        m_project.vocalsAudioPath = vocalsPath;
         m_project.backgroundAudioPath = backgroundPath;
         m_runner->setBackgroundAudioPath(backgroundPath);
         m_stepOutputs.insert(id, QVariantMap{{QStringLiteral("manualUpload"), true},
@@ -580,14 +581,13 @@ bool DubbingController::exportCapCutDraft(const QString &directoryPath)
     QString draftPath;
     QString warning;
     // analysisAudioPath is the normalized mono analysis input immediately
-    // after ingest. It becomes a genuine vocals stem only after the source
-    // separation node has produced its companion background stem. Do not
-    // label the analysis input as editable source vocals in a CapCut draft.
-    const bool hasSeparatedStems = !m_project.analysisAudioPath.trimmed().isEmpty()
-        && QFileInfo(m_project.analysisAudioPath).isFile()
+    // after ingest. It is never a source-vocals stem. Only the explicit
+    // separated vocals field may be exported as editable source vocals.
+    const bool hasSeparatedStems = !m_project.vocalsAudioPath.trimmed().isEmpty()
+        && QFileInfo(m_project.vocalsAudioPath).isFile()
         && !m_project.backgroundAudioPath.trimmed().isEmpty()
         && QFileInfo(m_project.backgroundAudioPath).isFile();
-    const QString vocalsStemPath = hasSeparatedStems ? m_project.analysisAudioPath : QString();
+    const QString vocalsStemPath = hasSeparatedStems ? m_project.vocalsAudioPath : QString();
     if (!CapCutDraftExporter::exportDraft(
             outputDirectory, QFileInfo(m_project.projectPath).completeBaseName(),
             m_project.sourceMediaPath, m_project.masterAudioPath, m_project.backgroundAudioPath,
@@ -606,5 +606,13 @@ bool DubbingController::exportCapCutDraft(const QString &directoryPath)
 
 bool DubbingController::renderPreview(const QString &path)
 {
+    const QFileInfo backgroundInfo(m_project.backgroundAudioPath);
+    if (!backgroundInfo.isFile() || backgroundInfo.size() <= 0) {
+        setError(QStringLiteral(
+            "Background stem is missing or unreadable. Run Separate and verify both "
+            "Vocals and Background outputs before mixing; normalized analysis audio "
+            "will not be used as a substitute."));
+        return false;
+    }
     return m_runner->renderPreview(m_project.segments, m_project.projectPath, path);
 }

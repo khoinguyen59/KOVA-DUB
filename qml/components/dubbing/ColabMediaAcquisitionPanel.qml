@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import "../base"
+import "../shared"
+import LAStudio
 
 // Downloading a public file is a CPU-only acquisition task, not AI inference.
 // Keep its controls deliberately independent from every Colab/GPU route.
@@ -195,13 +197,11 @@ Rectangle {
             font.pixelSize: Theme.fontSmall
             wrapMode: Text.WordWrap
         }
-        Text {
+        ErrorGuidanceInline {
             Layout.fillWidth: true
             visible: root.dubbing.lastError !== "" && !root.dubbing.mediaQueueDownloading
-            text: root.dubbing.lastError
-            color: Theme.error
-            font.pixelSize: Theme.fontSmall
-            wrapMode: Text.WordWrap
+            message: root.dubbing.lastError
+            source: "Dubbing media acquisition"
         }
     }
 }

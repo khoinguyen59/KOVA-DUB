@@ -34,6 +34,7 @@ private slots:
     void mediaLibraryRunsOnlyTheLaterSelectedActionSubset();
     void mediaBatchContinuesAfterARealWorkerFailure();
     void mediaBatchCanRunEachStageAcrossTheSelectedQueue();
+    void ingestUsesTwoPassEbuR128AndValidatedCache();
     void downloadRouteAndDubbingLinkControlAreWired();
 };
 

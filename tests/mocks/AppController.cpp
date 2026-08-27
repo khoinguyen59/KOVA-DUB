@@ -80,6 +80,11 @@ AppController* AppController::create(QQmlEngine *, QJSEngine *)
 }
 
 void AppController::clearError() {}
+QVariantMap AppController::currentError() const { return {}; }
+QVariantMap AppController::explainError(const QString &message, const QString &source) const
+{
+    return classifyAppError(message, source).toVariantMap();
+}
 void AppController::copyToClipboard(const QString &) {}
 QString AppController::logsDir() const { return PathUtils::logsDir(); }
 QString AppController::dataDir() const { return PathUtils::dataDir(); }

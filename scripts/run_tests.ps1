@@ -15,6 +15,7 @@ param(
     [ValidateRange(1, 64)]
     [int] $MaxParallelJobs = 4,
     [switch] $NoBuild,
+    [switch] $SkipAppBuildDependency,
     [switch] $Verbose
 )
 
@@ -118,7 +119,14 @@ function Test-UnitTestsConfigured {
         -not (Test-Path -LiteralPath $cachePath)) {
         return $false
     }
-    return [bool] (Select-String -LiteralPath $cachePath -Pattern '^BUILD_TESTING:BOOL=ON$' -Quiet)
+    if (-not (Select-String -LiteralPath $cachePath -Pattern '^BUILD_TESTING:BOOL=ON$' -Quiet)) {
+        return $false
+    }
+    if ($SkipAppBuildDependency -and
+        -not (Select-String -LiteralPath $cachePath -Pattern '^LASTUDIO_SKIP_TEST_APP_DEPENDENCY:BOOL=ON$' -Quiet)) {
+        return $false
+    }
+    return $true
 }
 
 function Configure-UnitTests {
@@ -164,6 +172,9 @@ function Configure-UnitTests {
         $archiverPath = (Get-Command "lib.exe" -ErrorAction Stop).Source.Replace('\', '/')
         $cmakeArgs += "-DCMAKE_LINKER=$linkerPath"
         $cmakeArgs += "-DCMAKE_AR=$archiverPath"
+    }
+    if ($SkipAppBuildDependency) {
+        $cmakeArgs += "-DLASTUDIO_SKIP_TEST_APP_DEPENDENCY=ON"
     }
 
     $env:VCPKG_ROOT = $ResolvedVcpkgRoot

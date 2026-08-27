@@ -21,6 +21,7 @@ Rectangle {
     required property var sourceMediaPanel
     property int selectedSegment: -1
     property int activeTab: 0
+    onDisplayedStepIdChanged: activeTab = 0
     property bool ocrSetupEditable: true
     property string playingSeparationStem: ""
     property string playingVoiceClipPath: ""
@@ -30,6 +31,8 @@ Rectangle {
     signal configureNodeRequested(string nodeId)
     signal runStepRequested(string nodeId)
     signal runNextStepRequested(string nodeId)
+    signal nextStepRequested(string stepId)
+    signal previousStepRequested(string stepId)
     signal fixRequested()
     signal fixSegmentRequested(int index)
     signal artifactUploadRequested(string nodeId)
@@ -41,6 +44,7 @@ Rectangle {
     signal playSeparationRequested(string kind, string path)
     signal voiceClipPlaybackRequested(string path)
     signal separationPlaybackStopped()
+    signal voiceModelRequested(string nodeId)
     signal segmentSelected(int index)
 
     component SegmentTextArea: AppTextArea {
@@ -63,6 +67,7 @@ Rectangle {
     border.width: 1
     Layout.fillWidth: true
     Layout.fillHeight: true
+    clip: true
 
     ColumnLayout {
         anchors.fill: parent
@@ -171,7 +176,7 @@ Rectangle {
             }
         }
 
-        // TAB 1: Advanced Configuration
+        // TAB 1: Advanced Configuration (Clean, No Duplicate Step Cards)
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -192,21 +197,15 @@ Rectangle {
                 nextReady: root.nextNodeReady
                 visible: node !== null
                 compact: true
+                Layout.fillWidth: true
                 onConfigureRequested: root.configureNodeRequested(nodeId)
                 onLoadRequested: root.dubbing.loadWorkflowNodeModel(nodeId)
                 onUnloadRequested: root.dubbing.unloadWorkflowNodeModel(nodeId)
                 onReloadRequested: root.dubbing.reloadWorkflowNodeModel(nodeId)
                 onRunRequested: root.runStepRequested(nodeId)
-                onNextRequested: root.runNextStepRequested(nodeId)
+                onNextRequested: root.nextStepRequested(nodeId)
                 onFixRequested: root.fixRequested()
                 onArtifactUploadRequested: root.artifactUploadRequested(nodeId)
-            }
-
-            DubbingTranscribeStep {
-                visible: root.displayedStepId === "transcribe"
-                dubbing: root.dubbing
-                ocrSetupEditable: root.ocrSetupEditable
-                onOpenOcrColabSetupRequested: root.openOcrColabSetupRequested()
             }
 
             Item { Layout.fillHeight: true }
@@ -240,39 +239,63 @@ Rectangle {
             spacing: Theme.paddingSmall
             visible: root.activeTab === 0
 
-            // Specific Task View for non-segments steps
+            // Specific Task View for steps
             DubbingImportStep {
                 visible: root.displayedStepId === "import"
                 dubbing: root.dubbing
+                onNextStepRequested: root.nextStepRequested("import")
             }
 
             DubbingNormalizeStep {
                 visible: root.displayedStepId === "normalize" || root.displayedStepId === "ingest"
                 dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("normalize")
+                onNextStepRequested: root.nextStepRequested("normalize")
             }
 
             DubbingSeparateStep {
                 visible: root.displayedStepId === "source-separate" || root.displayedStepId === "isolator"
                 dubbing: root.dubbing
                 playingSeparationStem: root.playingSeparationStem
+                onPreviousStepRequested: root.previousStepRequested("source-separate")
+                onNextStepRequested: root.nextStepRequested("source-separate")
                 onPlaySeparationRequested: function(kind, path) {
                     root.playSeparationRequested(kind, path)
                 }
             }
 
+            DubbingTranscribeStep {
+                visible: root.displayedStepId === "transcribe"
+                dubbing: root.dubbing
+                ocrSetupEditable: root.ocrSetupEditable
+                onPreviousStepRequested: root.previousStepRequested("transcribe")
+                onNextStepRequested: root.nextStepRequested("transcribe")
+                onOpenOcrColabSetupRequested: root.openOcrColabSetupRequested()
+            }
+
             DubbingTranscriptReviewStep {
                 visible: root.displayedStepId === "review-transcript"
                 dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("review-transcript")
                 onOpenTranscriptEditorRequested: root.openTranscriptEditorRequested()
                 onOpenAlignmentStudioRequested: root.openAlignmentStudioRequested()
-                onContinueRequested: root.runNextStepRequested("review-transcript")
+                onContinueRequested: root.nextStepRequested("review-transcript")
+            }
+
+            DubbingTranslateStep {
+                visible: root.displayedStepId === "translate"
+                dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("translate")
+                onNextStepRequested: root.nextStepRequested("translate")
+                onFixRequested: root.fixRequested()
             }
 
             DubbingTranslationReviewStep {
                 visible: root.displayedStepId === "review-translation"
                 dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("review-translation")
                 onOpenSubtitleEditorRequested: root.openSubtitleEditorRequested()
-                onContinueRequested: root.runNextStepRequested("review-translation")
+                onContinueRequested: root.nextStepRequested("review-translation")
             }
 
             DubbingSynthesizeStep {
@@ -282,20 +305,27 @@ Rectangle {
                 playingVoiceClipPath: root.playingVoiceClipPath
                 generatedClipCount: root.generatedClipCount
                 synthesisComplete: root.synthesisComplete
+                onPreviousStepRequested: root.previousStepRequested("synthesize")
+                onNextStepRequested: root.nextStepRequested("synthesize")
                 onVoiceClipPlaybackRequested: function(path) {
                     root.voiceClipPlaybackRequested(path)
                 }
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                onVoiceModelRequested: function(nodeId) { root.voiceModelRequested(nodeId) }
                 onSeparationPlaybackStopped: root.separationPlaybackStopped()
             }
 
             DubbingMixStep {
                 visible: root.displayedStepId === "mix"
                 dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("mix")
+                onNextStepRequested: root.nextStepRequested("mix")
             }
 
             DubbingExportStep {
                 visible: root.displayedStepId === "export"
                 dubbing: root.dubbing
+                onPreviousStepRequested: root.previousStepRequested("export")
                 onOpenExportDialogRequested: root.openExportDialogRequested()
             }
 
@@ -304,7 +334,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: Theme.paddingSmall
-                visible: root.displayedStepId === "transcribe" || root.displayedStepId === "translate"
+                visible: (root.displayedStepId === "transcribe" || root.displayedStepId === "translate") && root.dubbing.segments.length > 0
 
                 // Fast conflict resolution banner
                 Rectangle {
@@ -362,10 +392,10 @@ Rectangle {
                         anchors.leftMargin: Theme.paddingSmall
                         anchors.rightMargin: Theme.paddingSmall
                         spacing: Theme.paddingSmall
-                        Text { text: qsTr("THỜI GIAN"); Layout.preferredWidth: 88; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
+                        Text { text: qsTr("THỜI GIAN"); Layout.preferredWidth: 68; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
                         Text { text: qsTr("VĂN BẢN GỐC / DỊCH"); Layout.fillWidth: true; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
-                        Text { text: qsTr("TRẠNG THÁI"); Layout.preferredWidth: 64; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
-                        Item { Layout.preferredWidth: 84 }
+                        Text { text: qsTr("TRẠNG THÁI"); Layout.preferredWidth: 50; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true; visible: root.width > 380 }
+                        Item { Layout.preferredWidth: root.displayedStepId === "translate" ? 64 : 32 }
                     }
                 }
 
@@ -408,7 +438,7 @@ Rectangle {
                                 text: "%1–%2".arg(modelData.startMs).arg(modelData.endMs)
                                 color: Theme.textSecondary
                                 font.pixelSize: 10
-                                Layout.preferredWidth: 88
+                                Layout.preferredWidth: 68
                                 elide: Text.ElideRight
                             }
 
@@ -512,21 +542,21 @@ Rectangle {
                                 text: modelData.state || qsTr("Sẵn sàng")
                                 color: modelData.state === "stale" ? Theme.warning : Theme.textSecondary
                                 font.pixelSize: 10
-                                Layout.preferredWidth: 64
+                                Layout.preferredWidth: 50
+                                visible: root.width > 380
                                 horizontalAlignment: Text.AlignRight
+                                elide: Text.ElideRight
                             }
 
                             RowLayout {
-                                Layout.preferredWidth: 84
-                                Layout.minimumWidth: 84
+                                Layout.preferredWidth: root.displayedStepId === "translate" ? 64 : 32
                                 Layout.alignment: Qt.AlignVCenter
                                 spacing: Theme.paddingSmall
 
                                 Item {
                                     visible: root.displayedStepId === "translate"
-                                    Layout.preferredWidth: 38
-                                    Layout.minimumWidth: 38
-                                    Layout.preferredHeight: 38
+                                    Layout.preferredWidth: 32
+                                    Layout.preferredHeight: 32
                                     Layout.alignment: Qt.AlignVCenter
                                     PrimaryButton {
                                         anchors.fill: parent
@@ -546,8 +576,12 @@ Rectangle {
                                     iconName: "trash"
                                     iconOnly: true
                                     quiet: true
+                                    Layout.preferredWidth: 32
+                                    Layout.preferredHeight: 32
+                                    Layout.alignment: Qt.AlignVCenter
                                     textColor: Theme.danger
                                     toolTip: qsTr("Xóa phân đoạn")
+                                    enabled: !root.dubbing.processing
                                     onClicked: root.dubbing.removeSegment(index)
                                 }
                             }
@@ -561,6 +595,50 @@ Rectangle {
                         LineIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "mic"; color: Theme.accentLight; width: 32; height: 32 }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("Bản ghi lời thoại sẽ xuất hiện ở đây"); color: Theme.textPrimary; font.pixelSize: Theme.fontMedium; font.bold: true }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("Chọn nguồn media, sau đó chạy nhận dạng."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    }
+                }
+
+                // Bottom Navigation & Quick Action Strip for Transcribe / Translate
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+
+                    PrimaryButton {
+                        visible: root.displayedStepId === "translate" && root.dubbing.translationFixCandidateCount > 0
+                        text: qsTr("⚡ Tự động sửa bản dịch (%1)").arg(root.dubbing.translationFixCandidateCount)
+                        iconName: "spark"
+                        buttonColor: Theme.warning
+                        quiet: true
+                        loading: root.dubbing.translationFixing
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        onClicked: root.fixRequested()
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+
+                        PrimaryButton {
+                            text: qsTr("⬅ Quay lại")
+                            iconName: "chevron-left"
+                            quiet: true
+                            Layout.preferredHeight: 38
+                            Layout.preferredWidth: 100
+                            onClicked: root.previousStepRequested(root.displayedStepId)
+                        }
+
+                        PrimaryButton {
+                            text: root.displayedStepId === "transcribe"
+                                  ? qsTr("Tiếp tục: Duyệt Lời Thoại ➔")
+                                  : qsTr("Tiếp tục: Duyệt Bản Dịch ➔")
+                            iconName: "chevron-right"
+                            buttonColor: Theme.accent
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 38
+                            enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0
+                            onClicked: root.nextStepRequested(root.displayedStepId)
+                        }
                     }
                 }
             }

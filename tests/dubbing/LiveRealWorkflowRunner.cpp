@@ -250,7 +250,7 @@ int runLiveWorkflow(int argc, char *argv[])
     });
 
     if (sepVocalsOk && sepBgOk && QFileInfo::exists(vocalsPath) && QFileInfo::exists(backgroundPath)) {
-        project.analysisAudioPath = vocalsPath;
+        project.vocalsAudioPath = vocalsPath;
         project.backgroundAudioPath = backgroundPath;
         project.save();
 
@@ -872,7 +872,7 @@ int runLiveDubbingStudio(int argc, char *argv[])
     t3Res.route = QStringLiteral("Upload Output / Direct Colab Contract");
 
     if (sepVocalsOk && sepBgOk && QFileInfo::exists(vocalsPath) && QFileInfo::exists(backgroundPath)) {
-        project.analysisAudioPath = vocalsPath;
+        project.vocalsAudioPath = vocalsPath;
         project.backgroundAudioPath = backgroundPath;
         project.save();
 

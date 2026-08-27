@@ -21,6 +21,9 @@ ApplicationWindow {
     readonly property string appVersion: Qt.application.version
     property string dismissedUpdateVersion: ""
     property bool restoringWindowPlacement: true
+    // Optional developer-only entry point for QML preview tools. Empty keeps
+    // the normal persisted welcome route behavior in the production app.
+    property string initialPreviewRouteId: ""
     property int qmlSmokeSubtitleLayoutSizeIndex: 0
     property bool qmlSmokeSubtitleLayoutResizePending: false
     property int qmlSmokeHomeLayoutSizeIndex: 0
@@ -101,6 +104,21 @@ ApplicationWindow {
         })
     }
 
+    // Developer-only preview hook. It exercises the same on-demand drawer
+    // used by the production Dubbing workspace without inventing a second
+    // preview page or duplicating the real shell layout.
+    function qmlPreviewOpenDubbingContext(contextId) {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewOpenContextDrawer
+                ? page.qmlPreviewOpenContextDrawer(contextId) : false
+    }
+
+    function qmlPreviewDubbingDrawer() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewContextDrawer
+                ? page.qmlPreviewContextDrawer() : null
+    }
+
     function requestStudioRoute(routeId, familyId) {
         workflowsPopup.close()
         downloadsPopup.close()
@@ -132,56 +150,22 @@ ApplicationWindow {
         }
     }
 
-    // Error toast
-    Popup {
+    // Every error keeps its raw message in the log and technicalDetails, but
+    // the modal surface starts with a user-facing explanation and recovery
+    // route.  Keep the existing id for smoke tests and external references.
+    ErrorGuidanceDialog {
         id: errorPopup
-        anchors.centerIn: parent
-        width: 400
-        padding: Theme.paddingLarge
-        modal: false
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        background: Rectangle {
-            color: Theme.surface
-            radius: Theme.radiusMedium
-            border.color: Theme.danger
-            border.width: 2
-        }
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: Theme.paddingMedium
-
-            Text {
-                text: AppController.pendingErrorCount > 1
-                      ? qsTr("Error (%1 pending)").arg(AppController.pendingErrorCount)
-                      : qsTr("Error")
-                color: Theme.danger
-                font.pixelSize: Theme.fontLarge
-                font.bold: true
-            }
-            Text {
-                text: AppController.errorMessage
-                color: Theme.textPrimary
-                font.pixelSize: Theme.fontMedium
-                wrapMode: Text.Wrap
-                Layout.fillWidth: true
-            }
-            PrimaryButton {
-                text: qsTr("Dismiss")
-                Layout.alignment: Qt.AlignRight
-                onClicked: {
-                    errorPopup.close()
-                    AppController.clearError()
-                }
-            }
+        onActionRequested: function(routeId) {
+            errorPopup.close()
+            AppController.clearError()
+            root.requestStudioRoute(routeId)
         }
     }
 
     Connections {
         target: AppController
         function onErrorMessageChanged() {
-            if (AppController.errorMessage.length > 0)
+            if (AppController.pendingErrorCount > 0)
                 errorPopup.open()
         }
     }
@@ -269,6 +253,8 @@ ApplicationWindow {
         visibility = AppController.settings.windowMaximized
                    ? ApplicationWindow.Maximized : ApplicationWindow.Windowed
         restoringWindowPlacement = false
+        if (initialPreviewRouteId !== "")
+            stack.currentIndex = StudioRouteRegistry.getIndex(initialPreviewRouteId)
         if (!AppController.settings.updateCheckConsentAsked)
             updateConsentDialog.open()
     }
@@ -381,6 +367,9 @@ ApplicationWindow {
                     return 0
                 qmlSmokeDubbingLayoutResizePending = false
                 if (dubbingCheckResult < 0) return -1
+                if (dubbingLoader.item.qmlSmokeDubbingWorkspaceContractCheck
+                        && !dubbingLoader.item.qmlSmokeDubbingWorkspaceContractCheck())
+                    return -1
                 dubbingLoader.item.beginQmlSmokeAutomaticPreflightCheck()
                 qmlSmokeDubbingAutomaticPending = true
                 return 0

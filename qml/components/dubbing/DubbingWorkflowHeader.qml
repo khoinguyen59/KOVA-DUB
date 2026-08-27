@@ -64,7 +64,7 @@ Rectangle {
                    > headerActionCluster.x + 1)
             return false
 
-        var actions = [generateAction, colabAction, workflowAction]
+        var actions = [generateAction, workflowAction]
         for (var index = 0; index < actions.length; ++index) {
             var action = actions[index]
             if (action.width <= 0 || action.x + action.width > root.width + 1)
@@ -82,6 +82,20 @@ Rectangle {
         }
 
         return root.compactActionCluster || workflowAction.text === qsTr("Workflow")
+    }
+
+    function qmlSmokeTaskRailCheck() {
+        if (stepsRepeater.count !== 8)
+            return false
+        for (var index = 0; index < stepsRepeater.count; ++index) {
+            var item = stepsRepeater.itemAt(index)
+            if (!item || !/^([1-8])\s+.+$/.test(item.shortTitle)
+                    || item.shortTitle.indexOf("(") >= 0
+                    || item.detailTitle === ""
+                    || item.detailTitle.indexOf("(") < 0)
+                return false
+        }
+        return true
     }
 
     Layout.fillWidth: true
@@ -102,6 +116,13 @@ Rectangle {
             toolTip: root.historyOpen ? qsTr("Hide dubbing history") : qsTr("Show dubbing history")
             active: root.historyOpen
             onClicked: root.historyToggled()
+        }
+
+        SidebarToggleButton {
+            iconName: "workflow"
+            toolTip: root.settingsOpen ? qsTr("Ẩn bảng điều khiển tác vụ") : qsTr("Hiện bảng điều khiển tác vụ")
+            active: root.settingsOpen
+            onClicked: root.settingsToggled()
         }
 
         PrimaryButton {
@@ -166,11 +187,28 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.HorizontalFlick
 
+            function ensureActiveVisible() {
+                for (var i = 0; i < stepsRepeater.count; ++i) {
+                    var item = stepsRepeater.itemAt(i)
+                    if (item && item.active) {
+                        var left = item.x
+                        var right = item.x + item.width
+                        if (left < contentX) {
+                            contentX = Math.max(0, left - 12)
+                        } else if (right > contentX + width) {
+                            contentX = Math.min(contentWidth - width, right - width + 12)
+                        }
+                        break
+                    }
+                }
+            }
+
             Row {
                 id: workflowStepsRow
                 height: workflowStepsFlickable.height
                 spacing: Theme.paddingSmall
                 Repeater {
+                    id: stepsRepeater
                     model: root.steps
                     delegate: DubbingWorkflowStep {
                         required property var modelData
@@ -178,10 +216,13 @@ Rectangle {
                         height: workflowStepsRow.height
                         stepId: modelData.stepId
                         title: modelData.title
+                        shortTitle: modelData.shortTitle || modelData.title
+                        detailTitle: modelData.detailTitle || modelData.label || modelData.title
                         iconName: modelData.iconName
                         complete: modelData.complete
                         active: modelData.active
                         enabled: true
+                        onActiveChanged: if (active) Qt.callLater(workflowStepsFlickable.ensureActiveVisible)
                         onSelected: root.stepSelected(stepId)
                     }
                 }
@@ -210,19 +251,6 @@ Rectangle {
                 toolTip: root.dubbing.processing ? qsTr("Running automatic dubbing") : qsTr("Generate final dubbing")
                 accessibleName: toolTip
                 onClicked: root.generateRequested()
-            }
-            PrimaryButton {
-                text: root.compactActionCluster ? "" : qsTr("Colab")
-                id: colabAction
-                iconName: "cloud"
-                iconOnly: root.compactActionCluster
-                quiet: true
-                Layout.minimumWidth: root.compactActionCluster ? 38 : requiredContentWidth
-                Layout.preferredWidth: root.compactActionCluster ? 38 : Math.max(82, requiredContentWidth)
-                enabled: !root.dubbing.settingsLocked
-                toolTip: qsTr("Open Colab setup")
-                accessibleName: toolTip
-                onClicked: root.colabSetupRequested()
             }
             PrimaryButton {
                 text: root.compactActionCluster ? "" : qsTr("Workflow")

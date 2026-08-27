@@ -36,7 +36,7 @@ WorkflowGraph DubbingWorkflowDefinition::create()
     graph.version = Version;
     graph.kind = QStringLiteral("system");
     graph.title = QStringLiteral("Default Dubbing");
-    graph.description = QStringLiteral("Remote-first dubbing workflow with independent Gateway and Colab routes.");
+    graph.description = QStringLiteral("Preflighted dubbing workflow with explicit local, Gateway, and Colab routes.");
     graph.interfaceDefinition = {
         {QStringLiteral("inputs"), QVariantList{
             QVariantMap{{QStringLiteral("id"), QStringLiteral("media")}, {QStringLiteral("type"), QStringLiteral("media.source@1")}, {QStringLiteral("required"), true}},
@@ -57,7 +57,7 @@ WorkflowGraph DubbingWorkflowDefinition::create()
         node(QStringLiteral("ingest"), QStringLiteral("media.ingest"), QStringLiteral("Import & Normalize"),
              {{QStringLiteral("analysisSampleRate"), 16000}, {QStringLiteral("masterSampleRate"), 48000}}),
         node(QStringLiteral("source-separate"), QStringLiteral("audio.source-separate"), QStringLiteral("Isolate Voice"),
-             {{QStringLiteral("qualityPreset"), QStringLiteral("quality")}, {QStringLiteral("fallback"), QStringLiteral("original-audio")},
+             {{QStringLiteral("qualityPreset"), QStringLiteral("quality")}, {QStringLiteral("fallback"), QStringLiteral("strict")},
               {QStringLiteral("executionProvider"), QStringLiteral("colab-direct")},
               {QStringLiteral("modelId"), QStringLiteral("sherpa-onnx-spleeter-2stems-fp16")}}),
         node(QStringLiteral("transcribe"), QStringLiteral("audio.transcribe"), QStringLiteral("Transcribe"),

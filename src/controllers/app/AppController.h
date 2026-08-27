@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqml.h>
 
 #include "core/storage/Settings.h"
@@ -49,6 +50,7 @@
 #include "AppUpdateService.h"
 #include "ExampleManager.h"
 #include "controllers/app/WorkflowActivityManager.h"
+#include "controllers/app/AppErrorCatalog.h"
 #include "api/ApiServerService.h"
 #include "remote/colab/ColabSession.h"
 
@@ -120,6 +122,7 @@ class AppController : public QObject {
     Q_PROPERTY(ApiServerService* apiServer READ apiServer CONSTANT)
 
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
+    Q_PROPERTY(QVariantMap currentError READ currentError NOTIFY errorMessageChanged)
     Q_PROPERTY(int pendingErrorCount READ pendingErrorCount NOTIFY errorNotificationsChanged)
     Q_PROPERTY(QVariantList errorNotifications READ errorNotifications NOTIFY errorNotificationsChanged)
     Q_PROPERTY(QString logsDir READ logsDir CONSTANT)
@@ -195,6 +198,7 @@ public:
     WaveformProvider* waveformProvider() const { return m_waveformProvider; }
 
     QString errorMessage() const { return m_errorMessage; }
+    QVariantMap currentError() const;
     int pendingErrorCount() const { return m_errorNotifications.size(); }
     QVariantList errorNotifications() const { return m_errorNotifications; }
     QString logsDir() const;
@@ -203,6 +207,7 @@ public:
     QString colabNotebooksDir() const;
 
     Q_INVOKABLE void clearError();
+    Q_INVOKABLE QVariantMap explainError(const QString &message, const QString &source = {}) const;
     Q_INVOKABLE void copyToClipboard(const QString &text);
     Q_INVOKABLE QString createProblemReport();
     Q_INVOKABLE bool openColabNotebooksDirectory();

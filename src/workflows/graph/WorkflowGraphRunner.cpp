@@ -1,9 +1,52 @@
 #include "WorkflowGraphRunner.h"
 
 #include <QUuid>
+#include <QFileInfo>
 #include <algorithm>
 
 namespace LAStudio {
+
+namespace {
+
+bool requiresReadableFileOutput(const QString &nodeType, const QString &outputId)
+{
+    if (nodeType == QStringLiteral("media.ingest"))
+        return outputId == QStringLiteral("masterAudio")
+            || outputId == QStringLiteral("analysisAudio")
+            || outputId == QStringLiteral("masterAudioPath")
+            || outputId == QStringLiteral("analysisAudioPath");
+    if (nodeType == QStringLiteral("audio.source-separate"))
+        return outputId == QStringLiteral("vocals") || outputId == QStringLiteral("background");
+    if (nodeType == QStringLiteral("audio.mix-timeline"))
+        return outputId == QStringLiteral("audio");
+    if (nodeType == QStringLiteral("media.export"))
+        return outputId == QStringLiteral("media");
+    return false;
+}
+
+bool validateRestoredFileOutputs(const WorkflowGraphNode &node,
+                                 const QVariantMap &outputs,
+                                 QString *error)
+{
+    for (auto it = outputs.cbegin(); it != outputs.cend(); ++it) {
+        if (!requiresReadableFileOutput(node.typeId, it.key()))
+            continue;
+        const QString path = it.value().toString().trimmed();
+        const QFileInfo info(path);
+        if (path.isEmpty() || !info.isFile() || info.size() <= 0) {
+            if (error) {
+                *error = QStringLiteral(
+                    "Cannot resume workflow: artifact '%1.%2' is missing or unreadable. "
+                    "Rerun the producing task before continuing.")
+                    .arg(node.id, it.key());
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
 
 WorkflowGraphRunner::WorkflowGraphRunner(NodeRegistry *registry, QObject *parent)
     : QObject(parent), m_registry(registry) {}
@@ -129,6 +172,13 @@ bool WorkflowGraphRunner::resumeInterrupted(const QString &runId)
             return false;
         }
         const QVariantMap outputs = event.payload.value(QStringLiteral("outputs")).toObject().toVariantMap();
+        const WorkflowGraphNode *completedNode = restoredGraph.node(nodeId);
+        if (!completedNode || !validateRestoredFileOutputs(*completedNode, outputs, &m_error)) {
+            if (m_error.isEmpty())
+                m_error = QStringLiteral("Cannot resume workflow: completed node is not in the saved graph.");
+            emit stateChanged();
+            return false;
+        }
         for (auto it = outputs.cbegin(); it != outputs.cend(); ++it)
             restoredArtifacts.insert(nodeId + QLatin1Char('.') + it.key(), it.value());
         ++completedCount;

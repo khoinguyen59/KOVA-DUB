@@ -235,6 +235,19 @@ AppController *AppController::create(QQmlEngine *, QJSEngine *)
     return s_instance;
 }
 
+QVariantMap AppController::currentError() const
+{
+    if (m_errorNotifications.isEmpty()) {
+        return {};
+    }
+    return m_errorNotifications.constFirst().toMap();
+}
+
+QVariantMap AppController::explainError(const QString &message, const QString &source) const
+{
+    return classifyAppError(message, source).toVariantMap();
+}
+
 void AppController::onError(const QString &msg)
 {
     enqueueError(msg);
@@ -266,12 +279,18 @@ void AppController::enqueueError(const QString &message, const QString &source)
         return;
     }
 
-    QVariantMap notification;
+    const AppErrorPresentation presentation = classifyAppError(trimmedMessage, source);
+    QVariantMap notification = presentation.toVariantMap();
     notification.insert(QStringLiteral("id"), QString::number(m_nextErrorNotificationId++));
-    notification.insert(QStringLiteral("severity"), QStringLiteral("error"));
     notification.insert(QStringLiteral("source"), source);
     notification.insert(QStringLiteral("message"), trimmedMessage);
+    notification.insert(QStringLiteral("technicalDetails"), trimmedMessage);
     notification.insert(QStringLiteral("timestamp"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+
+    // Producers may already log at their boundary.  This central log entry is
+    // still intentional: errors raised through a plain errorOccurred signal
+    // must remain searchable with their raw technical text too.
+    Logger::error(source.isEmpty() ? QStringLiteral("App") : source, trimmedMessage);
     const bool queueWasEmpty = m_errorNotifications.isEmpty();
     m_errorNotifications.append(notification);
     if (queueWasEmpty) {

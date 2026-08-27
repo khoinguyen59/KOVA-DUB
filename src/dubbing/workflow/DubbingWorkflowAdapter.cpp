@@ -65,6 +65,10 @@ void DubbingWorkflowAdapter::start(const QString &nodeType, const QVariantMap &i
         m_runner->fitTiming(inputs.value(QStringLiteral("timeline")).toList(),
                             parameters.value(QStringLiteral("projectPath")).toString());
     } else if (nodeType == QStringLiteral("audio.mix-timeline")) {
+        const QString backgroundPath = inputs.value(QStringLiteral("background")).toString().trimmed();
+        // Always replace the runner's background state.  An empty graph input
+        // must clear a previous run's stem instead of silently reusing it.
+        m_runner->setBackgroundAudioPath(backgroundPath);
         m_runner->renderPreview(inputs.value(QStringLiteral("timeline")).toList(),
                                 parameters.value(QStringLiteral("projectPath")).toString(),
                                 parameters.value(QStringLiteral("outputPath")).toString());

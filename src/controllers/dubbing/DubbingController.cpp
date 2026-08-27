@@ -71,6 +71,22 @@ QString automaticDefaultFamilyId(const QString &capabilityId,
     return {};
 }
 
+QString normalizedVoiceCloneWorkerFamily(const QVariantMap &preset)
+{
+    QString sourceFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
+    if (sourceFamily.isEmpty())
+        sourceFamily = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();
+
+    // A reference sample produced by VieNeu is valid input for the
+    // zero-shot OmniVoice clone worker. Keep the source family in the preset
+    // for display/filtering, but persist the actual worker family separately.
+    if (sourceFamily == QStringLiteral("vieneu")
+        || sourceFamily.startsWith(QStringLiteral("vieneu-tts"))) {
+        return QStringLiteral("omnivoice");
+    }
+    return sourceFamily;
+}
+
 QString unifiedColabStageUrl(const QUrl &baseUrl, const QString &capability,
                              const QString &model)
 {
@@ -587,8 +603,18 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
 
     connect(m_runner, &DubbingJobRunner::ingestFinished, this, &DubbingController::onIngestFinished);
     connect(m_runner, &DubbingJobRunner::sourceSeparationFinished, this, [this](const QVariantMap &outputs) {
-        m_project.analysisAudioPath = outputs.value(QStringLiteral("vocals"), m_project.masterAudioPath).toString();
-        m_project.backgroundAudioPath = outputs.value(QStringLiteral("background"), m_project.masterAudioPath).toString();
+        const QString vocalsPath = outputs.value(QStringLiteral("vocals")).toString().trimmed();
+        const QString backgroundPath = outputs.value(QStringLiteral("background")).toString().trimmed();
+        if (vocalsPath.isEmpty() || backgroundPath.isEmpty()
+                || !QFileInfo(vocalsPath).isFile() || QFileInfo(vocalsPath).size() <= 0
+                || !QFileInfo(backgroundPath).isFile() || QFileInfo(backgroundPath).size() <= 0) {
+            setError(QStringLiteral(
+                "Source separation completed without readable Vocals and Background stems. "
+                "The normalized analysis audio was not used as a substitute."));
+            return;
+        }
+        m_project.vocalsAudioPath = vocalsPath;
+        m_project.backgroundAudioPath = backgroundPath;
         m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
         emit projectChanged();
         emit workflowChanged();
@@ -650,10 +676,10 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
             if (nodeId == QStringLiteral("source-separate")) {
                 const QString outputDirectory = mediaQueueOutputDirectory(m_activeMediaQueueItemId);
                 QString error;
-                const QString vocalsName = QFileInfo(m_project.analysisAudioPath).fileName();
+                const QString vocalsName = QFileInfo(m_project.vocalsAudioPath).fileName();
                 const QString backgroundName = QFileInfo(m_project.backgroundAudioPath).fileName();
-                const bool wroteVocals = QFileInfo(m_project.analysisAudioPath).isFile()
-                    && replaceCopy(m_project.analysisAudioPath,
+                const bool wroteVocals = QFileInfo(m_project.vocalsAudioPath).isFile()
+                    && replaceCopy(m_project.vocalsAudioPath,
                                    QDir(outputDirectory).filePath(vocalsName), &error);
                 if (wroteVocals) recordMediaQueueOutput(
                     QStringLiteral("vocals"), QDir(outputDirectory).filePath(vocalsName));
@@ -1518,11 +1544,14 @@ void DubbingController::refreshCloneVoicePresets()
             if (id.isEmpty()) continue;
             preset.insert(QStringLiteral("audioPath"), audioPath);
             preset.insert(QStringLiteral("familyId"), familyId);
+            const QString cloneWorkerFamily = normalizedVoiceCloneWorkerFamily(preset);
+            preset.insert(QStringLiteral("sourceModelFamily"), familyId);
+            preset.insert(QStringLiteral("voiceCloneModelId"), cloneWorkerFamily);
             preset.insert(QStringLiteral("valid"), preset.value(QStringLiteral("valid"), true).toBool());
             // A saved clone belongs to the voice-cloning worker which created it or supports it
             preset.insert(QStringLiteral("compatible"),
                           DubbingColabModelRoutes::supports(
-                              QStringLiteral("voice-cloning"), familyId));
+                              QStringLiteral("voice-cloning"), cloneWorkerFamily));
             refreshed.append(preset);
         }
     }
@@ -1555,7 +1584,9 @@ bool DubbingController::selectCloneVoicePreset(const QString &presetId)
         setError(QStringLiteral("That saved voice has no supported exact Voice Cloning notebook. Choose another saved voice or recreate it with a supported Voice Cloning model."));
         return false;
     }
-    const QString cloneModel = selected.value(QStringLiteral("familyId")).toString()
+    const QString cloneModel = selected.value(QStringLiteral("voiceCloneModelId"),
+                                               selected.value(QStringLiteral("familyId")))
+        .toString()
         .trimmed().toLower();
     if (cloneModel.isEmpty()) {
         setError(QStringLiteral("That saved voice has no Voice Cloning model identity."));

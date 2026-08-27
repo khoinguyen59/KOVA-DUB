@@ -188,6 +188,7 @@ void DubbingController::onIngestFinished(bool success, const QVariantMap &manife
     m_project.sourceHash = manifest.value(QStringLiteral("sourceHash")).toString();
     m_project.masterAudioPath = manifest.value(QStringLiteral("masterAudioPath")).toString();
     m_project.analysisAudioPath = manifest.value(QStringLiteral("analysisAudioPath")).toString();
+    m_project.vocalsAudioPath = manifest.value(QStringLiteral("vocalsAudioPath")).toString();
     m_project.backgroundAudioPath = manifest.value(QStringLiteral("backgroundAudioPath")).toString();
     m_runner->setBackgroundAudioPath(manifest.value(QStringLiteral("backgroundAudioPath")).toString());
     m_project.sourceDurationMs = manifest.value(QStringLiteral("sourceDurationMs")).toLongLong();
@@ -195,9 +196,10 @@ void DubbingController::onIngestFinished(bool success, const QVariantMap &manife
     m_project.sourceChannels = manifest.value(QStringLiteral("sourceChannels")).toInt();
     m_project.sourceIsVideo = manifest.value(QStringLiteral("sourceIsVideo")).toBool();
     Logger::info(QStringLiteral("DubbingController"),
-                 QStringLiteral("Media normalized successfully: source=%1, hash=%2, master=%3, analysis=%4")
+                 QStringLiteral("Media normalized successfully: source=%1, hash=%2, master=%3, analysis=%4, vocals=%5")
                      .arg(m_project.sourceMediaPath, m_project.sourceHash,
-                          m_project.masterAudioPath, m_project.analysisAudioPath));
+                          m_project.masterAudioPath, m_project.analysisAudioPath,
+                          m_project.vocalsAudioPath));
     emit projectChanged();
     emit workflowChanged();
     persistAfterEdit();
@@ -220,12 +222,16 @@ void DubbingController::transcribeSource()
         reconcileTranscriptSources();
         return;
     }
-    const QString audioPath = !m_project.analysisAudioPath.isEmpty() ? m_project.analysisAudioPath
-                                                                     : m_project.masterAudioPath;
+    const QString audioPath = !m_project.vocalsAudioPath.isEmpty()
+        ? m_project.vocalsAudioPath
+        : (!m_project.analysisAudioPath.isEmpty() ? m_project.analysisAudioPath
+                                                 : m_project.masterAudioPath);
     const QFileInfo audioInfo(audioPath);
     if (mode != QStringLiteral("ocr") && (audioPath.isEmpty() || !audioInfo.isFile()
                                            || audioInfo.size() <= 0)) {
-        setError(QStringLiteral("Normalize and separate the source audio before transcription."));
+        setError(QStringLiteral(
+            "Normalize the source audio before transcription. A separated vocals stem is preferred, "
+            "but the normalized analysis track can be used as a fallback."));
         return;
     }
     Logger::info(QStringLiteral("DubbingController"),

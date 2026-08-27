@@ -51,6 +51,7 @@ set(TEST_SOURCES
     core/test_MediaIngestService.cpp
     core/test_MediaToolService.cpp
     core/test_HardwareManager.cpp
+    core/test_AppErrorCatalog.cpp
     mocks/SttEngine.cpp
     mocks/SttEngineInstance.cpp
     mocks/TtsEngine.cpp
@@ -92,6 +93,7 @@ set(TEST_SOURCES
     ../src/controllers/shared/HistoryService.cpp
     ../src/controllers/shared/AudioPreviewService.cpp
     ../src/controllers/app/StudioActions.cpp
+    ../src/controllers/app/AppErrorCatalog.cpp
     ../src/controllers/shared/VoiceClonePresetService.cpp
     ../src/controllers/shared/VoiceDesignPresetService.cpp
     ../src/controllers/alignment/AlignmentModelSession.cpp
@@ -264,6 +266,7 @@ set(TEST_SOURCES
     ../src/controllers/separation/ColabVoiceIsolatorController.h
     ../src/controllers/separation/VoiceCloneReferenceIsolatorController.h
     ../src/controllers/app/AppController.h
+    ../src/controllers/app/AppErrorCatalog.h
     ../src/controllers/shared/AppUpdateService.h
     ../src/controllers/shared/ExampleManager.h
     ../src/controllers/app/IStudioAction.h
@@ -326,6 +329,7 @@ set(TEST_SOURCES
     core/test_LlmChatEngine.h
     core/test_RemoteExecution.h
     core/test_HardwareManager.h
+    core/test_AppErrorCatalog.h
     dubbing/test_TranslationProject.h
     ../src/controllers/separation/VoiceIsolatorController.h
 )
@@ -506,6 +510,7 @@ set(LASTUDIO_TEST_SUITES
     TestMediaIngestService
     TestMediaToolService
     TestHardwareManager
+    TestAppErrorCatalog
     TestTtsTextPreprocessor
     TestTtsRequestValidator
     TestLlmChatEngine

@@ -453,6 +453,7 @@ bool DubbingController::importMedia(const QString &pathOrUrl)
     m_project.sourceHash.clear();
     m_project.masterAudioPath.clear();
     m_project.analysisAudioPath.clear();
+    m_project.vocalsAudioPath.clear();
     m_project.backgroundAudioPath.clear();
     m_project.sourceDurationMs = 0;
     m_project.sourceSampleRate = 0;

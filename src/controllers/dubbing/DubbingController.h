@@ -157,7 +157,7 @@ public:
     QString projectPath() const { return m_project.projectPath; }
     QString sourceMediaPath() const { return m_project.sourceMediaPath; }
     QString normalizedAudioPath() const { return m_project.masterAudioPath; }
-    QString vocalsPath() const { return m_project.analysisAudioPath; }
+    QString vocalsPath() const { return m_project.vocalsAudioPath; }
     QString backgroundPath() const { return m_project.backgroundAudioPath; }
     QUrl sourceMediaUrl() const {
         if (m_project.sourceMediaPath.isEmpty()) return QUrl();
@@ -369,6 +369,7 @@ public:
     Q_INVOKABLE void startStepByStep();
     Q_INVOKABLE bool runCurrentStep(const QString &outputPath = QString());
     Q_INVOKABLE bool rerunStep(const QString &stepId, const QString &outputPath = QString());
+    Q_INVOKABLE bool runWorkflowNode(const QString &nodeId, const QString &outputPath = QString());
     Q_INVOKABLE QVariantMap stepOutput(const QString &stepId) const;
     Q_INVOKABLE bool approveWorkflowReview(const QVariantMap &artifact = QVariantMap());
     Q_INVOKABLE bool rejectWorkflowReview(const QString &reason = QString());

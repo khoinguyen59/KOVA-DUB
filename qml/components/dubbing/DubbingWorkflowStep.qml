@@ -8,12 +8,17 @@ Item {
 
     required property string stepId
     required property string title
+    property string shortTitle: title
+    property string detailTitle: title
     property string iconName: "check"
     property bool complete: false
     property bool active: false
     signal selected(string stepId)
 
-    implicitWidth: stepRow.implicitWidth + Theme.paddingSmall * 2
+    // Keep the complete numbered English label visible at the supported
+    // 1280px editor width.  The rail can still flick horizontally on a
+    // smaller window, but normal desktop capture must not cut the last word.
+    implicitWidth: stepRow.implicitWidth + 12
     implicitHeight: 34
 
     Rectangle {
@@ -32,32 +37,41 @@ Item {
     RowLayout {
         id: stepRow
         anchors.fill: parent
-        anchors.leftMargin: Theme.paddingSmall
-        anchors.rightMargin: Theme.paddingSmall
-        spacing: 8
+        anchors.leftMargin: 6
+        anchors.rightMargin: 6
+        spacing: 5
         Rectangle {
-            Layout.preferredWidth: 24
-            Layout.preferredHeight: 24
-            radius: 12
+            Layout.preferredWidth: 20
+            Layout.preferredHeight: 20
+            radius: 10
             color: root.active ? Theme.accent : (root.complete ? Theme.success : Qt.rgba(1, 1, 1, 0.08))
             border.color: root.complete ? Theme.success : (root.active ? Theme.accentLight : Qt.rgba(1, 1, 1, 0.18))
             border.width: 1
             LineIcon {
                 anchors.centerIn: parent
-                width: 12
-                height: 12
+                width: 10
+                height: 10
                 name: root.complete ? "check" : root.iconName
                 color: root.complete || root.active ? "#ffffff" : Theme.textSecondary
             }
         }
         Text {
             Layout.fillWidth: true
-            text: root.title
+            text: root.shortTitle
             color: root.active ? Theme.textPrimary : (stepHover.hovered ? "#ffffff" : Theme.textSecondary)
             font.pixelSize: Theme.fontSmall
             font.bold: root.active || root.complete
             elide: Text.ElideRight
         }
+    }
+
+    AppToolTip {
+        text: {
+            var detail = root.detailTitle || ""
+            var opening = detail.indexOf("(")
+            return root.shortTitle + (opening >= 0 ? " " + detail.slice(opening) : " (" + detail + ")")
+        }
+        visible: stepHover.hovered
     }
 
     TapHandler { onTapped: root.selected(root.stepId) }

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import "../base"
+import "../shared"
 import LAStudio
 
 // Manual handoff for a completed Direct Colab task.  This is deliberately
@@ -360,11 +361,16 @@ Rectangle {
         }
         Text {
             Layout.fillWidth: true
-            visible: root.uploadStatus !== ""
+            visible: root.uploadStatus !== "" && root.uploadStatus !== root.dubbing.lastError
             text: root.uploadStatus
-            color: root.uploadStatus.indexOf("Accepted") === 0 ? Theme.success : Theme.error
+            color: root.uploadStatus.indexOf("Accepted") === 0 ? Theme.success : Theme.textSecondary
             font.pixelSize: 10
             wrapMode: Text.WordWrap
+        }
+        ErrorGuidanceInline {
+            visible: root.uploadStatus !== "" && root.uploadStatus === root.dubbing.lastError
+            message: root.uploadStatus
+            source: "Dubbing artifact handoff"
         }
     }
 }

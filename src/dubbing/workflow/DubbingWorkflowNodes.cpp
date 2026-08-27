@@ -32,7 +32,6 @@ public:
                 completeReview(m_pendingArtifact);
             } else {
                 emit waitingForInput({{QStringLiteral("reviewId"), QUuid::createUuid().toString(QUuid::WithoutBraces)},
-                                      {QStringLiteral("nodeId"), QStringLiteral("core.review-gate")},
                                       {QStringLiteral("mode"), mode},
                                       {QStringLiteral("editor"), parameters.value(QStringLiteral("editor"))},
                                       {QStringLiteral("artifact"), m_pendingArtifact}});
@@ -106,9 +105,7 @@ private:
         m_completed = true;
         if (m_typeId == QStringLiteral("media.ingest")) {
             emit completed({{QStringLiteral("analysisAudio"), outputs.value(QStringLiteral("analysisAudioPath"))},
-                            {QStringLiteral("masterAudio"), outputs.value(QStringLiteral("masterAudioPath"))},
-                            {QStringLiteral("vocals"), outputs.value(QStringLiteral("analysisAudioPath"))},
-                            {QStringLiteral("background"), outputs.value(QStringLiteral("backgroundAudioPath"))}});
+                            {QStringLiteral("masterAudio"), outputs.value(QStringLiteral("masterAudioPath"))}});
         } else if (m_typeId == QStringLiteral("audio.source-separate")) {
             emit completed({{QStringLiteral("vocals"), outputs.value(QStringLiteral("vocals"))},
                             {QStringLiteral("background"), outputs.value(QStringLiteral("background"))},

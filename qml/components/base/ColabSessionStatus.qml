@@ -58,7 +58,8 @@ ColumnLayout {
                 if (root.session.checking) return root.session.verificationMessage
                 if (root.session.active && root.session.verified)
                     return root.session.verificationMessage
-                if (root.session.lastError !== "") return root.session.lastError
+                if (root.session.lastError !== "")
+                    return AppController.explainError(root.session.lastError, "Colab").summary
                 return qsTr("Colab worker is not connected")
             }
             color: {

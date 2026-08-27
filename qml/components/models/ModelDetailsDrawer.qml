@@ -40,7 +40,7 @@ Rectangle {
             }
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
         ScrollView {
             Layout.fillWidth: true
@@ -59,7 +59,7 @@ Rectangle {
                     wrapMode: Text.WordWrap
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.05) }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.05) }
 
                 Text {
                     text: qsTr("Thông Số Kỹ Thuật:")
@@ -86,7 +86,7 @@ Rectangle {
             }
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
         RowLayout {
             Layout.fillWidth: true

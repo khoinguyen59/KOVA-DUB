@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "../../base"
 import "../../shared"
@@ -13,9 +12,11 @@ Rectangle {
     property bool stepComplete: false
 
     signal playSeparationRequested(string kind, string path)
+    signal nextStepRequested()
+    signal previousStepRequested()
 
     Layout.fillWidth: true
-    implicitHeight: layout.implicitHeight + Theme.paddingLarge * 2
+    implicitHeight: layout.implicitHeight + Theme.paddingMedium * 2
     radius: Theme.radiusMedium
     color: Qt.rgba(Theme.surfaceLevel2.r, Theme.surfaceLevel2.g, Theme.surfaceLevel2.b, 0.60)
     border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -24,8 +25,8 @@ Rectangle {
     ColumnLayout {
         id: layout
         anchors.fill: parent
-        anchors.margins: Theme.paddingLarge
-        spacing: Theme.paddingMedium
+        anchors.margins: Theme.paddingMedium
+        spacing: Theme.paddingSmall
 
         RowLayout {
             Layout.fillWidth: true
@@ -39,18 +40,22 @@ Rectangle {
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
                 Text {
                     text: qsTr("Tách riêng lời thoại gốc (Vocals) để nhận dạng và giữ lại nhạc nền (BGM) để ghép thành phẩm.")
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
             }
         }
 
         VoiceSeparationOutput {
             Layout.fillWidth: true
-            compact: false
+            compact: true
             showActions: true
             showPlaybackControls: true
             showExportButton: false
@@ -60,6 +65,54 @@ Rectangle {
             playingStem: root.playingSeparationStem
             onPlayRequested: function(kind, path) {
                 root.playSeparationRequested(kind, path)
+            }
+        }
+
+        // Action Controls & Run Buttons (Clean 2-row layout with zero horizontal overflow)
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+
+            // Row 1: Primary Action Button (Full width)
+            PrimaryButton {
+                id: runSeparateBtn
+                text: (root.dubbing.vocalsPath || "").length > 0 && (root.dubbing.backgroundPath || "").length > 0
+                      ? qsTr("⚡ Tách Lại Giọng & Nhạc Nền")
+                      : qsTr("⚡ Chạy Tách Giọng Nói & Nhạc Nền (Isolator)")
+                iconName: root.dubbing.processing ? "activity" : "play"
+                loading: root.dubbing.processing
+                enabled: !root.dubbing.processing && (root.dubbing.normalizedAudioPath || "").length > 0
+                Layout.preferredHeight: 40
+                Layout.fillWidth: true
+                buttonColor: Theme.accent
+                onClicked: root.dubbing.runWorkflowNode("source-separate")
+            }
+
+            // Row 2: Navigation Buttons (Quay lại & Tiếp tục)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.paddingSmall
+
+                PrimaryButton {
+                    text: qsTr("⬅ Quay lại")
+                    iconName: "chevron-left"
+                    quiet: true
+                    Layout.preferredHeight: 38
+                    Layout.preferredWidth: 100
+                    onClicked: root.previousStepRequested()
+                }
+
+                PrimaryButton {
+                    text: qsTr("Tiếp tục: Nhận Dạng ➔")
+                    iconName: "chevron-right"
+                    buttonColor: Theme.accent
+                    enabled: !root.dubbing.processing
+                             && (root.dubbing.vocalsPath || "").length > 0
+                             && (root.dubbing.backgroundPath || "").length > 0
+                    Layout.preferredHeight: 38
+                    Layout.fillWidth: true
+                    onClicked: root.nextStepRequested()
+                }
             }
         }
     }

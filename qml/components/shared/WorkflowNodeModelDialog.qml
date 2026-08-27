@@ -36,12 +36,14 @@ Dialog {
         }
 
         var selected = gallery.selectedConfiguration()
+        // qmllint disable use-proper-function
         var result = root.configurationApplier
                 ? root.configurationApplier(root.nodeId, selected.familyId,
                                             selected.runtimeId, selected.runtimeVersion,
                                             selected.selectedFiles)
                 : ({ accepted: false,
                      error: qsTr("No Dubbing configuration handler is available.") })
+        // qmllint enable use-proper-function
         if (!result.accepted) {
             applyError = result.error || qsTr("LA Studio could not save the selected model configuration.")
             return false
@@ -59,11 +61,13 @@ Dialog {
             return false
         }
 
+        // qmllint disable use-proper-function
         var result = root.colabConfigurationApplier
                 ? root.colabConfigurationApplier(root.nodeId, selected.familyId,
                                                   openNotebook === true)
                 : ({ accepted: false,
                      error: qsTr("This Dubbing task has no Direct Colab configuration handler.") })
+        // qmllint enable use-proper-function
         if (!result.accepted) {
             applyError = result.error || qsTr("LA Studio could not select the Direct Colab model.")
             return false
@@ -89,8 +93,13 @@ Dialog {
                 || (root.nodes ? root.nodes.find(function(entry) { return entry.id === value }) : null)
                 || ({})
         var saved = root.nodeConfigurations[root.nodeId] || {}
-        var preferredFamilyId = saved.familyId || item.selectedFamilyId
-                                || item.defaultFamilyId || ""
+        var savedParameters = saved.parameters || {}
+        var voiceCloneFamily = root.nodeId === "synthesize"
+                ? String(savedParameters.voiceCloneModelId || "") : ""
+        var preferredFamilyId = voiceCloneFamily !== ""
+                                ? voiceCloneFamily
+                                : (saved.familyId || item.selectedFamilyId
+                                   || item.defaultFamilyId || "")
         var recommended = preferredFamilyId !== ""
                           ? modelController.familiesModel.configurationForFamily(preferredFamilyId)
                           : modelController.familiesModel.recommendedConfiguration()
@@ -176,13 +185,12 @@ Dialog {
                     elide: Text.ElideRight
                 }
 
-                Text {
+                ErrorGuidanceInline {
                     Layout.fillWidth: true
                     visible: root.applyError !== ""
-                    text: root.applyError
-                    color: Theme.danger
-                    font.pixelSize: 10
-                    elide: Text.ElideRight
+                    message: root.applyError
+                    source: "Model Configuration"
+                    compact: true
                 }
             }
 

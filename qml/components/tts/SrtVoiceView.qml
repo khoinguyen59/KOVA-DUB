@@ -387,7 +387,8 @@ ColumnLayout {
 
                 Text {
                     Layout.fillWidth: true
-                    text: voiceController && voiceController.error !== "" ? voiceController.error : ""
+                    text: voiceController && voiceController.error !== ""
+                          ? AppController.explainError(voiceController.error, "TTS").summary : ""
                     color: Theme.danger
                     font.pixelSize: Theme.fontSmall
                     elide: Text.ElideRight

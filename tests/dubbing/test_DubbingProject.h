@@ -9,6 +9,7 @@ class TestDubbingProject : public QObject
     Q_OBJECT
 private slots:
     void roundTripsVersionedJson();
+    void separationKeepsAnalysisAndVocalsArtifactsDistinct();
     void controllerSaveAsPersistsProjectForLaterResume();
     void migratesLegacyProjectsToLlmRewritePipeline();
     void rejectsUnknownSchema();
@@ -44,11 +45,15 @@ private slots:
     void localSavedVoiceRequiresPersistentProfile();
     void zeroCloneVoicePresetBlocksSynthesisWithoutFallback();
     void cloneVoicePresetSelectionPersistsAndMissingPresetBlocks();
+    void vieneuReferenceRoutesToOmniVoiceCloneWorker();
     void changingCloneVoicePresetAppliesToEntireNextRun();
     void voiceClonePresetLibraryPersistsAtomicallyAndProtectsSource();
     void voiceClonePresetLibraryMigratesLegacyArrayOnEdit();
     void audioMixRunsAsynchronously();
     void audioMixCreatesIndependentVocalStem();
+    void audioMixAppliesSidechainDuckingToBackground();
+    void exportValidatesMuxedMediaBeforeCommit();
+    void exportCommitsOnlyAfterMediaValidation();
     void commitsMediaExportAtomically();
     void sourceTextEditInvalidatesWordTiming();
     void unchangedTextEditPreservesTranslationMetadata();
@@ -96,6 +101,7 @@ private slots:
     void dubbingColabModelsMapToExactNotebooks();
     void dubbingManualArtifactSpecsExposeStrictColabContracts();
     void dubbingUiUsesExactModelWorkers();
+    void dubbingUiUsesSafePublicContractsAndArtifactGates();
     void dubbingEntryAndAutomaticSetupCannotBypassConfiguration();
     void dubbingTranscriptionWaitsForFreshDecodedAudio();
     void dubbingTranscriptionDecodeFailureStopsWithoutContactingWorker();

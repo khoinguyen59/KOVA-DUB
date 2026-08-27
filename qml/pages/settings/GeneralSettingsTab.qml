@@ -157,7 +157,9 @@ ScrollView {
 
                 Text {
                     visible: AppController.updates.statusMessage !== "" || AppController.updates.errorMessage !== ""
-                    text: AppController.updates.errorMessage !== "" ? AppController.updates.errorMessage : AppController.updates.statusMessage
+                    text: AppController.updates.errorMessage !== ""
+                          ? AppController.explainError(AppController.updates.errorMessage, "App Update").summary
+                          : AppController.updates.statusMessage
                     color: AppController.updates.errorMessage !== "" ? Theme.danger : Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
                     wrapMode: Text.WordWrap
@@ -294,7 +296,7 @@ ScrollView {
 
                     Text {
                         visible: AppController.modelsMigration.error !== ""
-                        text: AppController.modelsMigration.error
+                        text: AppController.explainError(AppController.modelsMigration.error, "Model Migration").summary
                         color: Theme.danger
                         font.pixelSize: Theme.fontSmall
                         wrapMode: Text.WordWrap

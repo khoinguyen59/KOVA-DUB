@@ -10,6 +10,7 @@
 #include "controllers/dubbing/DubbingJobRunner.h"
 #include "controllers/dubbing/DubbingTranscriptionJob.h"
 #include "controllers/dubbing/DubbingSynthesisJob.h"
+#include "controllers/dubbing/DubbingExportJob.h"
 #include "controllers/dubbing/DubbingTranslationJob.h"
 #include "controllers/dubbing/DubbingTranslationFixService.h"
 #include "controllers/subtitles/SubtitleOcrController.h"
@@ -1201,6 +1202,8 @@ void TestDubbingProject::dubbingEntryGatePersistsChoiceWithoutMutatingProject()
     QVERIFY(controller.dubbingEntryGateActive());
     QVERIFY(!controller.runCurrentStep());
     QVERIFY(controller.lastError().contains(QStringLiteral("entry mode")));
+    QVERIFY(!controller.runWorkflowNode(QStringLiteral("ingest")));
+    QVERIFY(controller.dubbingEntryGateActive());
     QVERIFY(controller.chooseDubbingEntryMode(QStringLiteral("automatic")));
     QVERIFY(!controller.dubbingEntryGateActive());
     QCOMPARE(controller.savedDubbingEntryMode(), QStringLiteral("automatic"));
@@ -2826,6 +2829,7 @@ void TestDubbingProject::dubbingUiUsesExactModelWorkers()
     QVERIFY(inspectorSource.contains(QStringLiteral("TTS / Text to Speech")));
     QVERIFY(inspectorSource.contains(QStringLiteral("dubbing.ttsVoiceOptions")));
     QVERIFY(inspectorSource.contains(QStringLiteral("dubbing.selectTtsVoice")));
+    QVERIFY(inspectorSource.contains(QStringLiteral("voiceModelRequested")));
     QVERIFY(!inspectorSource.contains(QStringLiteral("Create or import clone voice")));
     QVERIFY(inspectorSource.contains(
         QStringLiteral("Saved voice-design presets are not available for Dubbing yet.")));
@@ -2833,6 +2837,26 @@ void TestDubbingProject::dubbingUiUsesExactModelWorkers()
         QStringLiteral("will not silently substitute a designed voice")));
     QVERIFY(!inspectorSource.contains(
         QStringLiteral("Auto-select a clean voice reference")));
+
+    QFile synthesisStep(
+        QStringLiteral(LASTUDIO_SOURCE_DIR)
+        + QStringLiteral("/qml/components/dubbing/steps/DubbingSynthesizeStep.qml"));
+    QVERIFY(synthesisStep.open(QIODevice::ReadOnly));
+    const QString synthesisStepSource = QString::fromUtf8(synthesisStep.readAll());
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("selectVoiceAndMaybeOpenModel")));
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("voiceCloneModelId")));
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("root.voiceModelRequested(\"synthesize\")")));
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("Mở cấu hình Colab")));
+    QVERIFY(!synthesisStepSource.contains(QStringLiteral("colab.research.google.com")));
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("id: synthesisScrollView")));
+    QVERIFY(synthesisStepSource.contains(QStringLiteral("Layout.fillHeight: true")));
+
+    QFile modelDialog(
+        QStringLiteral(LASTUDIO_SOURCE_DIR)
+        + QStringLiteral("/qml/components/shared/WorkflowNodeModelDialog.qml"));
+    QVERIFY(modelDialog.open(QIODevice::ReadOnly));
+    const QString modelDialogSource = QString::fromUtf8(modelDialog.readAll());
+    QVERIFY(modelDialogSource.contains(QStringLiteral("voiceCloneFamily")));
     QVERIFY(inspectorSource.contains(
         QStringLiteral("\"alignment\", root.alignmentModelId")));
     QVERIFY(inspectorSource.contains(
@@ -3043,6 +3067,74 @@ void TestDubbingProject::dubbingUiUsesExactModelWorkers()
         QStringLiteral("DubbingTranscriptFusionService::fuse")));
     QVERIFY(!runnerSource.contains(
         QStringLiteral("DubbingTranscriptFusionService::fuse")));
+}
+
+void TestDubbingProject::separationKeepsAnalysisAndVocalsArtifactsDistinct()
+{
+    DubbingProject project;
+    project.projectPath = QStringLiteral("/tmp/distinct.ladub.json");
+    project.masterAudioPath = QStringLiteral("/cache/master.wav");
+    project.analysisAudioPath = QStringLiteral("/cache/analysis.wav");
+    project.vocalsAudioPath = QStringLiteral("/cache/vocals.wav");
+    project.backgroundAudioPath = QStringLiteral("/cache/background.wav");
+
+    const QJsonObject json = project.toJson();
+    QCOMPARE(json.value(QStringLiteral("schemaVersion")).toInt(),
+             DubbingProject::CurrentSchemaVersion);
+    QCOMPARE(json.value(QStringLiteral("analysisAudioPath")).toString(),
+             project.analysisAudioPath);
+    QCOMPARE(json.value(QStringLiteral("vocalsAudioPath")).toString(),
+             project.vocalsAudioPath);
+
+    DubbingProject restored;
+    QString error;
+    QVERIFY2(DubbingProject::fromJson(json, restored, &error), qPrintable(error));
+    QCOMPARE(restored.analysisAudioPath, project.analysisAudioPath);
+    QCOMPARE(restored.vocalsAudioPath, project.vocalsAudioPath);
+    QCOMPARE(restored.backgroundAudioPath, project.backgroundAudioPath);
+
+    // A schema-13 project has no reliable separated-vocals field.  Loading it
+    // must keep analysis audio as analysis audio rather than guessing that it
+    // is a vocals stem and reintroducing the old UI collision.
+    QJsonObject legacy{{QStringLiteral("schemaVersion"), 13},
+                       {QStringLiteral("analysisAudioPath"), project.analysisAudioPath},
+                       {QStringLiteral("backgroundAudioPath"), QString()}};
+    DubbingProject legacyProject;
+    QVERIFY2(DubbingProject::fromJson(legacy, legacyProject, &error), qPrintable(error));
+    QCOMPARE(legacyProject.analysisAudioPath, project.analysisAudioPath);
+    QVERIFY(legacyProject.vocalsAudioPath.isEmpty());
+}
+
+void TestDubbingProject::dubbingUiUsesSafePublicContractsAndArtifactGates()
+{
+    const QString sourceRoot = QStringLiteral(LASTUDIO_SOURCE_DIR);
+    auto read = [&sourceRoot](const QString &relativePath) {
+        QFile file(QDir(sourceRoot).filePath(relativePath));
+        if (!file.open(QIODevice::ReadOnly)) return QString();
+        return QString::fromUtf8(file.readAll());
+    };
+
+    const QString page = read(QStringLiteral("qml/pages/DubbingPage.qml"));
+    QVERIFY(!page.isEmpty());
+    QVERIFY(!page.contains(QStringLiteral("root.dubbing.setWorkflowMode(mode)")));
+
+    const QString gallery = read(QStringLiteral("qml/components/shared/VoiceGalleryDialog.qml"));
+    QVERIFY(gallery.contains(QStringLiteral(
+        "signal voiceSelected(string audioPath, string referenceText, string name, string familyId, string voiceId)")));
+    QVERIFY(gallery.contains(QStringLiteral(
+        "root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText, item.name || root.selectedVoiceName, item.modelFamily || \"\", item.id || \"\")")));
+
+    const QString importStep = read(QStringLiteral("qml/components/dubbing/steps/DubbingImportStep.qml"));
+    const QString normalizeStep = read(QStringLiteral("qml/components/dubbing/steps/DubbingNormalizeStep.qml"));
+    const QString separateStep = read(QStringLiteral("qml/components/dubbing/steps/DubbingSeparateStep.qml"));
+    QVERIFY(importStep.contains(QStringLiteral("elide: Text.ElideMiddle")));
+    QVERIFY(normalizeStep.contains(QStringLiteral("elide: Text.ElideMiddle")));
+    QVERIFY(importStep.contains(QStringLiteral("HoverHandler { id: sourcePathHover }")));
+    QVERIFY(normalizeStep.contains(QStringLiteral("HoverHandler { id: normalizedPathHover }")));
+    QVERIFY(!importStep.contains(QStringLiteral("ToolTip.visible: hovered")));
+    QVERIFY(!normalizeStep.contains(QStringLiteral("ToolTip.visible: hovered")));
+    QVERIFY(separateStep.contains(QStringLiteral("(root.dubbing.vocalsPath || \"\").length > 0")));
+    QVERIFY(separateStep.contains(QStringLiteral("(root.dubbing.backgroundPath || \"\").length > 0")));
 }
 
 void TestDubbingProject::dubbingEntryAndAutomaticSetupCannotBypassConfiguration()
@@ -3607,6 +3699,49 @@ void TestDubbingProject::cloneVoicePresetSelectionPersistsAndMissingPresetBlocks
         QStringLiteral("no longer available")));
 }
 
+void TestDubbingProject::vieneuReferenceRoutesToOmniVoiceCloneWorker()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    constexpr int sampleRate = 24000;
+    QVector<float> samples(sampleRate, 0.04F);
+    const QString referencePath = dir.filePath(QStringLiteral("vieneu-reference.wav"));
+    QVERIFY(WavIO::saveFloat(referencePath, samples.constData(), samples.size(), sampleRate));
+
+    TtsEngine tts;
+    VoiceClonePresetService presets;
+    DubbingController controller(nullptr, &tts);
+    controller.setVoiceClonePresetService(&presets);
+    const QString presetName = QStringLiteral("ViNeu OmniVoice routing %1")
+        .arg(QDateTime::currentMSecsSinceEpoch());
+    QVERIFY(presets.addPreset(QStringLiteral("vieneu-tts"), presetName,
+                              referencePath, QStringLiteral("Approved ViNeu sample")));
+
+    QVERIFY(controller.newProject(dir.filePath(QStringLiteral("project.ladub.json"))));
+    QVariantMap selected;
+    for (const QVariant &entry : controller.cloneVoicePresets()) {
+        const QVariantMap preset = entry.toMap();
+        if (preset.value(QStringLiteral("name")).toString() == presetName) {
+            selected = preset;
+            break;
+        }
+    }
+    QVERIFY(!selected.isEmpty());
+    QCOMPARE(selected.value(QStringLiteral("sourceModelFamily")).toString(),
+             QStringLiteral("vieneu-tts"));
+    QCOMPARE(selected.value(QStringLiteral("voiceCloneModelId")).toString(),
+             QStringLiteral("omnivoice"));
+    QVERIFY(selected.value(QStringLiteral("compatible")).toBool());
+
+    QVERIFY(controller.selectCloneVoicePreset(
+        selected.value(QStringLiteral("id")).toString()));
+    QCOMPARE(controller.workflowNodeConfigurations()
+                 .value(QStringLiteral("synthesize")).toMap()
+                 .value(QStringLiteral("parameters")).toMap()
+                 .value(QStringLiteral("voiceCloneModelId")).toString(),
+             QStringLiteral("omnivoice"));
+}
+
 void TestDubbingProject::changingCloneVoicePresetAppliesToEntireNextRun()
 {
     QTemporaryDir dir;
@@ -4080,6 +4215,100 @@ void TestDubbingProject::audioMixCreatesIndependentVocalStem()
     QVERIFY(!mixed.samples.isEmpty());
     QVERIFY(qAbs(vocals.samples.constFirst() - 0.25f) < 0.01f);
     QVERIFY(qAbs(mixed.samples.constFirst() - 0.425f) < 0.01f);
+}
+
+void TestDubbingProject::audioMixAppliesSidechainDuckingToBackground()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    constexpr int sampleRate = 48000;
+    QVector<float> clipSamples(sampleRate, 0.25f);
+    QVector<float> backgroundSamples(sampleRate, 0.5f);
+    const QString clipPath = dir.filePath(QStringLiteral("clip.wav"));
+    const QString backgroundPath = dir.filePath(QStringLiteral("background.wav"));
+    const QString previewPath = dir.filePath(QStringLiteral("preview.wav"));
+    QVERIFY(WavIO::saveFloat(clipPath, clipSamples.constData(), clipSamples.size(), sampleRate));
+    QVERIFY(WavIO::saveFloat(backgroundPath, backgroundSamples.constData(),
+                             backgroundSamples.size(), sampleRate));
+
+    const QVariantList segments{
+        QVariantMap{{QStringLiteral("startMs"), 0},
+                    {QStringLiteral("endMs"), 1000},
+                    {QStringLiteral("clipPath"), clipPath}}
+    };
+    QString error;
+    QVERIFY2(AudioTimelineMixer::mixSegments(segments, previewPath, backgroundPath,
+                                              QString(), &error), qPrintable(error));
+
+    const WavIO::WavData mixed = WavIO::loadAsFloat(previewPath);
+    QVERIFY(mixed.samples.size() > sampleRate / 2);
+    const float quietSample = mixed.samples.at(sampleRate / 2);
+    QVERIFY2(quietSample < 0.38f,
+             qPrintable(QStringLiteral("sidechain did not duck the background: %1")
+                            .arg(quietSample)));
+}
+
+void TestDubbingProject::exportValidatesMuxedMediaBeforeCommit()
+{
+    const QDir sourceRoot(QStringLiteral(LASTUDIO_SOURCE_DIR));
+    QFile exportJob(sourceRoot.filePath(QStringLiteral("src/controllers/dubbing/DubbingExportJob.cpp")));
+    QVERIFY(exportJob.open(QIODevice::ReadOnly));
+    const QString source = QString::fromUtf8(exportJob.readAll());
+
+    QVERIFY(source.contains(QStringLiteral("startMediaValidation")));
+    QVERIFY(source.contains(QStringLiteral("onValidationFinished")));
+    QVERIFY(source.contains(QStringLiteral("-show_streams")));
+    QVERIFY(source.contains(QStringLiteral("duration")));
+    QVERIFY(source.contains(QStringLiteral("subtitle")));
+    QVERIFY(source.contains(QStringLiteral("AtomicMediaCommit::commit")));
+}
+
+void TestDubbingProject::exportCommitsOnlyAfterMediaValidation()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QString source = directory.filePath(QStringLiteral("source.mp4"));
+    const QString audio = directory.filePath(QStringLiteral("dub.wav"));
+    const QString output = directory.filePath(QStringLiteral("dubbed.mp4"));
+    const QString ffprobe = directory.filePath(QStringLiteral("ffprobe.cmd"));
+    const QString ffmpeg = directory.filePath(QStringLiteral("ffmpeg.cmd"));
+    QVERIFY(writeFixtureFile(source, QByteArrayLiteral("video fixture")));
+    const QVector<float> audioSamples(48000, 0.1F);
+    QVERIFY(WavIO::saveFloat(audio, audioSamples.constData(), audioSamples.size(), 48000));
+    QVERIFY(writeFixtureFile(ffprobe, QByteArrayLiteral(
+        "@echo off\r\n"
+        "echo {\"streams\":[{\"codec_type\":\"video\"},{\"codec_type\":\"audio\"},{\"codec_type\":\"subtitle\"}],\"format\":{\"duration\":\"1.0\"}}\r\n")));
+    QVERIFY(writeFixtureFile(ffmpeg, QByteArrayLiteral(
+        "@echo off\r\n"
+        "set \"last=\"\r\n"
+        ":next\r\n"
+        "if \"%~1\"==\"\" goto done\r\n"
+        "set \"last=%~1\"\r\n"
+        "shift\r\n"
+        "goto next\r\n"
+        ":done\r\n"
+        "if \"%last%\"==\"\" exit /b 2\r\n"
+        ">\"%last%\" echo muxed\r\n"
+        "exit /b 0\r\n")));
+
+    const ScopedEnvironmentValue ffprobeEnvironment("LASTUDIO_FFPROBE", ffprobe.toUtf8());
+    const ScopedEnvironmentValue ffmpegEnvironment("LASTUDIO_FFMPEG", ffmpeg.toUtf8());
+    DubbingExportJob job;
+    QSignalSpy exported(&job, &DubbingExportJob::exported);
+    QSignalSpy failed(&job, &DubbingExportJob::failed);
+    const QVariantList segments{
+        QVariantMap{{QStringLiteral("startMs"), 0},
+                    {QStringLiteral("endMs"), 1000},
+                    {QStringLiteral("targetText"), QStringLiteral("Hello")}}
+    };
+
+    QVERIFY(job.startExport(source, audio, output, segments,
+                            QVariantMap{{QStringLiteral("burnIn"), false}}));
+    QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 10000);
+    QCOMPARE(failed.count(), 0);
+    QVERIFY(QFileInfo(output).isFile());
+    QVERIFY(!job.running());
 }
 
 void TestDubbingProject::commitsMediaExportAtomically()
@@ -4608,7 +4837,9 @@ void TestDubbingProject::dubbingSubtitleUiWiresImportPreviewAndBurnIn()
     QVERIFY(pageSource.contains(QStringLiteral("DubbingInlineSubtitleEditor")));
     QVERIFY(panelSource.contains(QStringLiteral("dubbingSubtitlePreviewOverlay")));
     QVERIFY(panelSource.contains(QStringLiteral("FontLoader")));
-    QVERIFY(panelSource.contains(QStringLiteral("dubbingSubtitleEditorButton")));
+    // Subtitle editing is now direct on the preview overlay; the persistent
+    // toolbar no longer reserves space for a separate editor button.
+    QVERIFY(!panelSource.contains(QStringLiteral("dubbingSubtitleEditorButton")));
     QVERIFY(panelSource.contains(QStringLiteral("activeSubtitleIndex")));
     QVERIFY(panelSource.contains(QStringLiteral("subtitleSegmentEditRequested")));
     QVERIFY(panelSource.contains(QStringLiteral("dubbingSubtitlePreviewEditArea")));
@@ -5512,6 +5743,7 @@ void TestDubbingProject::transcriptConflictUiAndColabSetupWireProductionControll
     QVERIFY(serviceSource.contains(QStringLiteral("supportsStructuredReconciliation")));
     QVERIFY(serviceSource.contains(QStringLiteral("buildReconciliationPrompt")));
     QVERIFY(adapterSource.contains(QStringLiteral("unresolvedConflicts")));
+    QVERIFY(adapterSource.contains(QStringLiteral("m_runner->setBackgroundAudioPath(backgroundPath);")));
 }
 
 void TestDubbingProject::mediaBatchQueueWiresSerialRealOutputs()

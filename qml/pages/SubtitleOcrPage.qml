@@ -862,7 +862,7 @@ Page {
                         }
                         ProgressBar { Layout.fillWidth: true; visible: runtime.progressAvailable; from: 0; to: runtime.bytesTotal; value: runtime.bytesReceived }
                         Text { Layout.fillWidth: true; visible: runtime.progressAvailable; text: qsTr("Downloaded %1 / %2 MiB").arg((runtime.bytesReceived / 1048576).toFixed(1)).arg((runtime.bytesTotal / 1048576).toFixed(1)); color: Theme.textSecondary }
-                        Text { Layout.fillWidth: true; visible: runtime.error !== ""; text: runtime.error; color: Theme.danger; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; visible: runtime.error !== ""; text: AppController.explainError(runtime.error, "Subtitle OCR runtime").summary; color: Theme.danger; wrapMode: Text.WordWrap }
                         Text { visible: !root.usingPaddleLocalEngine; text: qsTr("Tesseract baseline language data"); color: Theme.textPrimary; font.bold: true; topPadding: Theme.paddingSmall }
                         ScrollView {
                             id: languagePackScroll
@@ -1008,7 +1008,7 @@ Page {
                             radius: Theme.radiusSmall
                             Image { anchors.fill: parent; anchors.margins: Theme.paddingSmall; source: ocr.cropPreviewUrl; fillMode: Image.PreserveAspectFit; asynchronous: true }
                         }
-                        Text { Layout.fillWidth: true; visible: ocr.error !== ""; text: ocr.error; color: Theme.danger; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; visible: ocr.error !== ""; text: AppController.explainError(ocr.error, "Subtitle OCR").summary; color: Theme.danger; wrapMode: Text.WordWrap }
                         Text { Layout.fillWidth: true; text: ocr.phase; color: Theme.textSecondary }
                         ProgressBar { Layout.fillWidth: true; visible: ocr.progressAvailable; from: 0; to: 100; value: ocr.progress }
                         Text { visible: ocr.progressAvailable; text: ocr.progress + "%"; color: Theme.textSecondary }

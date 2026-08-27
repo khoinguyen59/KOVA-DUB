@@ -2,6 +2,8 @@
 
 #include "core/services/MediaRuntimeLocator.h"
 #include "core/storage/PathUtils.h"
+#include "dubbing/media/AtomicMediaCommit.h"
+#include "audio/io/WavIO.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -11,13 +13,29 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSaveFile>
+#include <QUuid>
+#include <QtConcurrent>
 #include <QtMath>
 
 namespace LAStudio {
 
+namespace {
+
+bool readableAudioArtifact(const QString &path)
+{
+    const WavIO::WavData audio = WavIO::loadAsFloat(path);
+    return !audio.samples.isEmpty() && audio.sampleRate > 0 && audio.channels > 0;
+}
+
+} // namespace
+
 MediaIngestService::MediaIngestService(QObject *parent)
     : QObject(parent)
 {
+    connect(&m_hashWatcher, &QFutureWatcher<HashResult>::finished,
+            this, &MediaIngestService::onHashFinished);
+    connect(&m_artifactWatcher, &QFutureWatcher<bool>::finished,
+            this, &MediaIngestService::onArtifactValidationFinished);
     connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
             this, &MediaIngestService::onProcessFinished);
     connect(&m_process, &QProcess::errorOccurred,
@@ -58,26 +76,53 @@ void MediaIngestService::ingest(const QString &path)
         return;
     }
 
-    QFile input(info.absoluteFilePath());
-    if (!input.open(QIODevice::ReadOnly)) {
-        fail(QStringLiteral("Cannot read media file: %1").arg(input.errorString()));
+    m_inputPath = info.absoluteFilePath();
+    const QString inputPath = m_inputPath;
+    const quint64 requestId = ++m_nextHashRequestId;
+    m_activeHashRequestId = requestId;
+    emit progress(1);
+    m_hashWatcher.setFuture(QtConcurrent::run([inputPath, requestId]() {
+        HashResult result;
+        result.requestId = requestId;
+        QFile input(inputPath);
+        if (!input.open(QIODevice::ReadOnly)) {
+            result.error = QStringLiteral("Cannot read media file: %1").arg(input.errorString());
+            return result;
+        }
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        while (!input.atEnd()) {
+            const QByteArray chunk = input.read(1024 * 1024);
+            if (chunk.isEmpty() && input.error() != QFileDevice::NoError) {
+                result.error = QStringLiteral("Cannot hash media file: %1").arg(input.errorString());
+                return result;
+            }
+            hash.addData(chunk);
+        }
+        result.success = true;
+        result.hash = QString::fromLatin1(hash.result().toHex());
+        return result;
+    }));
+}
+
+void MediaIngestService::onHashFinished()
+{
+    const HashResult result = m_hashWatcher.result();
+    if (m_terminal || result.requestId != m_activeHashRequestId) return;
+    if (!result.success) {
+        fail(result.error.isEmpty() ? QStringLiteral("Cannot hash media file.") : result.error);
         return;
     }
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    while (!input.atEnd()) {
-        const QByteArray chunk = input.read(1024 * 1024);
-        if (chunk.isEmpty() && input.error() != QFileDevice::NoError) {
-            fail(QStringLiteral("Cannot hash media file: %1").arg(input.errorString()));
-            return;
-        }
-        hash.addData(chunk);
-    }
-    m_inputPath = info.absoluteFilePath();
-    m_hash = QString::fromLatin1(hash.result().toHex());
+    m_hash = result.hash;
     m_workspace = PathUtils::cacheDir() + QStringLiteral("/dubbing/imports/") + m_hash;
     m_masterPath = m_workspace + QStringLiteral("/master.wav");
     m_analysisPath = m_workspace + QStringLiteral("/analysis.wav");
+    const QString stagingId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_masterStagingPath = m_workspace + QStringLiteral("/master.workflow-") + stagingId
+        + QStringLiteral(".staging.wav");
+    m_analysisStagingPath = m_workspace + QStringLiteral("/analysis.workflow-") + stagingId
+        + QStringLiteral(".staging.wav");
     m_manifest.clear();
+    m_loudnessMeasurements.clear();
     m_probeOutput.clear();
     m_stderr.clear();
     QDir().mkpath(m_workspace);
@@ -94,15 +139,39 @@ void MediaIngestService::startProbe()
     m_process.start();
 }
 
+void MediaIngestService::startLoudnessMeasurement()
+{
+    m_stage = Stage::LoudnessMeasurement;
+    m_stderr.clear();
+    m_process.setProgram(ffmpegPath());
+    m_process.setArguments({QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
+                            QStringLiteral("-i"), m_inputPath,
+                            QStringLiteral("-map"), QStringLiteral("0:a:0"),
+                            QStringLiteral("-vn"), QStringLiteral("-af"),
+                            QStringLiteral("loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json"),
+                            QStringLiteral("-f"), QStringLiteral("null"),
+                            QStringLiteral("NUL")});
+    m_process.start();
+}
+
 void MediaIngestService::startMaster()
 {
     m_stage = Stage::Master;
     m_stderr.clear();
     m_process.setProgram(ffmpegPath());
+    const QString filter = QStringLiteral(
+        "loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=%1:measured_TP=%2:"
+        "measured_LRA=%3:measured_thresh=%4:offset=%5:linear=true:print_format=summary")
+        .arg(m_loudnessMeasurements.value(QStringLiteral("input_i")).toDouble(), 0, 'f', 6)
+        .arg(m_loudnessMeasurements.value(QStringLiteral("input_tp")).toDouble(), 0, 'f', 6)
+        .arg(m_loudnessMeasurements.value(QStringLiteral("input_lra")).toDouble(), 0, 'f', 6)
+        .arg(m_loudnessMeasurements.value(QStringLiteral("input_thresh")).toDouble(), 0, 'f', 6)
+        .arg(m_loudnessMeasurements.value(QStringLiteral("target_offset")).toDouble(), 0, 'f', 6);
     m_process.setArguments({QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"), QStringLiteral("-y"),
                             QStringLiteral("-i"), m_inputPath, QStringLiteral("-map"), QStringLiteral("0:a:0"),
                             QStringLiteral("-vn"), QStringLiteral("-ac"), QStringLiteral("2"), QStringLiteral("-ar"), QStringLiteral("48000"),
-                            QStringLiteral("-c:a"), QStringLiteral("pcm_f32le"), m_masterPath});
+                            QStringLiteral("-af"), filter, QStringLiteral("-c:a"), QStringLiteral("pcm_f32le"),
+                            m_masterStagingPath});
     m_process.start();
 }
 
@@ -112,9 +181,9 @@ void MediaIngestService::startAnalysis()
     m_stderr.clear();
     m_process.setProgram(ffmpegPath());
     m_process.setArguments({QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"), QStringLiteral("-y"),
-                            QStringLiteral("-i"), m_inputPath, QStringLiteral("-map"), QStringLiteral("0:a:0"),
+                            QStringLiteral("-i"), m_masterPath, QStringLiteral("-map"), QStringLiteral("0:a:0"),
                             QStringLiteral("-vn"), QStringLiteral("-ac"), QStringLiteral("1"), QStringLiteral("-ar"), QStringLiteral("16000"),
-                            QStringLiteral("-c:a"), QStringLiteral("pcm_s16le"), m_analysisPath});
+                            QStringLiteral("-c:a"), QStringLiteral("pcm_s16le"), m_analysisStagingPath});
     m_process.start();
 }
 
@@ -124,7 +193,9 @@ void MediaIngestService::onProcessFinished(int exitCode, QProcess::ExitStatus st
     const bool ok = status == QProcess::NormalExit && exitCode == 0;
     if (!ok) {
         fail(QStringLiteral("Media import failed during %1: %2")
-             .arg(m_stage == Stage::Probe ? QStringLiteral("probe") : QStringLiteral("audio normalization"),
+             .arg(m_stage == Stage::Probe ? QStringLiteral("probe")
+                   : m_stage == Stage::LoudnessMeasurement ? QStringLiteral("EBU R128 loudness measurement")
+                   : QStringLiteral("audio normalization"),
                   QString::fromLocal8Bit(m_stderr).trimmed()));
         return;
     }
@@ -165,46 +236,153 @@ void MediaIngestService::onProcessFinished(int exitCode, QProcess::ExitStatus st
         m_manifest.insert(QStringLiteral("sourceChannels"), channels);
         m_manifest.insert(QStringLiteral("sourceIsVideo"), video);
         m_manifest.insert(QStringLiteral("workspacePath"), m_workspace);
-        const auto finishCached = [this]() {
-            m_manifest.insert(QStringLiteral("manifestVersion"), 1);
-            QSaveFile file(m_workspace + QStringLiteral("/manifest.json"));
-            if (!file.open(QIODevice::WriteOnly)
-                || file.write(QJsonDocument::fromVariant(m_manifest).toJson(QJsonDocument::Indented)) < 0
-                || !file.commit()) {
-                fail(QStringLiteral("Cannot write normalized media manifest."));
-                return;
+        QFile cachedManifest(m_workspace + QStringLiteral("/manifest.json"));
+        bool cacheIsValidated = false;
+        if (cachedManifest.open(QIODevice::ReadOnly)) {
+            QJsonParseError cachedParseError;
+            const QJsonDocument cachedDocument = QJsonDocument::fromJson(
+                cachedManifest.readAll(), &cachedParseError);
+            cacheIsValidated = cachedParseError.error == QJsonParseError::NoError
+                && cachedDocument.isObject()
+                && cachedDocument.object().value(QStringLiteral("normalizationMethod")).toString()
+                    == QStringLiteral("ebur128-r128-2pass");
+            if (cacheIsValidated) {
+                const QVariantMap cached = cachedDocument.object().toVariantMap();
+                m_manifest.insert(QStringLiteral("normalizationMethod"),
+                                  cached.value(QStringLiteral("normalizationMethod")));
+                m_manifest.insert(QStringLiteral("normalization"),
+                                  cached.value(QStringLiteral("normalization")));
             }
-            m_terminal = true;
-            m_stage = Stage::None;
-            emit progress(100);
-            emit finished(true, m_manifest, QString());
-        };
-        if (QFileInfo::exists(m_masterPath) && QFileInfo::exists(m_analysisPath)) {
-            m_manifest.insert(QStringLiteral("masterAudioPath"), m_masterPath);
-            m_manifest.insert(QStringLiteral("analysisAudioPath"), m_analysisPath);
-            finishCached();
+            // Windows does not allow QSaveFile::commit() to replace a target
+            // that is still held open by this reader.  Close the cache
+            // descriptor before either the atomic refresh or a full rebuild.
+            cachedManifest.close();
+        }
+        if (cacheIsValidated) {
+            startCacheValidation();
+            return;
+        }
+        startLoudnessMeasurement();
+    } else if (m_stage == Stage::LoudnessMeasurement) {
+        QString measurementError;
+        if (!parseLoudnessMeasurement(&measurementError)) {
+            fail(measurementError);
             return;
         }
         startMaster();
     } else if (m_stage == Stage::Master) {
-        if (!QFileInfo::exists(m_masterPath)) { fail(QStringLiteral("FFmpeg did not create master audio.")); return; }
-        startAnalysis();
+        startArtifactValidation(m_masterStagingPath, Stage::MasterValidation);
     } else if (m_stage == Stage::Analysis) {
-        if (!QFileInfo::exists(m_analysisPath)) { fail(QStringLiteral("FFmpeg did not create analysis audio.")); return; }
-        m_manifest.insert(QStringLiteral("masterAudioPath"), m_masterPath);
-        m_manifest.insert(QStringLiteral("analysisAudioPath"), m_analysisPath);
-        QSaveFile file(m_workspace + QStringLiteral("/manifest.json"));
-        if (!file.open(QIODevice::WriteOnly)
-            || file.write(QJsonDocument::fromVariant(m_manifest).toJson(QJsonDocument::Indented)) < 0
-            || !file.commit()) {
-            fail(QStringLiteral("Cannot write normalized media manifest."));
+        startArtifactValidation(m_analysisStagingPath, Stage::AnalysisValidation);
+    }
+}
+
+void MediaIngestService::startArtifactValidation(const QString &path, Stage validationStage)
+{
+    if (m_terminal) return;
+    m_stage = validationStage;
+    m_artifactWatcher.setFuture(QtConcurrent::run([path]() {
+        return readableAudioArtifact(path);
+    }));
+}
+
+void MediaIngestService::startCacheValidation()
+{
+    if (m_terminal) return;
+    m_stage = Stage::CacheValidation;
+    const QString masterPath = m_masterPath;
+    const QString analysisPath = m_analysisPath;
+    m_artifactWatcher.setFuture(QtConcurrent::run([masterPath, analysisPath]() {
+        return readableAudioArtifact(masterPath) && readableAudioArtifact(analysisPath);
+    }));
+}
+
+void MediaIngestService::onArtifactValidationFinished()
+{
+    if (m_terminal || (m_stage != Stage::MasterValidation
+                       && m_stage != Stage::AnalysisValidation
+                       && m_stage != Stage::CacheValidation)) return;
+    const Stage validationStage = m_stage;
+    if (!m_artifactWatcher.result()) {
+        if (validationStage == Stage::CacheValidation) {
+            startLoudnessMeasurement();
             return;
         }
-        m_terminal = true;
-        m_stage = Stage::None;
-        emit progress(100);
-        emit finished(true, m_manifest, QString());
+        fail(validationStage == Stage::MasterValidation
+                 ? QStringLiteral("FFmpeg did not create a readable normalized master audio file.")
+                 : QStringLiteral("FFmpeg did not create a readable analysis audio file."));
+        return;
     }
+    if (validationStage == Stage::CacheValidation) {
+        m_manifest.insert(QStringLiteral("masterAudioPath"), m_masterPath);
+        m_manifest.insert(QStringLiteral("analysisAudioPath"), m_analysisPath);
+        finishCached();
+        return;
+    }
+    QString commitError;
+    if (validationStage == Stage::MasterValidation) {
+        if (!AtomicMediaCommit::commit(m_masterStagingPath, m_masterPath, &commitError)) {
+            fail(commitError);
+            return;
+        }
+        QFile::remove(m_masterStagingPath);
+        startAnalysis();
+        return;
+    }
+    if (!AtomicMediaCommit::commit(m_analysisStagingPath, m_analysisPath, &commitError)) {
+        fail(commitError);
+        return;
+    }
+    QFile::remove(m_analysisStagingPath);
+    finishAnalysis();
+}
+
+void MediaIngestService::finishCached()
+{
+    m_manifest.insert(QStringLiteral("manifestVersion"), 1);
+    const QByteArray payload = QJsonDocument::fromVariant(m_manifest)
+        .toJson(QJsonDocument::Indented);
+    QSaveFile file(m_workspace + QStringLiteral("/manifest.json"));
+    if (!file.open(QIODevice::WriteOnly)
+        || file.write(payload) != payload.size()
+        || !file.commit()) {
+        fail(QStringLiteral("Cannot write normalized media manifest."));
+        return;
+    }
+    m_terminal = true;
+    m_stage = Stage::None;
+    emit progress(100);
+    emit finished(true, m_manifest, QString());
+}
+
+void MediaIngestService::finishAnalysis()
+{
+    m_manifest.insert(QStringLiteral("masterAudioPath"), m_masterPath);
+    m_manifest.insert(QStringLiteral("analysisAudioPath"), m_analysisPath);
+    m_manifest.insert(QStringLiteral("normalizationMethod"),
+                      QStringLiteral("ebur128-r128-2pass"));
+    m_manifest.insert(QStringLiteral("normalization"), QVariantMap{
+        {QStringLiteral("standard"), QStringLiteral("EBU R128")},
+        {QStringLiteral("filter"), QStringLiteral("loudnorm")},
+        {QStringLiteral("targetI"), -16.0},
+        {QStringLiteral("targetTP"), -1.5},
+        {QStringLiteral("targetLRA"), 11.0},
+        {QStringLiteral("passes"), 2},
+        {QStringLiteral("measurement"), m_loudnessMeasurements}
+    });
+    const QByteArray payload = QJsonDocument::fromVariant(m_manifest)
+        .toJson(QJsonDocument::Indented);
+    QSaveFile file(m_workspace + QStringLiteral("/manifest.json"));
+    if (!file.open(QIODevice::WriteOnly)
+        || file.write(payload) != payload.size()
+        || !file.commit()) {
+        fail(QStringLiteral("Cannot write normalized media manifest."));
+        return;
+    }
+    m_terminal = true;
+    m_stage = Stage::None;
+    emit progress(100);
+    emit finished(true, m_manifest, QString());
 }
 
 void MediaIngestService::onProcessError(QProcess::ProcessError error)
@@ -225,6 +403,8 @@ void MediaIngestService::fail(const QString &error)
     if (m_terminal) return;
     m_terminal = true;
     if (m_process.state() != QProcess::NotRunning) m_process.kill();
+    QFile::remove(m_masterStagingPath);
+    QFile::remove(m_analysisStagingPath);
     m_stage = Stage::None;
     emit progress(0);
     emit finished(false, {}, error);
@@ -233,8 +413,47 @@ void MediaIngestService::fail(const QString &error)
 void MediaIngestService::cancel()
 {
     m_terminal = true;
+    m_hashWatcher.cancel();
+    m_artifactWatcher.cancel();
     if (m_process.state() != QProcess::NotRunning) m_process.kill();
+    QFile::remove(m_masterStagingPath);
+    QFile::remove(m_analysisStagingPath);
     m_stage = Stage::None;
+}
+
+bool MediaIngestService::parseLoudnessMeasurement(QString *error)
+{
+    const qsizetype objectStart = m_stderr.lastIndexOf('{');
+    const qsizetype objectEnd = m_stderr.lastIndexOf('}');
+    if (objectStart < 0 || objectEnd <= objectStart) {
+        if (error) *error = QStringLiteral("FFmpeg loudnorm did not return an EBU R128 measurement.");
+        return false;
+    }
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(
+        m_stderr.mid(objectStart, objectEnd - objectStart + 1), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        if (error) *error = QStringLiteral("Invalid loudnorm measurement JSON: %1")
+            .arg(parseError.errorString());
+        return false;
+    }
+    const QJsonObject object = document.object();
+    const QStringList requiredKeys{
+        QStringLiteral("input_i"), QStringLiteral("input_tp"),
+        QStringLiteral("input_lra"), QStringLiteral("input_thresh"),
+        QStringLiteral("target_offset")};
+    QVariantMap measurement;
+    for (const QString &key : requiredKeys) {
+        bool ok = false;
+        const double value = object.value(key).toString().toDouble(&ok);
+        if (!ok || !qIsFinite(value)) {
+            if (error) *error = QStringLiteral("Loudnorm measurement is missing numeric field: %1").arg(key);
+            return false;
+        }
+        measurement.insert(key, value);
+    }
+    m_loudnessMeasurements = measurement;
+    return true;
 }
 
 } // namespace LAStudio

@@ -174,7 +174,7 @@ void TestWorkflowGraph::buildsCanonicalDubbingWorkflowDefinition()
     QCOMPARE(graph.policies.value(QStringLiteral("remoteExecution")).toString(),
              QStringLiteral("explicit-per-node"));
     QCOMPARE(graph.description,
-             QStringLiteral("Remote-first dubbing workflow with independent Gateway and Colab routes."));
+             QStringLiteral("Preflighted dubbing workflow with explicit local, Gateway, and Colab routes."));
     QCOMPARE(graph.nodes.at(0).id, QStringLiteral("media-input"));
     QCOMPARE(graph.nodes.at(5).typeId, QStringLiteral("text.translate-transcript"));
     QCOMPARE(graph.edges.at(0).id, QStringLiteral("l01"));
@@ -197,6 +197,25 @@ void TestWorkflowGraph::buildsCanonicalDubbingWorkflowDefinition()
     QCOMPARE(subtitleEdge->targetPortId, QStringLiteral("subtitles"));
     QVERIFY(graph.topologicalOrder().size() == graph.nodes.size());
     QVERIFY(graph.canonicalJson().contains("system.dubbing.default"));
+}
+
+void TestWorkflowGraph::requiresExplicitSourceSeparationStems()
+{
+    const WorkflowGraph graph = DubbingWorkflowDefinition::create();
+    const auto sourceSeparate = std::find_if(graph.nodes.cbegin(), graph.nodes.cend(),
+        [](const WorkflowGraphNode &node) { return node.id == QStringLiteral("source-separate"); });
+    QVERIFY(sourceSeparate != graph.nodes.cend());
+    QCOMPARE(sourceSeparate->parameters.value(QStringLiteral("fallback")).toString(),
+             QStringLiteral("strict"));
+
+    const auto transcribeAudio = std::find_if(graph.edges.cbegin(), graph.edges.cend(),
+        [](const WorkflowGraphEdge &edge) {
+            return edge.targetNodeId == QStringLiteral("transcribe")
+                && edge.targetPortId == QStringLiteral("audio");
+        });
+    QVERIFY(transcribeAudio != graph.edges.cend());
+    QCOMPARE(transcribeAudio->sourceNodeId, QStringLiteral("source-separate"));
+    QCOMPARE(transcribeAudio->sourcePortId, QStringLiteral("vocals"));
 }
 
 void TestWorkflowGraph::commitsAndResolvesAtomicArtifacts()
@@ -375,6 +394,41 @@ void TestWorkflowGraph::resumesInterruptedRunFromJournalSnapshot()
     QCOMPARE(completedSpy.at(0).at(0).toMap().value(QStringLiteral("review.artifact")).toString(),
              QStringLiteral("transcript-v1"));
     QVERIFY(journal.interruptedRuns().isEmpty());
+}
+
+void TestWorkflowGraph::rejectsInterruptedRunWithMissingFileArtifact()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    DubbingJobRunner dubbingRunner(nullptr, nullptr);
+    NodeRegistry registry;
+    QVERIFY(registerDubbingWorkflowNodes(registry, &dubbingRunner));
+
+    WorkflowGraph graph;
+    graph.id = QStringLiteral("artifact-recovery.workflow");
+    graph.nodes = {{QStringLiteral("ingest"), QStringLiteral("media.ingest"), QString(), {}}};
+    const QString runId = QStringLiteral("run-with-missing-artifact");
+    WorkflowRunJournal journal(temp.path());
+    QVERIFY(journal.append(WorkflowRunEvent{
+        0, {}, QStringLiteral("run.started"), runId, {},
+        QJsonObject{{QStringLiteral("workflowId"), graph.id},
+                    {QStringLiteral("workflowVersion"), graph.version},
+                    {QStringLiteral("graph"), graph.toJson()},
+                    {QStringLiteral("initialInputs"), QJsonObject{}}}}));
+    QVERIFY(journal.append(WorkflowRunEvent{
+        0, {}, QStringLiteral("node.completed"), runId, {},
+        QJsonObject{{QStringLiteral("nodeId"), QStringLiteral("ingest")},
+                    {QStringLiteral("outputs"),
+                     QJsonObject{{QStringLiteral("masterAudioPath"),
+                                  temp.filePath(QStringLiteral("missing-master.wav"))},
+                                 {QStringLiteral("analysisAudioPath"),
+                                  temp.filePath(QStringLiteral("missing-analysis.wav"))}}}}}));
+
+    WorkflowGraphRunner recovered(&registry);
+    recovered.setJournal(&journal);
+    QVERIFY(!recovered.resumeInterrupted(runId));
+    QVERIFY2(recovered.error().contains(QStringLiteral("missing or unreadable")),
+             qPrintable(recovered.error()));
 }
 
 void TestWorkflowGraph::recordsCancellationSeparatelyFromFailure()

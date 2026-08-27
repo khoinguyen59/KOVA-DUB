@@ -345,17 +345,21 @@ Dialog {
         nodes: root.nodes
         nodeConfigurations: root.nodeConfigurations
         configurationApplier: function(nodeId, familyId, runtimeId, runtimeVersion, selectedFiles) {
+            // qmllint disable use-proper-function
             return root.nodeConfigurationApplier
                     ? root.nodeConfigurationApplier(nodeId, familyId, runtimeId, runtimeVersion,
                                                      selectedFiles)
                     : ({ accepted: false,
                          error: qsTr("No Dubbing configuration handler is available.") })
+            // qmllint enable use-proper-function
         }
         colabConfigurationApplier: function(nodeId, familyId, openNotebook) {
+            // qmllint disable use-proper-function
             return root.nodeColabConfigurationApplier
                     ? root.nodeColabConfigurationApplier(nodeId, familyId, openNotebook)
                     : ({ accepted: false,
                          error: qsTr("This workflow task has no Direct Colab configuration handler.") })
+            // qmllint enable use-proper-function
         }
     }
 

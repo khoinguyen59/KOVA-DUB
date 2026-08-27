@@ -37,6 +37,7 @@ Rectangle {
 
     signal closeRequested()
     signal rewriteSetupRequested()
+    signal voiceModelRequested(string nodeId)
 
     Layout.preferredWidth: 332
     Layout.minimumWidth: 290
@@ -233,7 +234,18 @@ Rectangle {
                                 return -1
                             }
                             enabled: !root.dubbing.processing && model.length > 0
-                            onActivated: function(index) { root.dubbing.selectTtsVoice(model[index].id) }
+                            onActivated: function(index) {
+                                var selected = model[index]
+                                if (!selected || !root.dubbing.selectTtsVoice(selected.id))
+                                    return
+                                var family = String(selected.sourceModelFamily
+                                                    || selected.modelFamily
+                                                    || selected.familyId || "").toLowerCase()
+                                var worker = String(selected.voiceCloneModelId || "").toLowerCase()
+                                if (worker === "omnivoice" || family === "omnivoice"
+                                        || family.indexOf("vieneu") === 0)
+                                    root.voiceModelRequested(root.nodeId)
+                            }
                         }
 
                         PrimaryButton {
@@ -247,7 +259,7 @@ Rectangle {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Hơn 60+ giọng đọc Tiếng Việt (CapCut TikTok, VieNeu 3 Miền, OmniVoice AI) và giọng clone cá nhân. Giọng đã chọn sẽ được áp dụng cho toàn bộ phân đoạn lồng tiếng.")
+                        text: qsTr("Choose a voice from the catalog or a saved reference. The selected voice is applied consistently to the dubbing run.")
                         color: Theme.textSecondary
                         font.pixelSize: 10
                         wrapMode: Text.WordWrap
@@ -533,20 +545,20 @@ Rectangle {
         modal: true
         property bool awaitingVerification: false
         anchors.centerIn: parent
-        width: Math.min(520, Overlay.overlay.width - Theme.paddingXL * 2)
+        width: Math.min(520, Math.max(320, (Overlay.overlay ? Overlay.overlay.width : (parent ? parent.width : 520)) - Theme.paddingXL * 2))
         title: qsTr("Forced-alignment Colab worker")
         standardButtons: Dialog.Ok | Dialog.Cancel
         onOpened: {
             alignmentWorkerUrl.text = AppController.colabAlignmentSession.workerUrl
             if (!awaitingVerification) {
                 alignmentWorkerToken.text = ""
-                alignmentWorkerError.text = ""
+                alignmentWorkerError.message = ""
             }
         }
         onAccepted: {
             if (!root.dubbing.selectWorkflowColabModel(
                     "alignment", root.alignmentModelId)) {
-                alignmentWorkerError.text = qsTr("Select an exact alignment model.")
+                alignmentWorkerError.message = qsTr("Select an exact alignment model.")
                 alignmentColabDialog.open()
                 return
             }
@@ -555,7 +567,7 @@ Rectangle {
                     alignmentWorkerToken.text,
                     "forced-alignment",
                     root.alignmentModelId)) {
-                alignmentWorkerError.text =
+                alignmentWorkerError.message =
                     AppController.colabAlignmentSession.lastError
                 alignmentColabDialog.open()
                 return
@@ -607,13 +619,11 @@ Rectangle {
             ColabSessionStatus {
                 session: AppController.colabAlignmentSession
             }
-            Text {
+            ErrorGuidanceInline {
                 id: alignmentWorkerError
                 Layout.fillWidth: true
-                visible: text !== ""
-                color: Theme.danger
-                font.pixelSize: Theme.fontSmall
-                wrapMode: Text.WordWrap
+                message: ""
+                source: "Dubbing alignment worker"
             }
         }
     }
@@ -627,7 +637,7 @@ Rectangle {
                 alignmentColabDialog.close()
                 return
             }
-            alignmentWorkerError.text = message
+            alignmentWorkerError.message = message
             if (!alignmentColabDialog.visible) alignmentColabDialog.open()
         }
     }
@@ -635,18 +645,36 @@ Rectangle {
     VoiceGalleryDialog {
         id: dubbingVoiceGalleryDialog
         parent: Overlay.overlay
-        onVoiceSelected: function(audioPath, referenceText, name, familyId) {
+        onVoiceSelected: function(audioPath, referenceText, name, familyId, voiceId) {
             root.dubbing.refreshCloneVoicePresets()
+            if (voiceId && voiceId.length > 0) {
+                if (root.dubbing.selectTtsVoice(voiceId)
+                        && (String(familyId || "").toLowerCase() === "omnivoice"
+                            || String(familyId || "").toLowerCase().indexOf("vieneu") === 0))
+                    root.voiceModelRequested(root.nodeId)
+                return
+            }
+            var cleanName = String(name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
             var opts = root.dubbing.ttsVoiceOptions || []
             for (var i = 0; i < opts.length; ++i) {
-                if (opts[i].name === name || opts[i].audioPath === audioPath || opts[i].id === ("builtin:" + name)) {
-                    root.dubbing.selectTtsVoice(opts[i].id)
+                var optClean = String(opts[i].name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
+                if (opts[i].id === voiceId || opts[i].name === name || optClean === cleanName || opts[i].audioPath === audioPath || opts[i].id === ("builtin:" + name)) {
+                    if (root.dubbing.selectTtsVoice(opts[i].id)
+                            && (String(opts[i].voiceCloneModelId || "").toLowerCase() === "omnivoice"
+                                || String(opts[i].sourceModelFamily || opts[i].modelFamily || "").toLowerCase().indexOf("vieneu") === 0))
+                        root.voiceModelRequested(root.nodeId)
                     return
                 }
             }
             for (var j = 0; j < opts.length; ++j) {
-                if (opts[j].audioPath && opts[j].audioPath.indexOf(audioPath) !== -1) {
-                    root.dubbing.selectTtsVoice(opts[j].id)
+                if (opts[j].audioPath && audioPath && opts[j].audioPath.indexOf(audioPath) !== -1) {
+                    var fallbackWorker = String(opts[j].voiceCloneModelId || "").toLowerCase()
+                    var fallbackFamily = String(opts[j].sourceModelFamily
+                                                 || opts[j].modelFamily || "").toLowerCase()
+                    if (root.dubbing.selectTtsVoice(opts[j].id)
+                            && (fallbackWorker === "omnivoice"
+                                || fallbackFamily.indexOf("vieneu") === 0))
+                        root.voiceModelRequested(root.nodeId)
                     return
                 }
             }

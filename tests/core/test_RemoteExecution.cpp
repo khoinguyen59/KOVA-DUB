@@ -771,7 +771,9 @@ void TestRemoteExecution::workflowActivityOnlyDisplaysMeasuredProgress()
     QVERIFY(sourcePanelSource.contains(QStringLiteral("property bool sourceSetupExpanded")));
     QVERIFY(sourcePanelSource.contains(QStringLiteral("id: sourceSetupPanel")));
     QVERIFY(sourcePanelSource.contains(QStringLiteral("visible: !root.hasLoadedSource || root.sourceSetupExpanded")));
-    QVERIFY(sourcePanelSource.contains(QStringLiteral("Change / download source")));
+    QVERIFY(!sourcePanelSource.contains(QStringLiteral("Change / download source")));
+    QVERIFY(!sourcePanelSource.contains(QStringLiteral("Replace video")));
+    QVERIFY(sourcePanelSource.contains(QStringLiteral("dubbingVideoThumbnail")));
     QVERIFY(sourcePanelSource.contains(QStringLiteral("dubbingOpenVideoButton")));
     QVERIFY(sourcePanelSource.contains(QStringLiteral("collapseSourceSetupAfterSelection")));
     QVERIFY(sourcePanelSource.contains(QStringLiteral("dubbingPreviewFrame")));
@@ -807,7 +809,7 @@ void TestRemoteExecution::workflowActivityOnlyDisplaysMeasuredProgress()
     QVERIFY(!pageSource.contains(QStringLiteral("DubbingProjectStatusPanel {")));
     QVERIFY(pageSource.contains(QStringLiteral("DubbingProjectSetupDialog")));
     QVERIFY(pageSource.contains(QStringLiteral("projectSetupDialog.openFor(\"automatic\", true)")));
-    QVERIFY(pageSource.contains(QStringLiteral("not a horizontally flicked canvas")));
+    QVERIFY(pageSource.contains(QStringLiteral("dubbingWorkspaceScroller")));
     QVERIFY(pageSource.contains(QStringLiteral("DragHandler")));
     QVERIFY(pageSource.contains(QStringLiteral("qmlSmokeLoadedSourceLayoutCheck")));
 }

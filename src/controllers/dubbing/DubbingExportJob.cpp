@@ -4,10 +4,15 @@
 #include "dubbing/exporters/DubbingSubtitleService.h"
 #include "dubbing/media/AtomicMediaCommit.h"
 #include "dubbing/media/MediaToolService.h"
+#include "core/services/MediaRuntimeLocator.h"
+#include "audio/io/WavIO.h"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSaveFile>
 #include <QUuid>
 #include <QtConcurrent>
@@ -59,6 +64,14 @@ DubbingExportJob::DubbingExportJob(QObject *parent)
     m_mediaTools = new MediaToolService(this);
     connect(m_mediaTools, &MediaToolService::finished,
             this, &DubbingExportJob::onMediaFinished);
+    connect(&m_validationProcess, &QProcess::readyReadStandardOutput,
+            this, &DubbingExportJob::onValidationReadyReadStandardOutput);
+    connect(&m_validationProcess, &QProcess::readyReadStandardError,
+            this, &DubbingExportJob::onValidationReadyReadStandardError);
+    connect(&m_validationProcess, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
+            this, &DubbingExportJob::onValidationFinished);
+    connect(&m_validationProcess, &QProcess::errorOccurred,
+            this, &DubbingExportJob::onValidationError);
 }
 
 DubbingExportJob::~DubbingExportJob()
@@ -117,11 +130,18 @@ bool DubbingExportJob::startExport(const QString &sourceMediaPath, const QString
     if (m_running) { fail(QStringLiteral("Finish the active export operation first.")); return false; }
     if (outputPath.isEmpty()) { fail(QStringLiteral("Choose an output path.")); return false; }
     if (sourceMediaPath.isEmpty()) { fail(QStringLiteral("Import source media before exporting.")); return false; }
+    if (!QFileInfo(sourceMediaPath).isFile()) {
+        fail(QStringLiteral("The source media file does not exist.")); return false;
+    }
     if (audioPath.isEmpty() || !QFileInfo::exists(audioPath)) {
         fail(QStringLiteral("Generate and render audio preview before exporting.")); return false;
     }
     m_exportDestination = outputPath;
     m_exportAudioPath = audioPath;
+    m_sourceMediaPath.clear();
+    m_expectSubtitle = false;
+    m_sourceHasVideo = false;
+    m_sourceDurationMs = 0;
     const bool exportBurnIn = subtitleConfiguration.value(QStringLiteral("burnIn")).toBool();
     const QVariantMap subtitleStyle = subtitleConfiguration.value(QStringLiteral("style")).toMap();
     const bool subtitleUsesTargetText = subtitleConfiguration.value(
@@ -153,6 +173,13 @@ bool DubbingExportJob::startExport(const QString &sourceMediaPath, const QString
         if (!QFile::copy(m_exportAudioPath, m_exportStagingPath)) {
             clearExportPaths();
             fail(QStringLiteral("Failed to stage rendered WAV for export: %1").arg(m_exportStagingPath));
+            return false;
+        }
+        const WavIO::WavData stagedAudio = WavIO::loadAsFloat(m_exportStagingPath);
+        if (stagedAudio.samples.isEmpty() || stagedAudio.sampleRate <= 0 || stagedAudio.channels <= 0) {
+            QFile::remove(m_exportStagingPath);
+            clearExportPaths();
+            fail(QStringLiteral("Rendered audio failed validation before export."));
             return false;
         }
         QString error;
@@ -191,9 +218,10 @@ bool DubbingExportJob::startExport(const QString &sourceMediaPath, const QString
         }
         m_exportSubtitlePath.clear();
     }
-    m_mediaTools->muxVideoWithAudio(sourceMediaPath, m_exportAudioPath,
-                                    m_exportSubtitlePath, m_exportStagingPath, m_exportBurnIn,
-                                    subtitleFontDirectory);
+    m_sourceMediaPath = sourceMediaPath;
+    m_expectSubtitle = !m_exportBurnIn && !m_exportSubtitlePath.isEmpty();
+    m_exportSubtitleFontDirectory = subtitleFontDirectory;
+    startMediaValidation(sourceMediaPath, ValidationStage::Source);
     return true;
 }
 
@@ -202,12 +230,21 @@ void DubbingExportJob::cancel()
     if (!m_running) return;
     if (m_renderCancel) m_renderCancel->storeRelease(true);
     if (m_mediaTools) m_mediaTools->cancel();
+    if (m_validationProcess.state() != QProcess::NotRunning)
+        m_validationProcess.kill();
+    m_validationStage = ValidationStage::None;
+    m_validationOutput.clear();
+    m_validationError.clear();
     QFile::remove(m_renderStagingPath);
     QFile::remove(m_renderVocalStagingPath);
     QFile::remove(m_exportStagingPath);
     QFile::remove(m_exportSubtitlePath);
     m_running = false;
     clearExportPaths();
+    m_sourceMediaPath.clear();
+    m_expectSubtitle = false;
+    m_sourceHasVideo = false;
+    m_sourceDurationMs = 0;
 }
 
 void DubbingExportJob::onRenderFinished()
@@ -240,6 +277,82 @@ void DubbingExportJob::onMediaFinished(bool success, const QString &outputPath, 
         fail(error.isEmpty() ? QStringLiteral("Media export failed.") : error);
         return;
     }
+    startMediaValidation(m_exportStagingPath, ValidationStage::Export);
+}
+
+void DubbingExportJob::startMediaValidation(const QString &path, ValidationStage stage)
+{
+    if (!m_running) return;
+    const MediaRuntimePaths media = MediaRuntimeLocator::resolve();
+    if (media.ffprobe.isEmpty()) {
+        QFile::remove(m_exportStagingPath);
+        QFile::remove(m_exportSubtitlePath);
+        clearExportPaths();
+        m_running = false;
+        fail(QStringLiteral("FFprobe was not found; media validation cannot run."));
+        return;
+    }
+    if (m_validationProcess.state() != QProcess::NotRunning) {
+        QFile::remove(m_exportStagingPath);
+        QFile::remove(m_exportSubtitlePath);
+        clearExportPaths();
+        m_running = false;
+        fail(QStringLiteral("Another media validation is already running."));
+        return;
+    }
+    m_validationStage = stage;
+    m_validationOutput.clear();
+    m_validationError.clear();
+    m_validationProcess.setProgram(media.ffprobe);
+    m_validationProcess.setWorkingDirectory(QFileInfo(media.ffprobe).absolutePath());
+    m_validationProcess.setProcessChannelMode(QProcess::SeparateChannels);
+    m_validationProcess.setArguments({QStringLiteral("-v"), QStringLiteral("error"),
+                                      QStringLiteral("-print_format"), QStringLiteral("json"),
+                                      QStringLiteral("-show_streams"), QStringLiteral("-show_format"),
+                                      path});
+    m_validationProcess.start();
+}
+
+void DubbingExportJob::onValidationReadyReadStandardOutput()
+{
+    m_validationOutput += m_validationProcess.readAllStandardOutput();
+    if (m_validationOutput.size() > 4 * 1024 * 1024)
+        m_validationOutput = m_validationOutput.right(4 * 1024 * 1024);
+}
+
+void DubbingExportJob::onValidationReadyReadStandardError()
+{
+    m_validationError += m_validationProcess.readAllStandardError();
+    if (m_validationError.size() > 1024 * 1024)
+        m_validationError = m_validationError.right(1024 * 1024);
+}
+
+void DubbingExportJob::onValidationFinished(int exitCode, QProcess::ExitStatus status)
+{
+    onValidationReadyReadStandardOutput();
+    onValidationReadyReadStandardError();
+    if (!m_running || m_validationStage == ValidationStage::None) return;
+    QString validationError;
+    const ValidationStage stage = m_validationStage;
+    m_validationStage = ValidationStage::None;
+    if (status != QProcess::NormalExit || exitCode != 0
+        || !validateProbeResult(m_validationOutput, stage, &validationError)) {
+        QFile::remove(m_exportStagingPath);
+        QFile::remove(m_exportSubtitlePath);
+        clearExportPaths();
+        m_running = false;
+        const QString diagnostics = QString::fromLocal8Bit(m_validationError).trimmed();
+        fail(validationError.isEmpty()
+                 ? QStringLiteral("Media validation failed: %1").arg(diagnostics)
+                 : validationError);
+        return;
+    }
+    if (stage == ValidationStage::Source) {
+        m_mediaTools->muxVideoWithAudio(m_sourceMediaPath, m_exportAudioPath,
+                                        m_exportSubtitlePath, m_exportStagingPath,
+                                        m_exportBurnIn, m_exportSubtitleFontDirectory);
+        return;
+    }
     QString commitError;
     if (!AtomicMediaCommit::commit(m_exportStagingPath, m_exportDestination, &commitError)) {
         QFile::remove(m_exportStagingPath);
@@ -253,9 +366,83 @@ void DubbingExportJob::onMediaFinished(bool success, const QString &outputPath, 
     QFile::remove(m_exportSubtitlePath);
     const QString destination = m_exportDestination;
     clearExportPaths();
+    m_sourceMediaPath.clear();
+    m_expectSubtitle = false;
+    m_sourceHasVideo = false;
+    m_sourceDurationMs = 0;
     m_running = false;
     emit progressChanged(QStringLiteral("export"), 100);
     emit exported(destination);
+}
+
+void DubbingExportJob::onValidationError(QProcess::ProcessError error)
+{
+    if (error != QProcess::FailedToStart || !m_running
+        || m_validationStage == ValidationStage::None) return;
+    QFile::remove(m_exportStagingPath);
+    QFile::remove(m_exportSubtitlePath);
+    clearExportPaths();
+    m_validationStage = ValidationStage::None;
+    m_running = false;
+    fail(QStringLiteral("FFprobe could not be started: %1").arg(m_validationProcess.errorString()));
+}
+
+bool DubbingExportJob::validateProbeResult(const QByteArray &payload, ValidationStage stage,
+                                          QString *errorMessage)
+{
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
+    if (!document.isObject()) {
+        if (errorMessage) *errorMessage = QStringLiteral("FFprobe returned invalid JSON: %1")
+            .arg(parseError.errorString());
+        return false;
+    }
+    const QJsonArray streams = document.object().value(QStringLiteral("streams")).toArray();
+    bool hasVideo = false;
+    bool hasAudio = false;
+    bool hasSubtitle = false;
+    for (const QJsonValue &value : streams) {
+        const QString codecType = value.toObject().value(QStringLiteral("codec_type")).toString();
+        hasVideo |= codecType == QStringLiteral("video");
+        hasAudio |= codecType == QStringLiteral("audio");
+        hasSubtitle |= codecType == QStringLiteral("subtitle");
+    }
+    const QJsonObject format = document.object().value(QStringLiteral("format")).toObject();
+    const QJsonValue durationValue = format.value(QStringLiteral("duration"));
+    const double duration = durationValue.isString() ? durationValue.toString().toDouble()
+                                                      : durationValue.toDouble();
+    if (duration <= 0.0) {
+        if (errorMessage) *errorMessage = QStringLiteral("FFprobe reported no usable media duration.");
+        return false;
+    }
+    if (stage == ValidationStage::Source) {
+        if (!hasVideo) {
+            if (errorMessage) *errorMessage = QStringLiteral("Source media has no video stream.");
+            return false;
+        }
+        m_sourceHasVideo = hasVideo;
+        m_sourceDurationMs = qRound64(duration * 1000.0);
+        return true;
+    }
+    if (m_sourceHasVideo && !hasVideo) {
+        if (errorMessage) *errorMessage = QStringLiteral("Export validation found no video stream.");
+        return false;
+    }
+    if (!hasAudio) {
+        if (errorMessage) *errorMessage = QStringLiteral("Export validation found no audio stream.");
+        return false;
+    }
+    if (m_expectSubtitle && !hasSubtitle) {
+        if (errorMessage) *errorMessage = QStringLiteral("Export validation found no subtitle stream.");
+        return false;
+    }
+    const qint64 exportDurationMs = qRound64(duration * 1000.0);
+    const qint64 toleranceMs = qMax<qint64>(250, m_sourceDurationMs / 20);
+    if (qAbs(exportDurationMs - m_sourceDurationMs) > toleranceMs) {
+        if (errorMessage) *errorMessage = QStringLiteral("Export duration drift exceeds %1 ms.").arg(toleranceMs);
+        return false;
+    }
+    return true;
 }
 
 void DubbingExportJob::clearExportPaths()
@@ -264,6 +451,7 @@ void DubbingExportJob::clearExportPaths()
     m_exportStagingPath.clear();
     m_exportAudioPath.clear();
     m_exportSubtitlePath.clear();
+    m_exportSubtitleFontDirectory.clear();
     m_exportBurnIn = false;
 }
 

@@ -189,7 +189,7 @@ Dialog {
                 Layout.fillWidth: true
                 spacing: Theme.paddingSmall
 
-                LineIcon { name: "clock"; color: Theme.accentLight; width: 16; height: 16 }
+                LineIcon { name: "clock"; color: Theme.accentLight; Layout.preferredWidth: 16; Layout.preferredHeight: 16 }
                 Text {
                     text: qsTr("Open existing project (%1)").arg(AppController.dubbing && AppController.dubbing.history ? AppController.dubbing.history.length : 0)
                     color: Theme.textPrimary
@@ -343,7 +343,7 @@ Dialog {
                         anchors.centerIn: parent
                         visible: historyList.count === 0
                         spacing: Theme.paddingSmall
-                        LineIcon { Layout.alignment: Qt.AlignHCenter; name: "folder"; color: Theme.textMuted; width: 36; height: 36 }
+                        LineIcon { Layout.alignment: Qt.AlignHCenter; name: "folder"; color: Theme.textMuted; Layout.preferredWidth: 36; Layout.preferredHeight: 36 }
                         Text {
                             Layout.alignment: Qt.AlignHCenter
                             text: qsTr("No recent projects found.")
@@ -361,13 +361,12 @@ Dialog {
             }
 
             // Error display
-            Text {
+            ErrorGuidanceInline {
                 visible: root.actionError !== ""
                 Layout.fillWidth: true
-                text: root.actionError
-                color: Theme.danger
-                font.pixelSize: Theme.fontSmall
-                wrapMode: Text.WordWrap
+                message: root.actionError
+                source: "Project Setup"
+                compact: true
             }
 
             // Bottom Action Bar

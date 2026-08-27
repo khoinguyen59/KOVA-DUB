@@ -1,6 +1,16 @@
+namespace {
+
+bool readableDubbingArtifact(const QString &path)
+{
+    const QFileInfo info(path.trimmed());
+    return info.isFile() && info.size() > 0;
+}
+
+} // namespace
+
 QVariantList DubbingController::workflowNodes() const
 {
-    const bool hasMedia = !m_project.sourceMediaPath.trimmed().isEmpty();
+    const bool hasMedia = readableDubbingArtifact(m_project.sourceMediaPath);
     const bool hasSegments = !m_project.segments.isEmpty();
     bool hasTargets = false;
     bool allTargets = hasSegments;
@@ -10,8 +20,8 @@ QVariantList DubbingController::workflowNodes() const
         const QVariantMap segment = entry.toMap();
         hasTargets = hasTargets || !segment.value(QStringLiteral("targetText")).toString().trimmed().isEmpty();
         allTargets = allTargets && !segment.value(QStringLiteral("targetText")).toString().trimmed().isEmpty();
-        hasClips = hasClips || (!segment.value(QStringLiteral("clipPath")).toString().isEmpty()
-                                && QFileInfo::exists(segment.value(QStringLiteral("clipPath")).toString()));
+        hasClips = hasClips || readableDubbingArtifact(
+            segment.value(QStringLiteral("clipPath")).toString());
         hasConflict = hasConflict || segment.value(QStringLiteral("timingConflict")).toBool();
     }
     const QVariantMap synthesisSelection = m_workflowNodeConfigurations
@@ -44,19 +54,27 @@ QVariantList DubbingController::workflowNodes() const
             state = hasMedia ? QStringLiteral("ready") : QStringLiteral("missing");
             detail = hasMedia ? QFileInfo(m_project.sourceMediaPath).fileName() : QStringLiteral("Import audio or video");
         } else if (definition.id == QStringLiteral("ingest")) {
-            const bool normalized = !m_project.masterAudioPath.trimmed().isEmpty();
+            const bool normalized = readableDubbingArtifact(m_project.masterAudioPath)
+                && readableDubbingArtifact(m_project.analysisAudioPath);
             state = normalized ? QStringLiteral("completed") : (hasMedia ? QStringLiteral("ready") : QStringLiteral("missing"));
             detail = normalized ? QStringLiteral("Media normalized") : (hasMedia ? QStringLiteral("Ready to normalize") : QStringLiteral("Import source media"));
         } else if (definition.id == QStringLiteral("source-separate")) {
-            const bool separated = hasMedia && !m_project.backgroundAudioPath.trimmed().isEmpty();
-            state = hasMedia ? (separated ? QStringLiteral("completed") : QStringLiteral("ready")) : QStringLiteral("missing");
+            const bool normalized = readableDubbingArtifact(m_project.masterAudioPath);
+            const bool separated = normalized && readableDubbingArtifact(m_project.vocalsAudioPath)
+                && readableDubbingArtifact(m_project.backgroundAudioPath);
+            state = !hasMedia ? QStringLiteral("missing")
+                : !normalized ? QStringLiteral("blocked")
+                : (separated ? QStringLiteral("completed") : QStringLiteral("ready"));
             detail = separated ? QStringLiteral("Vocals and Background stems available")
+                               : !normalized ? QStringLiteral("Normalize source media before running Isolator")
                                : (hasMedia ? QStringLiteral("Run Isolator to create Vocals and Background stems") : QStringLiteral("Import source media"));
         } else if (definition.id == QStringLiteral("transcribe")) {
             const QString transcriptSource = normalizedTranscriptSource(
                 m_project.transcriptConfiguration.value(QStringLiteral("transcriptSource"),
                                                         QStringLiteral("stt")).toString());
-            const bool audioReady = !m_project.analysisAudioPath.trimmed().isEmpty() || !m_project.masterAudioPath.trimmed().isEmpty();
+            const bool audioReady = readableDubbingArtifact(m_project.vocalsAudioPath)
+                || readableDubbingArtifact(m_project.analysisAudioPath)
+                || readableDubbingArtifact(m_project.masterAudioPath);
             const QVariantList sttSegments = m_project.transcriptConfiguration.value(
                 QStringLiteral("sttSegments")).toList();
             const QVariantList ocrSegments = m_project.transcriptConfiguration.value(
@@ -285,6 +303,11 @@ QVariantList DubbingController::workflowNodes() const
             item.insert(QStringLiteral("notebookFile"), DubbingColabModelRoutes::notebookForModel(
                 ocrUsesColab ? QStringLiteral("subtitle-ocr") : definition.id,
                 ocrUsesColab ? m_subtitleOcr->colabModelId() : configuredModel));
+        const bool isReadyOrComplete = (state == QStringLiteral("ready") || state == QStringLiteral("completed"));
+        const bool isCompleted = (state == QStringLiteral("completed"));
+        item.insert(QStringLiteral("canRun"), isReadyOrComplete);
+        item.insert(QStringLiteral("completed"), isCompleted);
+        item.insert(QStringLiteral("runReady"), isReadyOrComplete);
         result.append(item);
     }
     return result;
@@ -491,7 +514,8 @@ bool DubbingController::workflowReady() const
         QStringLiteral("executionProvider"), QStringLiteral("local-dev"))).toString();
     const QVariantMap savedClonePreset = selectedCloneVoicePreset();
     const QString savedCloneFamily = savedClonePreset.value(
-        QStringLiteral("familyId")).toString().trimmed().toLower();
+        QStringLiteral("voiceCloneModelId"), savedClonePreset.value(
+        QStringLiteral("familyId"))).toString().trimmed().toLower();
     const bool savedCloneDirect = executionProviderFromId(synthesisProviderId, &synthesisProvider)
         && synthesisProvider == ExecutionProvider::ColabDirect
         && !savedCloneFamily.isEmpty()
@@ -508,7 +532,7 @@ bool DubbingController::workflowReady() const
                         synthesisParameters.value(QStringLiteral("modelId"))).toString())));
     const bool ttsReady = remoteTtsSelected || (m_tts && m_tts->isModelLoaded());
     return workflowGraphValid()
-        && !m_project.sourceMediaPath.isEmpty()
+        && QFileInfo(m_project.sourceMediaPath).isFile()
         && !m_project.targetLanguage.trimmed().isEmpty()
         && cloneVoiceSelectionValid()
         && ttsReady
@@ -855,7 +879,7 @@ bool DubbingController::runWorkflow(const QString &outputPath)
         setError(QStringLiteral("Choose an output path before running the full dubbing workflow."));
         return false;
     }
-    if (!workflowGraphValid() || m_project.sourceMediaPath.isEmpty()) {
+    if (!workflowGraphValid() || !QFileInfo(m_project.sourceMediaPath).isFile()) {
         setError(QStringLiteral("Import source media before running the dubbing workflow."));
         return false;
     }
@@ -945,7 +969,7 @@ bool DubbingController::startAutomaticWorkflow(const QString &outputPath)
         setError(QStringLiteral("Choose an output path before generating the final dub."));
         return false;
     }
-    if (!workflowGraphValid() || m_project.sourceMediaPath.trimmed().isEmpty()) {
+    if (!workflowGraphValid() || !QFileInfo(m_project.sourceMediaPath).isFile()) {
         setError(QStringLiteral("Import source media before generating the final dub."));
         return false;
     }
@@ -1061,8 +1085,10 @@ void DubbingController::startStepByStep()
     const QString transcriptSource = normalizedTranscriptSource(
         m_project.transcriptConfiguration.value(
             QStringLiteral("transcriptSource"), QStringLiteral("stt")).toString());
-    if (m_project.masterAudioPath.isEmpty()) setCurrentStep(QStringLiteral("ingest"));
-    else if (m_project.backgroundAudioPath.isEmpty() && transcriptSource == QStringLiteral("stt"))
+    if (!readableDubbingArtifact(m_project.masterAudioPath)) setCurrentStep(QStringLiteral("ingest"));
+    else if ((!readableDubbingArtifact(m_project.vocalsAudioPath)
+              || !readableDubbingArtifact(m_project.backgroundAudioPath))
+             && transcriptSource == QStringLiteral("stt"))
         setCurrentStep(QStringLiteral("source-separate"));
     else if (m_project.segments.isEmpty()) setCurrentStep(QStringLiteral("transcribe"));
     else {
@@ -1075,8 +1101,8 @@ void DubbingController::startStepByStep()
         }
         if (!allTranslated) setCurrentStep(QStringLiteral("translate"));
         else if (!allGenerated) setCurrentStep(QStringLiteral("synthesize"));
-        else if (previewPath().isEmpty() || !QFileInfo::exists(previewPath())) setCurrentStep(QStringLiteral("mix"));
-        else if (exportPath().isEmpty() || !QFileInfo::exists(exportPath())) setCurrentStep(QStringLiteral("export"));
+        else if (previewPath().isEmpty() || !QFileInfo(previewPath()).isFile()) setCurrentStep(QStringLiteral("mix"));
+        else if (exportPath().isEmpty() || !QFileInfo(exportPath()).isFile()) setCurrentStep(QStringLiteral("export"));
         else setCurrentStep(QStringLiteral("completed"));
     }
     Logger::info(QStringLiteral("DubbingController"),
@@ -1086,7 +1112,7 @@ void DubbingController::startStepByStep()
 bool DubbingController::runCurrentStep(const QString &outputPath)
 {
     if (m_dubbingEntryGateActive) {
-        setError(QStringLiteral("Choose an entry mode before running a Dubbing stage."));
+        setError(QStringLiteral("Choose an entry mode before running the Dubbing workflow."));
         return false;
     }
     if (m_workflowMode != QStringLiteral("step")) startStepByStep();
@@ -1120,7 +1146,7 @@ bool DubbingController::runCurrentStep(const QString &outputPath)
         m_runner->startSourceSeparation(
             m_project.masterAudioPath,
             m_workflowNodeConfigurations.value(QStringLiteral("source-separate")).toMap());
-        return m_runner->processing() || !m_project.masterAudioPath.isEmpty();
+        return m_runner->processing();
     }
     if (step == QStringLiteral("transcribe")) {
         if (transcriptSource == QStringLiteral("reconcile"))
@@ -1150,7 +1176,7 @@ bool DubbingController::runCurrentStep(const QString &outputPath)
 bool DubbingController::rerunStep(const QString &stepId, const QString &outputPath)
 {
     if (m_dubbingEntryGateActive) {
-        setError(QStringLiteral("Choose an entry mode before running a Dubbing stage."));
+        setError(QStringLiteral("Choose an entry mode before running the Dubbing workflow."));
         return false;
     }
     const QString requestedStep = stepId.trimmed();
@@ -1201,6 +1227,47 @@ bool DubbingController::rerunStep(const QString &stepId, const QString &outputPa
                  QStringLiteral("Rerun step step=%1 output=%2 project=%3")
                      .arg(step, outputPath, m_project.projectPath));
     return runCurrentStep(outputPath);
+}
+
+bool DubbingController::runWorkflowNode(const QString &nodeId, const QString &outputPath)
+{
+    const QString normalized = nodeId.trimmed().toLower();
+    Logger::info(QStringLiteral("DubbingController"),
+                 QStringLiteral("runWorkflowNode requested: nodeId=%1 (normalized=%2)").arg(nodeId, normalized));
+    if (normalized == QStringLiteral("normalize") || normalized == QStringLiteral("ingest")
+        || normalized == QStringLiteral("step-2")) {
+        return rerunStep(QStringLiteral("ingest"), outputPath);
+    }
+    if (normalized == QStringLiteral("separate") || normalized == QStringLiteral("isolator")
+        || normalized == QStringLiteral("source-separate") || normalized == QStringLiteral("step-3")) {
+        return rerunStep(QStringLiteral("source-separate"), outputPath);
+    }
+    if (normalized == QStringLiteral("transcribe") || normalized == QStringLiteral("stt")
+        || normalized == QStringLiteral("review-transcript") || normalized == QStringLiteral("step-4")) {
+        return rerunStep(QStringLiteral("transcribe"), outputPath);
+    }
+    if (normalized == QStringLiteral("subtitle-ocr") || normalized == QStringLiteral("ocr")) {
+        return runSubtitleOcrIndependently();
+    }
+    if (normalized == QStringLiteral("translate") || normalized == QStringLiteral("review-translation")
+        || normalized == QStringLiteral("step-6")) {
+        return rerunStep(QStringLiteral("translate"), outputPath);
+    }
+    if (normalized == QStringLiteral("synthesize") || normalized == QStringLiteral("tts")
+        || normalized == QStringLiteral("assign-voices") || normalized == QStringLiteral("step-7")) {
+        return rerunStep(QStringLiteral("synthesize"), outputPath);
+    }
+    if (normalized == QStringLiteral("fit-timing") || normalized == QStringLiteral("alignment-subtitle")
+        || normalized == QStringLiteral("review-conflicts") || normalized == QStringLiteral("step-5")) {
+        return rerunStep(QStringLiteral("fit-timing"), outputPath);
+    }
+    if (normalized == QStringLiteral("mix")) {
+        return rerunStep(QStringLiteral("mix"), outputPath);
+    }
+    if (normalized == QStringLiteral("export") || normalized == QStringLiteral("step-8")) {
+        return rerunStep(QStringLiteral("export"), outputPath);
+    }
+    return rerunStep(nodeId, outputPath);
 }
 
 bool DubbingController::approveWorkflowReview(const QVariantMap &artifact)

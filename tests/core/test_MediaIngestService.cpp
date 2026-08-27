@@ -1007,6 +1007,21 @@ void TestMediaIngestService::mediaBatchCanRunEachStageAcrossTheSelectedQueue()
     }
 }
 
+void TestMediaIngestService::ingestUsesTwoPassEbuR128AndValidatedCache()
+{
+    const QDir sourceRoot(QStringLiteral(LASTUDIO_SOURCE_DIR));
+    QFile serviceFile(sourceRoot.filePath(QStringLiteral("src/dubbing/media/MediaIngestService.cpp")));
+    QVERIFY(serviceFile.open(QIODevice::ReadOnly));
+    const QString source = QString::fromUtf8(serviceFile.readAll());
+
+    QVERIFY(source.contains(QStringLiteral("loudnorm=I=-16:TP=-1.5:LRA=11")));
+    QVERIFY(source.contains(QStringLiteral("measured_I")));
+    QVERIFY(source.contains(QStringLiteral("measured_TP")));
+    QVERIFY(source.contains(QStringLiteral("normalizationMethod")));
+    QVERIFY(source.contains(QStringLiteral("ebur128-r128-2pass")));
+    QVERIFY(source.contains(QStringLiteral("startLoudnessMeasurement()")));
+}
+
 void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
 {
     const QDir sourceRoot(QStringLiteral(LASTUDIO_SOURCE_DIR));
@@ -1078,7 +1093,9 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(acquisition.contains(QStringLiteral("Download public links locally")));
     QVERIFY(dubbingSource.contains(QStringLiteral("DubbingMediaQueueDialog")));
     QVERIFY(dubbingSource.contains(QStringLiteral("Show source setup by default only until a source exists")));
-    QVERIFY(dubbingSource.contains(QStringLiteral("Change / download source")));
+    QVERIFY(!dubbingSource.contains(QStringLiteral("Change / download source")));
+    QVERIFY(!dubbingSource.contains(QStringLiteral("Replace video")));
+    QVERIFY(dubbingSource.contains(QStringLiteral("dubbingVideoThumbnail")));
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("Downloaded media")));
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("Import / Normalize")));
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("Export / Output")));
@@ -1097,25 +1114,31 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingStepReviewPanel")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingTimelineResizeHandle")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingTaskShelf")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("compactDubbingControls")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("visible: root.compactDubbingControls && node !== null")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("DubbingContextDrawer")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("contextDrawerId")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("visible: root.compactDubbingControls && node !== null")));
     QVERIFY(dubbingPage.contains(QStringLiteral("isAdvancedNodeInspectorOpen")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("Dubbing workbench shelf or full-width timeline is unavailable")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("Layout.minimumWidth: root.compactDubbingControls ? 240 : 320")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("Dubbing workbench shelf or full-width timeline is unavailable")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("Layout.minimumWidth: root.compactDubbingControls ? 240 : 320")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingContextDrawer.openContext")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing History")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing Preview")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize task controls")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing timeline")));
     QVERIFY(dubbingPage.contains(QStringLiteral("DragHandler")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("not a horizontally flicked canvas")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("video workspace overlays the task review panel")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("task review panel extends outside the Dubbing workspace")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("Dubbing header clips an action or overlays its workflow rail")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceScroller")));
+    // The current workspace keeps the media canvas in the central row and
+    // mounts review/settings content in an on-demand right drawer.  Keep the
+    // contract tied to the actual object graph instead of the old prose
+    // diagnostics that described the removed three-pane layout.
+    QVERIFY(dubbingPage.contains(QStringLiteral("id: dubbingWorkspaceRow")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("id: dubbingPreviewWorkspace")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("right-side review/inspector content is an on-demand drawer")));
     QVERIFY(dubbingPage.contains(QStringLiteral("property bool previewFocusMode")));
     QVERIFY(dubbingSource.contains(QStringLiteral("dubbingPreviewFocusToggle")));
-    QVERIFY(dubbingSource.contains(QStringLiteral("Focus video")));
+    QVERIFY(!dubbingSource.contains(QStringLiteral("text: qsTr(\"Focus video\")")));
     QVERIFY(dubbingSource.contains(QStringLiteral("dubbingOpenVideoButton")));
-    QVERIFY(dubbingSource.contains(QStringLiteral("Replace video")));
+    QVERIFY(!dubbingSource.contains(QStringLiteral("Replace video")));
     QVERIFY(dubbingSource.contains(QStringLiteral("dubbingPreviewFrameModeSelector")));
     QVERIFY(dubbingSource.contains(QStringLiteral("previewFrameAspectRatio")));
     QVERIFY(dubbingSource.contains(QStringLiteral("id: previewFrame")));
@@ -1128,7 +1151,8 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(dubbingSource.contains(QStringLiteral("objectName: \"dubbingPreviewToolbar\"")));
     QVERIFY(dubbingSource.contains(QStringLiteral("All preview controls share one horizontal editor toolbar")));
     QVERIFY(dubbingSource.contains(QStringLiteral("dubbingPreviewModeSelector")));
-    QVERIFY(dubbingSource.contains(QStringLiteral("Layout.minimumHeight: root.isVideoSource ? 440 : 300")));
+    QVERIFY(dubbingSource.contains(QStringLiteral("property bool showOcrTools")));
+    QVERIFY(dubbingSource.contains(QStringLiteral("Layout.minimumHeight: root.isVideoSource")));
     QVERIFY(dubbingHeader.contains(QStringLiteral("id: workflowStepsFlickable")));
     QVERIFY(dubbingHeader.contains(QStringLiteral("id: headerActionCluster")));
     QVERIFY(dubbingHeader.contains(QStringLiteral("function qmlSmokeLayoutCheck()")));

@@ -286,7 +286,7 @@ StudioShell {
                     Text { text: translation.statusText; color: translation.processing ? Theme.warning : Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                     PrimaryButton { text: translation.processing ? qsTr("Cancel") : qsTr("Translate all"); iconName: translation.processing ? "stop" : "translate"; enabled: translation.processing || translation.segments.length > 0; onClicked: translation.processing ? translation.cancel() : translation.translateAll() }
                 }
-                Text { visible: translation.errorText !== ""; Layout.fillWidth: true; text: translation.errorText; color: Theme.danger; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
+                Text { visible: translation.errorText !== ""; Layout.fillWidth: true; text: AppController.explainError(translation.errorText, "Translation").summary; color: Theme.danger; font.pixelSize: Theme.fontSmall; wrapMode: Text.WordWrap }
                 ListView {
                     id: editorList
                     Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: Theme.paddingSmall; model: translation.segments

@@ -280,10 +280,13 @@ bool DubbingSynthesisJob::start(const QVariantList &segments, const QString &pro
                     fail(QStringLiteral("Confirm permission to use the selected cloned voice before generating dubbing audio."));
                     return false;
                 }
+                const QVariantMap savedPreset = settings.value(
+                    QStringLiteral("savedTtsVoicePreset")).toMap();
                 const QString cloneModel = (m_legacyCloneSettings
                     ? settings.value(QStringLiteral("voiceCloneModelId"))
-                    : settings.value(QStringLiteral("savedTtsVoicePreset")).toMap()
-                        .value(QStringLiteral("familyId"))).toString().trimmed().toLower();
+                    : savedPreset.value(QStringLiteral("voiceCloneModelId"),
+                                        savedPreset.value(QStringLiteral("familyId"))))
+                    .toString().trimmed().toLower();
                 if (cloneModel.isEmpty()) {
                     fail(QStringLiteral("The selected saved voice has no compatible Voice Cloning family."));
                     return false;

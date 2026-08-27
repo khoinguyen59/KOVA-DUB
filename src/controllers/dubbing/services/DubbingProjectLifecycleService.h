@@ -27,7 +27,7 @@ public:
     QUrl sourceMediaUrl() const;
     QUrl playbackMediaUrl() const;
     QString normalizedAudioPath() const { return m_project.masterAudioPath; }
-    QString vocalsPath() const { return m_project.analysisAudioPath; }
+    QString vocalsPath() const { return m_project.vocalsAudioPath; }
     QString backgroundPath() const { return m_project.backgroundAudioPath; }
     QString dubbedVocalPath() const { return m_dubbedVocalPath; }
     QString previewPath() const { return m_previewPath; }

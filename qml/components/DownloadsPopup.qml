@@ -347,7 +347,8 @@ Popup {
                                     Text {
                                         text: {
                                             if (modelData.status === "failed") {
-                                                return qsTr("Failed • %1").arg(modelData.errorMsg || qsTr("Unknown error"));
+                                                return qsTr("Failed: %1").arg(
+                                                    AppController.explainError(modelData.errorMsg || qsTr("Unknown error"), "Download").summary)
                                             }
                                             return qsTr("Download • %1").arg(formatBytes(modelData.bytesTotal));
                                         }

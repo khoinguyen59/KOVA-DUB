@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../base"
+import "../shared"
 import LAStudio
 
 Rectangle {
@@ -51,11 +52,11 @@ Rectangle {
     function qmlSmokeCompactLayoutCheck() {
         if (!root.compact)
             return true
-        var controls = [compactModelAction, compactColabAction,
+        var controls = [compactModelAction,
                         compactReloadAction, compactUnloadAction,
                         compactRunAction, compactRerunAction,
                         compactFixAction, compactNextAction,
-                        compactRouteAction, compactArtifactUploadAction,
+                        compactArtifactUploadAction,
                         compactIsolationTransferFormat]
         for (var index = 0; index < controls.length; ++index) {
             var control = controls[index]
@@ -71,14 +72,10 @@ Rectangle {
     }
 
     Layout.fillWidth: true
-    Layout.preferredHeight: root.compact
-                            ? ((root.remoteRouteConfigurable() ? 430 : 294)
-                               + (root.nodeId === "source-separate" ? 52 : 0)
-                               + (root.artifactUploadAvailable ? 48 : 0))
-                            : (root.remoteRouteConfigurable() ? 146 : 86)
-    // Never permit a task-control child to render outside its owning pane.
-    // Compact controls stack their primary actions below instead of relying on
-    // RowLayout to squeeze two labelled buttons into a narrow shelf.
+    implicitHeight: root.compact
+                    ? (compactLayout.implicitHeight + Theme.paddingSmall * 2 + (root.remoteRouteConfigurable() ? Theme.paddingXL : 0))
+                    : (root.remoteRouteConfigurable() ? 146 : 86)
+    Layout.preferredHeight: implicitHeight
     clip: true
     radius: Theme.radiusSmall
     color: Theme.surfaceAlt
@@ -159,20 +156,18 @@ Rectangle {
             enabled: root.setupEditable()
             onClicked: root.fixRequested()
         }
-        PrimaryButton { visible: root.nextNodeId !== "" && root.nextReady; text: qsTr("Next"); iconName: "chevron-right"; enabled: !root.dubbing.processing; onClicked: root.nextRequested() }
+        PrimaryButton { visible: root.nextNodeId !== ""; text: qsTr("Next step ➔"); iconName: "chevron-right"; buttonColor: Theme.accent; enabled: !root.dubbing.processing; onClicked: root.nextRequested() }
     }
 
     // A narrow task shelf must stack the actions; otherwise the buttons are
     // silently compressed or clipped at typical 1280px editor widths.
     ColumnLayout {
+        id: compactLayout
         visible: root.compact
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.bottom: parent.bottom
         anchors.margins: Theme.paddingSmall
-        anchors.bottomMargin: root.remoteRouteConfigurable()
-                              ? Theme.paddingXL + Theme.paddingMedium : Theme.paddingSmall
         spacing: 5
 
         RowLayout {
@@ -218,17 +213,6 @@ Rectangle {
                 enabled: !root.lifecycleBusy()
                 quiet: root.modelState() === 3
                 onClicked: root.runModelAction()
-            }
-            PrimaryButton {
-                id: compactColabAction
-                visible: root.remoteRouteConfigurable()
-                text: qsTr("Colab")
-                iconName: "cloud"
-                quiet: true
-                Layout.fillWidth: true
-                enabled: root.setupEditable()
-                toolTip: qsTr("Configure this task to use its Direct Colab GPU worker")
-                onClicked: root.startColabSetup()
             }
             PrimaryButton {
                 id: compactArtifactUploadAction
@@ -288,24 +272,7 @@ Rectangle {
                 enabled: root.setupEditable()
                 onClicked: root.fixRequested()
             }
-            PrimaryButton { id: compactNextAction; visible: root.nextNodeId !== "" && root.nextReady; text: qsTr("Next"); iconName: "chevron-right"; Layout.fillWidth: true; enabled: !root.dubbing.processing; onClicked: root.nextRequested() }
-        }
-        PrimaryButton {
-            id: compactRouteAction
-            visible: root.remoteRouteConfigurable()
-            Layout.fillWidth: true
-            text: root.currentExecutionProvider() === "colab-direct"
-                  ? qsTr("Manage Colab route") : qsTr("Configure route / model")
-            iconName: "settings"
-            quiet: true
-            enabled: root.setupEditable()
-            toolTip: qsTr("Open the exact route and model setup without allowing controls to overflow this task pane")
-            onClicked: {
-                if (root.currentExecutionProvider() === "colab-direct")
-                    root.startColabSetup()
-                else
-                    root.configureRequested()
-            }
+            PrimaryButton { id: compactNextAction; visible: root.nextNodeId !== ""; text: qsTr("Tiếp tục bước sau ➔"); iconName: "chevron-right"; buttonColor: Theme.accent; Layout.fillWidth: true; enabled: !root.dubbing.processing; onClicked: root.nextRequested() }
         }
     }
 
@@ -428,7 +395,7 @@ Rectangle {
         parent: Overlay.overlay
         modal: true
         title: qsTr("API Gateway for %1").arg(root.nodeTitle)
-        width: Math.min(520, Overlay.overlay.width - Theme.paddingXL * 2)
+        width: Math.min(520, Math.max(320, (Overlay.overlay ? Overlay.overlay.width : (parent ? parent.width : 520)) - Theme.paddingXL * 2))
         anchors.centerIn: parent
         standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -506,7 +473,7 @@ Rectangle {
         modal: true
         property bool awaitingVerification: false
         title: qsTr("Colab GPU for %1").arg(root.nodeTitle)
-        width: Math.min(520, Overlay.overlay.width - Theme.paddingXL * 2)
+        width: Math.min(520, Math.max(320, (Overlay.overlay ? Overlay.overlay.width : (parent ? parent.width : 520)) - Theme.paddingXL * 2))
         anchors.centerIn: parent
         standardButtons: Dialog.Ok | Dialog.Cancel
 
@@ -520,26 +487,26 @@ Rectangle {
             colabWorkerUrl.text = session ? session.workerUrl : ""
             if (!awaitingVerification) {
                 colabWorkerToken.text = ""
-                colabWorkerError.text = ""
+                colabWorkerError.message = ""
             }
         }
         onAccepted: {
             var selected = root.currentRemoteModel()
             if (!root.dubbing.selectWorkflowColabModel(root.nodeId, selected)) {
-                colabWorkerError.text = qsTr("Select one of the exact Colab models listed for this node.")
+                colabWorkerError.message = qsTr("Select one of the exact Colab models listed for this node.")
                 colabWorkerDialog.open()
                 return
             }
             var session = root.colabSessionForNode()
             if (!session) {
-                colabWorkerError.text = qsTr("This workflow node has no Colab worker route.")
+                colabWorkerError.message = qsTr("This workflow node has no Colab worker route.")
                 colabWorkerDialog.open()
                 return
             }
             if (!session.connectTemporaryWorker(
                     colabWorkerUrl.text.trim(), colabWorkerToken.text,
                     root.colabCapabilityForNode(), selected)) {
-                colabWorkerError.text = session.lastError
+                colabWorkerError.message = session.lastError
                 colabWorkerDialog.open()
                 return
             }
@@ -608,13 +575,11 @@ Rectangle {
                 font.pixelSize: 10
                 wrapMode: Text.WordWrap
             }
-            Text {
+            ErrorGuidanceInline {
                 id: colabWorkerError
                 Layout.fillWidth: true
-                visible: text !== ""
-                color: Theme.danger
-                font.pixelSize: Theme.fontSmall
-                wrapMode: Text.WordWrap
+                message: ""
+                source: "Dubbing Colab worker"
             }
         }
     }
@@ -628,7 +593,7 @@ Rectangle {
                 colabWorkerDialog.close()
                 return
             }
-            colabWorkerError.text = message
+            colabWorkerError.message = message
             if (!colabWorkerDialog.visible) colabWorkerDialog.open()
         }
     }

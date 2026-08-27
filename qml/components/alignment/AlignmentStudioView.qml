@@ -280,7 +280,7 @@ WorkflowStudioShell {
 
     function emptyStateMessage() {
         if (alignmentExecution.errorMessage !== "" && inputReady)
-            return alignmentExecution.errorMessage
+            return AppController.explainError(alignmentExecution.errorMessage, "Alignment").summary
         if (colabSelected && !sessionReady)
             return qsTr("Connect the direct Colab alignment worker in Settings.")
         if (executionBackendReady && !sessionReady)

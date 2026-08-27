@@ -26,6 +26,7 @@
 #include "test_MediaIngestService.h"
 #include "test_MediaToolService.h"
 #include "test_HardwareManager.h"
+#include "test_AppErrorCatalog.h"
 #include "test_SubtitleVoice.h"
 #include "test_SubtitleOcrPipeline.h"
 #include "test_SubtitleOcrController.h"
@@ -276,6 +277,11 @@ int main(int argc, char *argv[])
     {
         LAStudio::TestHardwareManager suite;
         runSuite(&suite, "TestHardwareManager");
+    }
+
+    {
+        LAStudio::TestAppErrorCatalog suite;
+        runSuite(&suite, "TestAppErrorCatalog");
     }
 
     {

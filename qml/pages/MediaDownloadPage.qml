@@ -172,7 +172,9 @@ Rectangle {
                                 Text {
                                     Layout.fillWidth: true
                                     visible: (modelData.status || "") !== ""
-                                    text: modelData.status || ""
+                                    text: modelData.downloadState === "failed"
+                                          ? AppController.explainError(modelData.status || qsTr("Download failed"), "Media Download").summary
+                                          : (modelData.status || "")
                                     color: modelData.downloadState === "failed" ? Theme.error : Theme.textSecondary
                                     font.pixelSize: Theme.fontSmall
                                     wrapMode: Text.WrapAnywhere

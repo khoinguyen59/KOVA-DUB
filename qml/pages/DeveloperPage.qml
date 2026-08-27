@@ -542,7 +542,7 @@ Rectangle {
 
                 Text {
                     visible: AppController.apiServer.lastError !== ""
-                    text: AppController.apiServer.lastError
+                    text: AppController.explainError(AppController.apiServer.lastError, "Local API Server").summary
                     color: Theme.danger
                     font.pixelSize: Theme.fontSmall
                     wrapMode: Text.WordWrap

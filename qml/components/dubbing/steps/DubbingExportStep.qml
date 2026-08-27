@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "../../base"
 import LAStudio
@@ -11,9 +10,10 @@ Rectangle {
     property bool stepComplete: false
 
     signal openExportDialogRequested()
+    signal previousStepRequested()
 
     Layout.fillWidth: true
-    implicitHeight: layout.implicitHeight + Theme.paddingLarge * 2
+    implicitHeight: layout.implicitHeight + Theme.paddingMedium * 2
     radius: Theme.radiusMedium
     color: Qt.rgba(Theme.surfaceLevel2.r, Theme.surfaceLevel2.g, Theme.surfaceLevel2.b, 0.60)
     border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -22,8 +22,8 @@ Rectangle {
     ColumnLayout {
         id: layout
         anchors.fill: parent
-        anchors.margins: Theme.paddingLarge
-        spacing: Theme.paddingMedium
+        anchors.margins: Theme.paddingMedium
+        spacing: Theme.paddingSmall
 
         RowLayout {
             Layout.fillWidth: true
@@ -37,27 +37,31 @@ Rectangle {
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
                 Text {
                     text: qsTr("Ghép hoàn chỉnh Video + Giọng Lồng Tiếng + Nhạc Nền + Phụ Đề (Hardsub/Softsub) hoặc xuất Project CapCut.")
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
             }
         }
 
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: exportInfoLayout.implicitHeight + Theme.paddingMedium * 2
+            implicitHeight: exportInfoLayout.implicitHeight + Theme.paddingSmall * 2
             radius: Theme.radiusSmall
-            color: (root.dubbing.exportPath.length > 0 || root.dubbing.previewPath.length > 0) ? Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.08) : Qt.rgba(1, 1, 1, 0.03)
-            border.color: (root.dubbing.exportPath.length > 0 || root.dubbing.previewPath.length > 0) ? Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.30) : Qt.rgba(1, 1, 1, 0.08)
+            color: ((root.dubbing.exportPath || "").length > 0 || (root.dubbing.previewPath || "").length > 0) ? Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.08) : Qt.rgba(1, 1, 1, 0.03)
+            border.color: ((root.dubbing.exportPath || "").length > 0 || (root.dubbing.previewPath || "").length > 0) ? Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.30) : Qt.rgba(1, 1, 1, 0.08)
             border.width: 1
 
             ColumnLayout {
                 id: exportInfoLayout
                 anchors.fill: parent
-                anchors.margins: Theme.paddingMedium
+                anchors.margins: Theme.paddingSmall
                 spacing: Theme.paddingSmall
 
                 RowLayout {
@@ -80,13 +84,29 @@ Rectangle {
                     }
                 }
 
+                // Main Action Button
+                PrimaryButton {
+                    text: qsTr("🚀 Mở Hộp Thoại Xuất File (Export Dialog)")
+                    iconName: "download"
+                    buttonColor: Theme.accent
+                    Layout.preferredHeight: 40
+                    Layout.fillWidth: true
+                    enabled: !root.dubbing.processing && (root.dubbing.sourceMediaPath || "").length > 0
+                    onClicked: root.openExportDialogRequested()
+                }
+
+                // Navigation Row
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+
                     PrimaryButton {
-                        text: qsTr("Cấu hình Xuất Video / Dự Án")
-                        iconName: "download"
-                        enabled: !root.dubbing.processing && root.dubbing.sourceMediaPath.length > 0
-                        onClicked: root.openExportDialogRequested()
+                        text: qsTr("⬅ Quay lại")
+                        iconName: "chevron-left"
+                        quiet: true
+                        Layout.preferredHeight: 38
+                        Layout.fillWidth: true
+                        onClicked: root.previousStepRequested()
                     }
                 }
             }

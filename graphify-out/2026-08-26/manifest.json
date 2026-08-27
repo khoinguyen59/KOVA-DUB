@@ -1212,21 +1212,21 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingColabModelRoutes.h": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788875,
-    "ast_hash": "b2b773b1ebd08e73854d16e91294e4f5",
+    "mtime": 1787741161.457451,
+    "seen": 1787741376.9988365,
+    "ast_hash": "1af8a4a4ddbf15ec5dfc44ebc289f45b",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.cpp": {
-    "mtime": 1787683489.7975814,
-    "seen": 1787686997.5957355,
-    "ast_hash": "1011b8e6cd4d376e3dfb3faa7f8dc546",
+    "mtime": 1787741180.9645865,
+    "seen": 1787741376.9988394,
+    "ast_hash": "b9d22e09c7740bf50cf5eb20e2406d41",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.h": {
-    "mtime": 1787684340.188683,
-    "seen": 1787686997.5957367,
-    "ast_hash": "38160d250f562a0eac18c64778bd5343",
+    "mtime": 1787750033.290005,
+    "seen": 1787760522.2792497,
+    "ast_hash": "5d3ad6f3cea39f27c31cee6dd382bb5d",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingExportJob.cpp": {
@@ -4314,9 +4314,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Workflow.cpp": {
-    "mtime": 1787666427.4196656,
-    "seen": 1787666975.8594246,
-    "ast_hash": "d8bdda6e4dcec8e83eb2ba1cf96babf3",
+    "mtime": 1787750049.6299045,
+    "seen": 1787760522.2820468,
+    "ast_hash": "a89ae024655aedb4e12182677b305b29",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingTranslationFix_Candidate.cpp": {
@@ -4488,9 +4488,9 @@
     "semantic_hash": ""
   },
   "src/core/models/CatalogManager.cpp": {
-    "mtime": 1787563435.0,
-    "seen": 1787686997.6007843,
-    "ast_hash": "aff4431fc86225a8c38394416ba32387",
+    "mtime": 1787748022.3012712,
+    "seen": 1787748669.0156844,
+    "ast_hash": "28b14f93b569567e8e62cd106e2ab5ae",
     "semantic_hash": ""
   },
   "src/core/models/CatalogManager.h": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787737607.915154,
-    "seen": 1787738964.6253412,
-    "ast_hash": "39f633269c109a50d7436b445dd5a5d6",
+    "mtime": 1787748556.834389,
+    "seen": 1787748669.065285,
+    "ast_hash": "a6bc2bf870f32571fbb11ec6fd668a28",
     "semantic_hash": ""
   },
   "data/presets/vieneu_voices.json": {

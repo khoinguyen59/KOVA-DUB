@@ -30,7 +30,7 @@ Rectangle {
             font.weight: Font.Bold
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
         // Route selector
         Text { text: qsTr("Môi trường xử lý:"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }

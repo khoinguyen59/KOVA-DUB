@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Dialogs
 import LAStudio
 import "../base"
 
@@ -19,7 +18,7 @@ Dialog {
     property string pendingDeleteName: ""
 
     // Signal emitted when user selects a voice
-    signal voiceSelected(string audioPath, string referenceText, string name, string familyId)
+    signal voiceSelected(string audioPath, string referenceText, string name, string familyId, string voiceId)
 
     title: ""
     modal: true
@@ -91,7 +90,7 @@ Dialog {
     function togglePlayVoice(item) {
         if (!item) return
         var path = resolveAudioPath(item)
-        if (!path) return
+        if (!path || path.length === 0) return
         
         if (root.currentPlayingPath === path) {
             if (AppController.player && AppController.player.playing && !AppController.player.paused) {
@@ -102,6 +101,9 @@ Dialog {
                 AppController.player.playFile(path)
             }
         } else {
+            if (AppController.player && AppController.player.playing) {
+                AppController.player.stop()
+            }
             root.currentPlayingPath = path
             if (AppController.player) {
                 AppController.player.playFile(path)
@@ -127,7 +129,7 @@ Dialog {
         root.selectedAudioPath = resolveAudioPath(item)
         root.selectedReferenceText = item.referenceTranscript || item.referenceText || ""
         root.selectedVoiceName = (item.name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
-        root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText, root.selectedVoiceName, item.modelFamily || "")
+        root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText, item.name || root.selectedVoiceName, item.modelFamily || "", item.id || "")
         root.close()
     }
 
@@ -136,16 +138,16 @@ Dialog {
         var vName = String(v.name || "").toLowerCase()
         var vAccent = String(v.accent || "").toLowerCase()
         var vFam = String(v.modelFamily || v.familyId || "").toLowerCase()
+        var vCat = String(v.category || "").toLowerCase()
         var vTags = Array.isArray(v.tags) ? v.tags.join(" ").toLowerCase() : String(v.tags || "").toLowerCase()
         var isCustom = v.isUserPreset === true || v.canDelete === true || v.isBuiltin === false
 
         if (cat === "all") return true
         if (cat === "custom") return isCustom
-        if (cat === "capcut") return vName.indexOf("capcut") !== -1 || vTags.indexOf("capcut") !== -1 || vAccent.indexOf("capcut") !== -1
-        if (cat === "vieneu_bac") return vAccent.indexOf("bắc") !== -1 || vTags.indexOf("bắc") !== -1 || vName.indexOf("bắc") !== -1 || vName.indexOf("minh đức") !== -1 || vName.indexOf("ngọc huyền") !== -1 || vName.indexOf("trúc ly") !== -1 || vName.indexOf("ngọc linh") !== -1
-        if (cat === "vieneu_trung") return vAccent.indexOf("trung") !== -1 || vTags.indexOf("trung") !== -1 || vName.indexOf("trung") !== -1 || vName.indexOf("quang sơn") !== -1 || vName.indexOf("ngọc trân") !== -1
-        if (cat === "vieneu_nam") return (vAccent.indexOf("nam") !== -1 && vAccent.indexOf("bắc") === -1) || (vTags.indexOf("miền nam") !== -1) || vName.indexOf("nam · nam") !== -1 || vName.indexOf("xuân vĩnh") !== -1 || vName.indexOf("thục đoan") !== -1 || vName.indexOf("vĩnh nam") !== -1
-        if (cat === "omnivoice") return vFam === "omnivoice" || vTags.indexOf("omnivoice") !== -1 || vName.indexOf("omnivoice") !== -1
+        if (cat === "capcut") return vCat === "capcut" || vName.indexOf("capcut") !== -1 || vTags.indexOf("capcut") !== -1
+        if (cat === "vieneu_bac") return (vCat === "vieneu" || vFam === "vieneu-tts" || vTags.indexOf("vieneu") !== -1) && (vAccent.indexOf("bắc") !== -1 || vTags.indexOf("bắc") !== -1 || vName.indexOf("bắc") !== -1)
+        if (cat === "vieneu_nam") return (vCat === "vieneu" || vFam === "vieneu-tts" || vTags.indexOf("vieneu") !== -1) && (vAccent.indexOf("nam") !== -1 || vTags.indexOf("nam") !== -1 || vName.indexOf("nam") !== -1)
+        if (cat === "omnivoice") return vCat === "omnivoice" || vFam === "omnivoice" || vTags.indexOf("omnivoice") !== -1 || vName.indexOf("omnivoice") !== -1
         return false
     }
 
@@ -255,8 +257,8 @@ Dialog {
 
                 // Header Icon Glow Box
                 Rectangle {
-                    width: 42
-                    height: 42
+                    Layout.preferredWidth: 42
+                    Layout.preferredHeight: 42
                     radius: 10
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: "#7c4dff" }
@@ -288,24 +290,10 @@ Dialog {
                             font.bold: true
                         }
 
-                        Rectangle {
-                            radius: 10
-                            implicitWidth: countBadge.implicitWidth + 12
-                            implicitHeight: 20
-                            color: "#7c4dff"
-                            Text {
-                                id: countBadge
-                                anchors.centerIn: parent
-                                text: qsTr("%1 Giọng").arg(root.allVoices.length)
-                                color: "#ffffff"
-                                font.pixelSize: 10
-                                font.bold: true
-                            }
-                        }
                     }
 
                     Text {
-                        text: qsTr("Nghe thử trực tiếp và chọn nhanh hơn 60+ giọng đọc Tiếng Việt & Quốc tế đỉnh cao (CapCut TikTok, VieNeu 3 Miền, OmniVoice).")
+                        text: qsTr("Preview a catalog voice or saved reference, then choose it for this dubbing run.")
                         color: "#aea8d1"
                         font.pixelSize: 12
                     }
@@ -379,8 +367,8 @@ Dialog {
 
                             Rectangle {
                                 visible: root.searchFilter !== ""
-                                width: 20
-                                height: 20
+                                Layout.preferredWidth: 20
+                                Layout.preferredHeight: 20
                                 radius: 10
                                 color: "#302d47"
                                 Text {
@@ -587,8 +575,8 @@ Dialog {
 
                                 // AVATAR ICON CIRCLE
                                 Rectangle {
-                                    width: 44
-                                    height: 44
+                                    Layout.preferredWidth: 44
+                                    Layout.preferredHeight: 44
                                     radius: 22
                                     gradient: Gradient {
                                         GradientStop {
@@ -645,8 +633,8 @@ Dialog {
                                         // DELETE BUTTON (ONLY FOR CUSTOM/CLONED VOICES)
                                         Rectangle {
                                             visible: cardRect.isCustomVoice
-                                            width: 24
-                                            height: 24
+                                            Layout.preferredWidth: 24
+                                            Layout.preferredHeight: 24
                                             radius: 4
                                             color: trashHover.containsMouse ? "#7f1d1d" : "#381720"
                                             border.color: trashHover.containsMouse ? "#ef4444" : "#5c202a"
@@ -776,30 +764,33 @@ Dialog {
                                                 visible: cardRect.isPlayingThis
 
                                                 Rectangle {
-                                                    width: 3; height: 10; color: "#ffffff"; radius: 1
+                                                    width: 3; color: "#ffffff"; radius: 1
                                                     SequentialAnimation on height {
                                                         loops: Animation.Infinite; running: cardRect.isPlayingThis
-                                                        NumberAnimation { to: 4; duration: 250 }
+                                                        NumberAnimation { from: 10; to: 4; duration: 250 }
                                                         NumberAnimation { to: 14; duration: 300 }
                                                         NumberAnimation { to: 8; duration: 200 }
+                                                        NumberAnimation { to: 10; duration: 200 }
                                                     }
                                                 }
                                                 Rectangle {
-                                                    width: 3; height: 14; color: "#ffffff"; radius: 1
+                                                    width: 3; color: "#ffffff"; radius: 1
                                                     SequentialAnimation on height {
                                                         loops: Animation.Infinite; running: cardRect.isPlayingThis
-                                                        NumberAnimation { to: 14; duration: 200 }
-                                                        NumberAnimation { to: 5; duration: 350 }
+                                                        NumberAnimation { from: 14; to: 5; duration: 200 }
+                                                        NumberAnimation { to: 14; duration: 350 }
                                                         NumberAnimation { to: 12; duration: 250 }
+                                                        NumberAnimation { to: 14; duration: 200 }
                                                     }
                                                 }
                                                 Rectangle {
-                                                    width: 3; height: 8; color: "#ffffff"; radius: 1
+                                                    width: 3; color: "#ffffff"; radius: 1
                                                     SequentialAnimation on height {
                                                         loops: Animation.Infinite; running: cardRect.isPlayingThis
-                                                        NumberAnimation { to: 12; duration: 300 }
+                                                        NumberAnimation { from: 8; to: 12; duration: 300 }
                                                         NumberAnimation { to: 4; duration: 200 }
                                                         NumberAnimation { to: 10; duration: 250 }
+                                                        NumberAnimation { to: 8; duration: 200 }
                                                     }
                                                 }
                                             }

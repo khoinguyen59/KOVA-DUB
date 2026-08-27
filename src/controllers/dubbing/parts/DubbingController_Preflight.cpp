@@ -110,19 +110,20 @@ QVariantMap DubbingController::automaticPreflight() const
             setupHint = QStringLiteral("Automatic local preprocessing; no model required");
         }
 
+        const bool modelStage = nodeId == QStringLiteral("source-separate")
+            || nodeId == QStringLiteral("transcribe") || nodeId == QStringLiteral("translate")
+            || nodeId == QStringLiteral("synthesize");
         QString preflightState = QStringLiteral("ready");
         QString preflightStateLabel = QStringLiteral("Ready");
         if (nodeId == QStringLiteral("media-input") && !hasMedia) {
             preflightState = QStringLiteral("needs-input");
             preflightStateLabel = QStringLiteral("Needs input");
         } else if (stage.value(QStringLiteral("state")).toString() == QStringLiteral("missing")
-                   || stage.value(QStringLiteral("state")).toString() == QStringLiteral("blocked")) {
+                   || (stage.value(QStringLiteral("state")).toString() == QStringLiteral("blocked")
+                       && !modelStage)) {
             preflightState = QStringLiteral("blocked-previous");
             preflightStateLabel = QStringLiteral("Blocked by previous stage");
         }
-        const bool modelStage = nodeId == QStringLiteral("source-separate")
-            || nodeId == QStringLiteral("transcribe") || nodeId == QStringLiteral("translate")
-            || nodeId == QStringLiteral("synthesize");
         const QString modelId = configuration.value(
             QStringLiteral("modelId"), parameters.value(QStringLiteral("modelId"))).toString().trimmed();
         // A saved clone is a durable project resource, not a regular TTS

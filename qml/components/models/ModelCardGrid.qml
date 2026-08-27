@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "../base"
 import LAStudio
@@ -48,7 +47,7 @@ Rectangle {
                     }
                     Rectangle {
                         implicitWidth: statusTxt.implicitWidth + 14
-                        height: 22
+                        Layout.preferredHeight: 22
                         radius: 11
                         color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15)
                         Text {

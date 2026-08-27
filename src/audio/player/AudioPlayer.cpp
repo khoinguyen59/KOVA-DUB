@@ -36,7 +36,11 @@ public:
     }
 
     void stop() {
-        m_sink->stop();
+        if (m_sink) {
+            m_sink->stop();
+            m_sink->reset();
+        }
+        m_buffer.close();
     }
 
     void pause() {
@@ -124,7 +128,7 @@ bool AudioPlayer::playFile(const QString &path)
     stop();
 
     const QString cleanPath = PathUtils::urlToLocalPath(path);
-    if (cleanPath.isEmpty() || !QFileInfo::exists(cleanPath)) {
+    if (cleanPath.isEmpty() || !QFileInfo(cleanPath).isFile()) {
         const QString message = QStringLiteral("Failed to load audio file for playback: %1")
                                     .arg(cleanPath);
         Logger::error("AudioPlayer", message);
@@ -166,6 +170,15 @@ bool AudioPlayer::playFile(const QString &path)
 
 void AudioPlayer::startDecodedPlayback(const WavIO::WavData &data)
 {
+    if (data.samples.isEmpty() || data.sampleRate <= 0 || data.channels <= 0) {
+        const QString message = QStringLiteral(
+            "Audio preview is unavailable because the decoded file has no valid samples or format.");
+        Logger::error("AudioPlayer", message);
+        emit errorOccurred(message);
+        resetPlaybackState();
+        return;
+    }
+
     QByteArray pcmData;
     pcmData.resize(data.samples.size() * 2);
     auto *out = reinterpret_cast<int16_t *>(pcmData.data());
@@ -178,6 +191,26 @@ void AudioPlayer::startDecodedPlayback(const WavIO::WavData &data)
     fmt.setSampleRate(data.sampleRate);
     fmt.setChannelCount(data.channels);
     fmt.setSampleFormat(QAudioFormat::Int16);
+
+    const QAudioDevice device = QMediaDevices::defaultAudioOutput();
+    if (device.isNull() || !device.isFormatSupported(fmt)) {
+        const QString message = QStringLiteral(
+            "Audio preview cannot use the current output device for %1 Hz, %2 channel PCM.")
+            .arg(data.sampleRate).arg(data.channels);
+        Logger::error("AudioPlayer", message);
+        emit errorOccurred(message);
+        resetPlaybackState();
+        return;
+    }
+
+    if (m_session) {
+        AudioPlaybackSession *oldSession = m_session.data();
+        m_session = nullptr;
+        if (oldSession) {
+            oldSession->stop();
+            oldSession->deleteLater();
+        }
+    }
 
     auto *session = new AudioPlaybackSession(pcmData, fmt, this);
     m_session = session;
@@ -209,10 +242,37 @@ void AudioPlayer::playPcm(const QByteArray &pcm16Data, int sampleRate)
 {
     stop();
 
+    if (pcm16Data.isEmpty() || sampleRate <= 0) {
+        const QString message = QStringLiteral(
+            "Audio preview received empty PCM data or an invalid sample rate.");
+        Logger::error("AudioPlayer", message);
+        emit errorOccurred(message);
+        return;
+    }
+
     QAudioFormat fmt;
     fmt.setSampleRate(sampleRate);
     fmt.setChannelCount(1);
     fmt.setSampleFormat(QAudioFormat::Int16);
+
+    const QAudioDevice device = QMediaDevices::defaultAudioOutput();
+    if (device.isNull() || !device.isFormatSupported(fmt)) {
+        const QString message = QStringLiteral(
+            "Audio preview cannot use the current output device for %1 Hz mono PCM.")
+            .arg(sampleRate);
+        Logger::error("AudioPlayer", message);
+        emit errorOccurred(message);
+        return;
+    }
+
+    if (m_session) {
+        AudioPlaybackSession *oldSession = m_session.data();
+        m_session = nullptr;
+        if (oldSession) {
+            oldSession->stop();
+            oldSession->deleteLater();
+        }
+    }
 
     auto *session = new AudioPlaybackSession(pcm16Data, fmt, this);
     m_session = session;

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../base"
+import LAStudio
 
 // A route-entry gate, not a workflow configuration dialog.  The operator must
 // deliberately choose a mode on every visit; the only escape is leaving the

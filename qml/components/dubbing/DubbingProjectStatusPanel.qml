@@ -15,7 +15,7 @@ Rectangle {
     signal customSetupRequested()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 168
+    Layout.preferredHeight: Math.max(168, statusPanelRow.implicitHeight + Theme.paddingMedium * 2)
     Layout.leftMargin: Theme.paddingMedium
     Layout.rightMargin: Theme.paddingMedium
     Layout.bottomMargin: Theme.paddingMedium
@@ -25,6 +25,7 @@ Rectangle {
     border.width: 1
 
     RowLayout {
+        id: statusPanelRow
         anchors.fill: parent
         anchors.margins: Theme.paddingMedium
         spacing: Theme.paddingMedium
@@ -216,7 +217,12 @@ Rectangle {
                 }
                 Text { visible: root.dubbing.speakers.length === 0; text: qsTr("No speakers assigned"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
             }
-            Text { visible: root.dubbing.lastError.length > 0; text: root.dubbing.lastError; color: Theme.danger; font.pixelSize: Theme.fontSmall; elide: Text.ElideRight; Layout.fillWidth: true }
+            ErrorGuidanceInline {
+                message: root.dubbing.lastError
+                source: "Dubbing"
+                compact: true
+                Layout.fillWidth: true
+            }
         }
 
         Rectangle { Layout.fillHeight: true; Layout.preferredWidth: 1; color: Qt.rgba(1, 1, 1, 0.08) }

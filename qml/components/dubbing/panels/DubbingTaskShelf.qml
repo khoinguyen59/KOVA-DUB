@@ -20,11 +20,14 @@ Rectangle {
     property bool ocrSetupEditable: true
 
     signal hideRequested()
+    signal contextRequested(string contextId)
     signal configureNodeRequested(string nodeId)
+    signal colabRequested(string nodeId)
     signal runStepRequested(string nodeId)
     signal runNextStepRequested(string nodeId)
     signal fixRequested()
     signal artifactUploadRequested(string nodeId)
+    signal sourceUploadRequested()
 
     objectName: "dubbingTaskShelf"
     color: Theme.surface
@@ -32,12 +35,22 @@ Rectangle {
     border.color: Qt.rgba(1, 1, 1, 0.08)
     border.width: 1
     Layout.minimumWidth: 220
-    Layout.maximumWidth: 420
+    Layout.maximumWidth: 280
+    Layout.preferredWidth: 248
     Layout.fillHeight: true
+
+    function qmlSmokeFeatureActionsCheck() {
+        return resultsButton.visible && settingsButton.visible && modelButton.visible
+                && colabButton.visible && uploadButton.visible && handoffButton.visible
+                && runButton.visible && backButton.visible && continueButton.visible
+                && runButton.width >= 180
+                && backButton.width >= 96
+                && continueButton.width >= 96
+    }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Theme.paddingMedium
+        anchors.margins: Theme.paddingSmall
         spacing: Theme.paddingSmall
 
         RowLayout {
@@ -52,140 +65,171 @@ Rectangle {
                 font.letterSpacing: 1
             }
             PrimaryButton {
-                text: qsTr("Hide")
+                objectName: "dubbingTaskShelfHide"
                 iconName: "chevron-left"
                 iconOnly: true
                 quiet: true
-                toolTip: qsTr("Hide task controls and details")
+                toolTip: qsTr("Hide task controls")
                 onClicked: root.hideRequested()
             }
         }
 
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: summaryColumn.implicitHeight + Theme.paddingMedium
+            radius: Theme.radiusSmall
+            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10)
+            border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.30)
+            ColumnLayout {
+                id: summaryColumn
+                anchors.fill: parent
+                anchors.margins: Theme.paddingSmall
+                spacing: 3
+                Text {
+                    Layout.fillWidth: true
+                    text: root.stepTitle
+                    color: Theme.textPrimary
+                    font.pixelSize: Theme.fontSmall
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: root.workflowNode ? (root.workflowNode.detail || root.workflowNode.state || qsTr("Ready for action")) : qsTr("Choose a task")
+                    color: Theme.textSecondary
+                    font.pixelSize: 10
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                }
+            }
+        }
+
         ScrollView {
-            id: taskShelfScroll
+            id: actionScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             contentWidth: availableWidth
 
             ColumnLayout {
-                id: taskShelfContent
-                width: taskShelfScroll.availableWidth
+                width: actionScroll.availableWidth
                 spacing: Theme.paddingSmall
 
-                DubbingNodeSettingsPanel {
-                    id: taskShelfNodeSettings
-                    objectName: "taskShelfNodeSettings"
-                    dubbing: root.dubbing
-                    nodeId: root.displayedStepId
-                    node: root.workflowNode
-                    nodeTitle: root.stepTitle
-                    canRun: root.canRunStep
-                    canRerun: root.canRerunStep
-                    runReady: root.stepRunReady
-                    nextNodeId: root.nextNodeId
-                    nextReady: root.nextNodeReady
-                    compact: true
-                    visible: node !== null
-                    onConfigureRequested: root.configureNodeRequested(nodeId)
-                    onLoadRequested: root.dubbing.loadWorkflowNodeModel(nodeId)
-                    onUnloadRequested: root.dubbing.unloadWorkflowNodeModel(nodeId)
-                    onReloadRequested: root.dubbing.reloadWorkflowNodeModel(nodeId)
-                    onRunRequested: root.runStepRequested(nodeId)
-                    onNextRequested: root.runNextStepRequested(nodeId)
-                    onFixRequested: root.fixRequested()
-                    onArtifactUploadRequested: root.artifactUploadRequested(nodeId)
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("FEATURES")
+                    color: Theme.textSecondary
+                    font.pixelSize: 9
+                    font.bold: true
+                    font.letterSpacing: 1
                 }
 
-                Rectangle {
-                    id: dubbingTranslationInputPanel
-                    objectName: "dubbingTranslationInputPanel"
-                    visible: root.displayedStepId === "translate"
+                PrimaryButton {
+                    id: resultsButton
+                    objectName: "dubbingFeatureResults"
                     Layout.fillWidth: true
-                    implicitHeight: translationInputLayout.implicitHeight + Theme.paddingSmall * 2
-                    radius: Theme.radiusSmall
-                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
-                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
-                    ColumnLayout {
-                        id: translationInputLayout
-                        anchors.fill: parent
-                        anchors.margins: Theme.paddingSmall
-                        spacing: 2
-                        Text {
-                            Layout.fillWidth: true
-                            text: qsTr("AI translation input")
-                            color: Theme.textPrimary
-                            font.bold: true
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: (root.dubbing.transcriptConfiguration.transcriptSource || "stt") === "reconcile"
-                                  ? qsTr("Translate uses the reviewed STT/OCR source after conflicts are resolved. The selected translation model converts it to the target language.")
-                                  : qsTr("Translate uses the reviewed source transcript from the selected STT or OCR route.")
-                            color: Theme.textSecondary
-                            font.pixelSize: 10
-                            wrapMode: Text.WordWrap
-                        }
-                    }
+                    text: qsTr("Results")
+                    iconName: "check"
+                    quiet: root.dubbing.processing
+                    onClicked: root.contextRequested("results")
+                }
+                PrimaryButton {
+                    id: settingsButton
+                    objectName: "dubbingFeatureSettings"
+                    Layout.fillWidth: true
+                    text: qsTr("Settings")
+                    iconName: "sliders"
+                    quiet: true
+                    onClicked: root.contextRequested("settings")
+                }
+                PrimaryButton {
+                    id: modelButton
+                    objectName: "dubbingFeatureModel"
+                    Layout.fillWidth: true
+                    text: root.workflowNode && root.workflowNode.configurable === true
+                          ? qsTr("Open model") : qsTr("Task settings")
+                    iconName: root.workflowNode && root.workflowNode.configurable === true
+                               ? "grid" : "sliders"
+                    onClicked: root.workflowNode && root.workflowNode.configurable === true
+                               ? root.configureNodeRequested(root.displayedStepId)
+                               : root.contextRequested("settings")
+                }
+                PrimaryButton {
+                    id: colabButton
+                    objectName: "dubbingFeatureColab"
+                    Layout.fillWidth: true
+                    text: qsTr("Colab")
+                    iconName: "cloud"
+                    quiet: true
+                    onClicked: root.colabRequested(root.displayedStepId)
+                }
+                PrimaryButton {
+                    id: uploadButton
+                    objectName: "dubbingFeatureUpload"
+                    Layout.fillWidth: true
+                    text: qsTr("Upload")
+                    iconName: "folder"
+                    quiet: true
+                    onClicked: root.displayedStepId === "import"
+                               ? root.sourceUploadRequested()
+                               : root.artifactUploadRequested(root.displayedStepId)
+                }
+                PrimaryButton {
+                    id: handoffButton
+                    objectName: "dubbingFeatureHandoff"
+                    Layout.fillWidth: true
+                    text: qsTr("Data & handoff")
+                    iconName: "share"
+                    quiet: true
+                    onClicked: root.contextRequested("handoff")
                 }
 
-                Rectangle {
-                    id: dubbingTranscriptSourcePanel
-                    objectName: "dubbingTranscriptSourcePanel"
-                    visible: root.displayedStepId === "transcribe"
+                PrimaryButton {
+                    id: fixButton
                     Layout.fillWidth: true
-                    implicitHeight: transcriptSourceLayout.implicitHeight + Theme.paddingSmall * 2
-                    radius: Theme.radiusSmall
-                    color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
-                    border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
-                    ColumnLayout {
-                        id: transcriptSourceLayout
-                        anchors.fill: parent
-                        anchors.margins: Theme.paddingSmall
-                        spacing: Theme.paddingSmall
-                        Text {
-                            text: qsTr("Transcript source")
-                            color: Theme.textPrimary
-                            font.bold: true
-                        }
-                        ComboBox {
-                            id: dubbingTranscriptSourceMode
-                            objectName: "dubbingTranscriptSourceMode"
-                            Layout.fillWidth: true
-                            textRole: "label"
-                            valueRole: "id"
-                            model: [
-                                { id: "stt", label: qsTr("Chỉ STT") },
-                                { id: "ocr", label: qsTr("Chỉ OCR") },
-                                { id: "reconcile", label: qsTr("Khớp STT + OCR") }
-                            ]
-                            currentIndex: {
-                                var source = root.dubbing.transcriptConfiguration.transcriptSource || "stt"
-                                if (source === "stt+ocr") source = "reconcile"
-                                for (var i = 0; i < model.length; ++i)
-                                    if (model[i].id === source) return i
-                                return 0
-                            }
-                            enabled: root.ocrSetupEditable
-                            onActivated: function(index) {
-                                root.dubbing.setWorkflowNodeParameters("transcribe", {
-                                    transcriptSource: model[index].id
-                                })
-                            }
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: (root.dubbing.transcriptConfiguration.transcriptSource || "stt") === "ocr"
-                                  ? qsTr("Uses Subtitle OCR with the selected execution route.")
-                                  : (root.dubbing.transcriptConfiguration.transcriptSource || "stt") === "reconcile"
-                                    ? qsTr("Khớp STT và OCR.")
-                                    : qsTr("Uses audio STT.")
-                            color: Theme.textSecondary
-                            font.pixelSize: 10
-                            wrapMode: Text.WordWrap
-                        }
-                    }
+                    visible: root.displayedStepId === "translate" || root.displayedStepId === "review-translation"
+                    text: qsTr("Review fixes")
+                    iconName: "magic"
+                    quiet: true
+                    onClicked: root.fixRequested()
                 }
+            }
+        }
+
+        PrimaryButton {
+            id: runButton
+            objectName: "dubbingTaskRunButton"
+            Layout.fillWidth: true
+            text: root.canRerunStep ? qsTr("Run task again") : qsTr("Run task")
+            iconName: root.dubbing.processing ? "activity" : "play"
+            loading: root.dubbing.processing
+            enabled: !root.dubbing.processing && root.displayedStepId !== ""
+            onClicked: root.runStepRequested(root.displayedStepId)
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+            PrimaryButton {
+                id: backButton
+                objectName: "dubbingTaskBackButton"
+                text: qsTr("Back")
+                iconName: "chevron-left"
+                quiet: true
+                Layout.preferredWidth: 100
+                Layout.minimumWidth: 96
+                onClicked: root.runNextStepRequested("__previous__")
+            }
+            PrimaryButton {
+                id: continueButton
+                objectName: "dubbingTaskContinueButton"
+                Layout.fillWidth: true
+                text: qsTr("Continue")
+                iconName: "chevron-right"
+                quiet: true
+                enabled: root.nextNodeId !== ""
+                onClicked: root.runNextStepRequested(root.nextNodeId)
             }
         }
     }

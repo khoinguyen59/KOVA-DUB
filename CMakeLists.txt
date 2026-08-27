@@ -6,7 +6,7 @@ include(cmake/RuntimeAbi.cmake)
 # automation may override it with -DLASTUDIO_VERSION=<major.minor.release.build>.
 # Internal builds use four single-digit fields. Carry at 9 rather than extending
 # one field: 0.0.0.1 ... 0.0.0.9, then 0.0.1.0.
-set(LASTUDIO_VERSION "0.0.8.3" CACHE STRING "LA Studio application version")
+set(LASTUDIO_VERSION "0.0.8.5" CACHE STRING "LA Studio application version")
 if(NOT LASTUDIO_VERSION MATCHES "^[0-9]\\.[0-9]\\.[0-9]\\.[0-9]$")
     message(FATAL_ERROR "LASTUDIO_VERSION must use four single digits (0-9), for example 0.0.1.0; got '${LASTUDIO_VERSION}'")
 endif()
@@ -167,6 +167,7 @@ set(LASTUDIO_SOURCES
     src/tts/backends/vieneu/VieneuTtsBackend.cpp
     src/tts/backends/omnivoice/OmnivoiceBackend.cpp
     src/controllers/app/AppController.cpp
+    src/controllers/app/AppErrorCatalog.cpp
     src/controllers/shared/AudioPreviewService.cpp
     src/controllers/shared/HistoryService.cpp
     src/controllers/shared/HistoryRepository.cpp
@@ -364,6 +365,7 @@ set(LASTUDIO_HEADERS
     src/tts/backends/vieneu/VieneuTtsBackend.h
     src/tts/backends/omnivoice/OmnivoiceBackend.h
     src/controllers/app/AppController.h
+    src/controllers/app/AppErrorCatalog.h
     src/controllers/shared/AudioPreviewService.h
     src/controllers/shared/HistoryService.h
     src/controllers/shared/HistoryRepository.h
@@ -547,6 +549,7 @@ qt_add_qml_module(LAStudio
         qml/components/base/ColabNotebookLink.qml
         qml/components/base/ColabSessionStatus.qml
         qml/components/PrimaryButton.qml
+        qml/components/AppButton.qml
         qml/components/SearchBar.qml
         qml/components/ModelListItem.qml
         qml/components/ModelDetailsView.qml
@@ -586,6 +589,7 @@ qt_add_qml_module(LAStudio
         qml/components/dubbing/DubbingMediaQueueDialog.qml
         qml/components/dubbing/DubbingVoiceClipReview.qml
         qml/components/dubbing/panels/DubbingTaskShelf.qml
+        qml/components/dubbing/panels/DubbingContextDrawer.qml
         qml/components/dubbing/panels/DubbingReviewPanel.qml
         qml/components/dubbing/panels/DubbingTimelineSection.qml
         qml/components/dubbing/steps/DubbingImportStep.qml
@@ -608,6 +612,8 @@ qt_add_qml_module(LAStudio
         qml/components/media/MediaDownloadQueueList.qml
         qml/components/shared/WorkflowPipelineDialog.qml
         qml/components/shared/WorkflowNodeModelDialog.qml
+        qml/components/shared/ErrorGuidanceDialog.qml
+        qml/components/shared/ErrorGuidanceInline.qml
         qml/components/shared/ProjectSelectionGate.qml
         qml/components/shared/MediaControlsAutoHide.qml
         qml/components/voicecloning/VoiceSettingsPanel.qml
@@ -980,7 +986,7 @@ target_compile_definitions(LAStudioRuntimeHost PRIVATE
     WIN32_LEAN_AND_MEAN
 )
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT LASTUDIO_SKIP_TEST_APP_DEPENDENCY)
     # QML route smoke must exercise the application compiled from the current
     # source, not a possibly stale executable left by a previous package run.
     add_dependencies(LAStudioUnitTests LAStudio LAStudioRuntimeHost)

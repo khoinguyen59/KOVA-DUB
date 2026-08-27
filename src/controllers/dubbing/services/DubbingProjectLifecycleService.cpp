@@ -276,7 +276,7 @@ void DubbingProjectLifecycleService::setNormalizedAudioPath(const QString &path)
 
 void DubbingProjectLifecycleService::setVocalsPath(const QString &path)
 {
-    m_project.analysisAudioPath = path;
+    m_project.vocalsAudioPath = path;
     emit projectChanged();
 }
 

@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../base"
 import "../shared"
+import LAStudio
+import "../shared"
 
 // This dialog is intentionally hosted by DubbingSourceMediaPanel rather than
 // only by the standalone Download route.  A Dubbing user can therefore add,
@@ -219,15 +221,13 @@ Dialog {
                 font.pixelSize: Theme.fontSmall
                 wrapMode: Text.WordWrap
             }
-            Text {
+            ErrorGuidanceInline {
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.paddingLarge
                 Layout.rightMargin: Theme.paddingLarge
                 visible: root.dubbing.lastError !== "" && !root.dubbing.mediaQueueDownloading
-                text: root.dubbing.lastError
-                color: Theme.error
-                font.pixelSize: Theme.fontSmall
-                wrapMode: Text.WordWrap
+                message: root.dubbing.lastError
+                source: "Dubbing media queue"
             }
 
             Repeater {

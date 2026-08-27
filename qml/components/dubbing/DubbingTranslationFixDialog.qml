@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import LAStudio
 import ".."
 import "../base"
+import "../shared/settings"
 
 Dialog {
     id: root

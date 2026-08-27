@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QFutureWatcher>
 #include <QAtomicInteger>
+#include <QProcess>
 #include <QVariantList>
 #include <QVariantMap>
 #include <memory>
@@ -35,8 +36,17 @@ signals:
 private slots:
     void onRenderFinished();
     void onMediaFinished(bool success, const QString &outputPath, const QString &error);
+    void onValidationReadyReadStandardOutput();
+    void onValidationReadyReadStandardError();
+    void onValidationFinished(int exitCode, QProcess::ExitStatus status);
+    void onValidationError(QProcess::ProcessError error);
 
 private:
+    enum class ValidationStage { None, Source, Export };
+
+    void startMediaValidation(const QString &path, ValidationStage stage);
+    bool validateProbeResult(const QByteArray &payload, ValidationStage stage,
+                             QString *errorMessage);
     void fail(const QString &message);
     void clearExportPaths();
 
@@ -47,10 +57,19 @@ private:
     QString m_exportStagingPath;
     QString m_exportAudioPath;
     QString m_exportSubtitlePath;
+    QString m_exportSubtitleFontDirectory;
+    QString m_sourceMediaPath;
     bool m_exportBurnIn = false;
+    bool m_expectSubtitle = false;
+    bool m_sourceHasVideo = false;
+    qint64 m_sourceDurationMs = 0;
     QFutureWatcher<QVariantMap> *m_renderWatcher = nullptr;
     std::shared_ptr<QAtomicInteger<bool>> m_renderCancel;
     MediaToolService *m_mediaTools = nullptr;
+    QProcess m_validationProcess;
+    QByteArray m_validationOutput;
+    QByteArray m_validationError;
+    ValidationStage m_validationStage = ValidationStage::None;
 };
 
 } // namespace LAStudio

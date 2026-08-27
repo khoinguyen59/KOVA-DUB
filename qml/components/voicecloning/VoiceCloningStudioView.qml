@@ -576,7 +576,8 @@ StudioShell {
                                         Text {
                                             Layout.fillWidth: true
                                             visible: root.referenceIsolator && root.referenceIsolator.lastError !== ""
-                                            text: root.referenceIsolator ? root.referenceIsolator.lastError : ""
+                                            text: root.referenceIsolator && root.referenceIsolator.lastError !== ""
+                                                  ? AppController.explainError(root.referenceIsolator.lastError, "Voice Clone Isolator").summary : ""
                                             color: Theme.danger
                                             font.pixelSize: 10
                                             wrapMode: Text.WordWrap

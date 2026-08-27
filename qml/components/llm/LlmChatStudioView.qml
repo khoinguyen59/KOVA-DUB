@@ -118,7 +118,7 @@ StudioShell {
                 AppTextArea { id: composer; Layout.fillWidth: true; Layout.minimumHeight: Theme.paddingXL * 3; placeholderText: chat.colabActive ? qsTr("Message the direct Colab model...") : (chat.gatewayActive ? qsTr("Message the 9Router model...") : (root.remoteFirstMode ? qsTr("Connect API Gateway or a direct Colab worker...") : qsTr("Message the local model..."))); enabled: !chat.generating; Keys.onReturnPressed: function(event) { if (!(event.modifiers & Qt.ShiftModifier)) { chat.sendMessage(text); text = ""; event.accepted = true } } }
                 PrimaryButton { text: chat.generating ? qsTr("Stop") : qsTr("Send"); iconName: chat.generating ? "stop" : "send"; enabled: chat.generating || ((!root.remoteFirstMode || chat.gatewayActive || chat.colabActive) && composer.text.trim() !== ""); onClicked: chat.generating ? chat.stopGeneration() : (chat.sendMessage(composer.text), composer.text = "") }
             }
-            Text { visible: chat.errorText !== ""; Layout.fillWidth: true; text: chat.errorText; color: Theme.danger; wrapMode: Text.Wrap; font.pixelSize: Theme.fontSmall }
+            Text { visible: chat.errorText !== ""; Layout.fillWidth: true; text: AppController.explainError(chat.errorText, "LLM Chat").summary; color: Theme.danger; wrapMode: Text.Wrap; font.pixelSize: Theme.fontSmall }
         }
     ]
 

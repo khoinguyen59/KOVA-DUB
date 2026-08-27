@@ -40,6 +40,7 @@ QJsonObject DubbingProject::toJson() const
     json.insert(QStringLiteral("sourceHash"), sourceHash);
     json.insert(QStringLiteral("masterAudioPath"), masterAudioPath);
     json.insert(QStringLiteral("analysisAudioPath"), analysisAudioPath);
+    json.insert(QStringLiteral("vocalsAudioPath"), vocalsAudioPath);
     json.insert(QStringLiteral("backgroundAudioPath"), backgroundAudioPath);
     json.insert(QStringLiteral("sourceDurationMs"), sourceDurationMs);
     json.insert(QStringLiteral("sourceSampleRate"), sourceSampleRate);
@@ -79,6 +80,10 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
     project.sourceHash = json.value(QStringLiteral("sourceHash")).toString();
     project.masterAudioPath = json.value(QStringLiteral("masterAudioPath")).toString();
     project.analysisAudioPath = json.value(QStringLiteral("analysisAudioPath")).toString();
+    if (version >= 14)
+        project.vocalsAudioPath = json.value(QStringLiteral("vocalsAudioPath")).toString();
+    else
+        project.vocalsAudioPath.clear();
     project.backgroundAudioPath = json.value(QStringLiteral("backgroundAudioPath")).toString();
     project.sourceDurationMs = json.value(QStringLiteral("sourceDurationMs")).toVariant().toLongLong();
     project.sourceSampleRate = json.value(QStringLiteral("sourceSampleRate")).toInt();
@@ -158,7 +163,11 @@ bool DubbingProject::save(QString *error) const
         setError(error, QStringLiteral("Cannot write dubbing project: %1").arg(file.errorString()));
         return false;
     }
-    file.write(QJsonDocument(toJson()).toJson(QJsonDocument::Indented));
+    const QByteArray payload = QJsonDocument(toJson()).toJson(QJsonDocument::Indented);
+    if (file.write(payload) != payload.size()) {
+        setError(error, QStringLiteral("Cannot write dubbing project: %1").arg(file.errorString()));
+        return false;
+    }
     if (!file.commit()) {
         setError(error, QStringLiteral("Cannot commit dubbing project: %1").arg(file.errorString()));
         return false;

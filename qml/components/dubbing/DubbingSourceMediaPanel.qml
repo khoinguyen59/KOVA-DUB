@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtMultimedia
 import "../base"
@@ -31,6 +30,9 @@ Rectangle {
     // The Dubbing workspace can give the video canvas its own focused view
     // without changing the active project, workflow, or media source.
     property bool previewFocusMode: false
+    // OCR handles belong to the Transcribe/OCR task, never to the global
+    // preview.  DubbingPage supplies the task context explicitly.
+    property bool showOcrTools: false
     // Link/download settings are useful before a source is chosen, but must not
     // consume the video canvas once an editor is working on an OCR scan area.
     property bool sourceSetupExpanded: true
@@ -39,10 +41,11 @@ Rectangle {
     readonly property int sourceSetupMaximumHeight: root.hasLoadedSource ? 110 : 540
     // This is a display frame only. It never crops or stretches the source:
     // VideoOutput continues to preserve the source pixels inside the frame.
-    property string previewFrameMode: "source"
-    readonly property real previewFrameAspectRatio: previewFrameMode === "16:9" ? 16 / 9
-                                                   : (previewFrameMode === "9:16" ? 9 / 16
-                                                      : (previewFrameMode === "1:1" ? 1 : 0))
+    readonly property string previewFrameMode: "16:9"
+    readonly property real previewFrameAspectRatio: 16 / 9
+    readonly property bool thumbnailReady: root.hasLoadedSource
+                                           && (mediaPlayer.mediaStatus === MediaPlayer.LoadedMedia
+                                               || mediaPlayer.mediaStatus === MediaPlayer.BufferedMedia)
     readonly property var subtitleConfiguration: root.dubbing.subtitleConfiguration || ({})
     readonly property var subtitleStyle: root.subtitleConfiguration.style || ({})
     // Target text is the normal final caption, but a reviewed STT/OCR source
@@ -200,7 +203,6 @@ Rectangle {
     function qmlSmokeMediaControlsCheck() {
         return controlsAutoHide.qmlSmokeStateCheck()
                 && controlsAutoHide.delayMs === 2000
-                && subtitleEditorButton.width > 0
                 && previewToolbar.width > 0
                 && previewToolbar.height === 40
                 && previewModeSelector.y >= -1
@@ -216,18 +218,24 @@ Rectangle {
     // validates the post-selection layout contract rather than only checking
     // that source setup is present in the source text.
     function qmlSmokeLoadedSourceLayoutCheck() {
-        if (!root.hasLoadedSource || sourceSetupPanel.visible || !openVideoButton.visible)
+        if (!root.hasLoadedSource || sourceSetupPanel.visible)
             return false
-        var originalFrameMode = root.previewFrameMode
-        root.previewFrameMode = "16:9"
         var landscapeRatio = previewFrame.height > 0
                 ? previewFrame.width / previewFrame.height : 0
-        root.previewFrameMode = "9:16"
-        var portraitRatio = previewFrame.height > 0
-                ? previewFrame.width / previewFrame.height : 0
-        root.previewFrameMode = originalFrameMode
         return Math.abs(landscapeRatio - 16 / 9) < 0.01
-                && Math.abs(portraitRatio - 9 / 16) < 0.01
+    }
+
+    function qmlSmokeWorkspaceContractCheck() {
+        if (previewFrame.width <= 0 || previewFrame.height <= 0
+                || Math.abs(previewFrame.width / previewFrame.height - 16 / 9) > 0.01)
+            return false
+        if (previewFrameMode !== "16:9")
+            return false
+        if (sourceSetupToggle.visible || openVideoButton.visible || previewFocusToggle.visible)
+            return false
+        if (previewFrameModeSelector.visible && previewFrameModeSelector.model.length !== 1)
+            return false
+        return previewModeSelector.visible
     }
 
     // Selection can originate from the native file dialog, a downloaded-media
@@ -373,7 +381,7 @@ Rectangle {
             flickableDirection: Flickable.HorizontalFlick
             boundsBehavior: Flickable.StopAtBounds
 
-            Row {
+                Row {
                 id: previewToolbarRow
                 height: previewToolbar.height
                 spacing: Theme.paddingSmall
@@ -384,81 +392,20 @@ Rectangle {
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
                     font.bold: true
-                    // A compact title leaves room for actual editing controls.
                     font.letterSpacing: 0.25
                     verticalAlignment: Text.AlignVCenter
-                }
-                Button {
-                    id: subtitleEditorButton
-                    objectName: "dubbingSubtitleEditorButton"
-                    height: previewToolbar.height
-                    text: qsTr("Subtitle style & import")
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Change caption style or import a subtitle file. Click a caption in the preview to edit its text.")
-                    enabled: root.dubbing.hasProject && !root.dubbing.processing
-                    onClicked: root.subtitleEditorRequested()
-                }
-                Button {
-                    id: sourceSetupToggle
-                    objectName: "dubbingSourceSetupToggle"
-                    height: previewToolbar.height
-                    text: root.sourceSetupExpanded ? qsTr("Hide source setup") : qsTr("Change / download source")
-                    enabled: !root.dubbing.mediaQueueProcessing
-                    onClicked: {
-                        if (root.previewFocusMode)
-                            root.previewFocusRequested(false)
-                        root.sourceSetupExpanded = !root.sourceSetupExpanded
-                    }
-                }
-                PrimaryButton {
-                    id: openVideoButton
-                    objectName: "dubbingOpenVideoButton"
-                    height: previewToolbar.height
-                    text: root.hasLoadedSource ? qsTr("Replace video") : qsTr("Open video")
-                    iconName: "folder"
-                    quiet: true
-                    enabled: !root.dubbing.processing
-                    toolTip: qsTr("Choose a local video or audio file. Choosing a source closes download setup and restores the canvas.")
-                    onClicked: root.browseRequested()
-                }
-                Button {
-                    id: previewFocusToggle
-                    objectName: "dubbingPreviewFocusToggle"
-                    height: previewToolbar.height
-                    text: root.previewFocusMode ? qsTr("Exit video focus") : qsTr("Focus video")
-                    enabled: root.isVideoSource
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Give the video canvas the central workspace; source setup stays available from Change / download source.")
-                    onClicked: {
-                        if (!root.previewFocusMode)
-                            root.sourceSetupExpanded = false
-                        root.previewFocusRequested(!root.previewFocusMode)
-                    }
                 }
                 AppComboBox {
                     id: previewFrameModeSelector
                     objectName: "dubbingPreviewFrameModeSelector"
                     width: 112
                     height: previewToolbar.height
-                    model: [
-                        { text: qsTr("Fit source"), value: "source" },
-                        { text: qsTr("16:9"), value: "16:9" },
-                        { text: qsTr("9:16"), value: "9:16" },
-                        { text: qsTr("1:1"), value: "1:1" }
-                    ]
+                    model: [ { text: qsTr("Fit source"), value: "16:9" } ]
                     textRole: "text"
-                    currentIndex: {
-                        for (var index = 0; index < model.length; ++index)
-                            if (model[index].value === root.previewFrameMode)
-                                return index
-                        return 0
-                    }
+                    currentIndex: 0
+                    enabled: false
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Preview frame ratio. The source video remains uncropped and unstretched.")
-                    onActivated: function(index) {
-                        if (index >= 0 && index < model.length)
-                            root.previewFrameMode = model[index].value
-                    }
+                    ToolTip.text: qsTr("The preview viewport stays 16:9; source pixels remain uncropped and unstretched.")
                 }
                 Rectangle {
                     id: previewModeSelector
@@ -491,16 +438,25 @@ Rectangle {
                         }
                     }
                 }
-                Text {
-                    width: 104
+                /* Source management is deliberately outside the loaded-source
+                   toolbar. The left task shelf owns Upload and source setup. */
+                Button {
+                    id: sourceSetupToggle
+                    objectName: "dubbingSourceSetupToggle"
                     height: previewToolbar.height
-                    text: root.showingDubbedMedia
-                          ? qsTr("Dubbed mix")
-                          : (root.dubbing.sourceMediaPath.length > 0 ? qsTr("Original audio") : qsTr("No media"))
-                    color: root.dubbing.sourceMediaPath.length > 0 ? Theme.success : Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    verticalAlignment: Text.AlignVCenter
-                    elide: Text.ElideRight
+                    visible: false
+                }
+                PrimaryButton {
+                    id: openVideoButton
+                    objectName: "dubbingOpenVideoButton"
+                    height: previewToolbar.height
+                    visible: false
+                }
+                Button {
+                    id: previewFocusToggle
+                    objectName: "dubbingPreviewFocusToggle"
+                    height: previewToolbar.height
+                    visible: false
                 }
             }
 
@@ -606,6 +562,24 @@ Rectangle {
                     visible: root.isVideoSource
                     fillMode: VideoOutput.PreserveAspectFit
                 }
+                Rectangle {
+                    id: thumbnailPoster
+                    objectName: "dubbingVideoThumbnail"
+                    anchors.fill: parent
+                    visible: root.isVideoSource && !root.thumbnailReady
+                    color: "#11121a"
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: Theme.paddingSmall
+                        LineIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "video"; color: Theme.accentLight; width: 36; height: 36 }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: qsTr("Loading preview thumbnail…")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontSmall
+                        }
+                    }
+                }
             }
             Rectangle {
                 id: dubbingOcrRoiOverlay
@@ -614,7 +588,7 @@ Rectangle {
                                                         previewFrame.y + videoOutput.contentRect.y,
                                                         videoOutput.contentRect.width,
                                                         videoOutput.contentRect.height)
-                visible: root.isVideoSource && root.dubbing.dubbingOcrRoiVisible
+                visible: root.showOcrTools && root.isVideoSource && root.dubbing.dubbingOcrRoiVisible
                          && content.width > 0 && content.height > 0
                 x: content.x + root.draftOcrRoi.x * content.width
                 y: content.y + root.draftOcrRoi.y * content.height
@@ -700,15 +674,24 @@ Rectangle {
                 objectName: "dubbingSubtitlePreviewOverlay"
                 readonly property string alignment: root.subtitleStyle.alignment || "bottom"
                 readonly property real safeMargin: Number(root.subtitleStyle.safeMargin || 0.06)
+                readonly property bool followsOcrRegion: root.showOcrTools
+                                                        && root.dubbing.dubbingOcrRoiVisible
+                                                        && root.isVideoSource
                 visible: root.isVideoSource && root.activeSubtitleText.length > 0
-                width: Math.max(80, previewFrame.width * Number(root.subtitleStyle.maxWidth || 0.82))
+                width: followsOcrRegion
+                       ? Math.max(80, dubbingOcrRoiOverlay.content.width * 0.92)
+                       : Math.max(80, previewFrame.width * Number(root.subtitleStyle.maxWidth || 0.82))
                 height: subtitlePreviewText.implicitHeight + Theme.paddingSmall * 2
-                x: alignment === "custom"
+                x: followsOcrRegion
+                   ? dubbingOcrRoiOverlay.content.x + (dubbingOcrRoiOverlay.content.width - width) / 2
+                   : alignment === "custom"
                    ? previewFrame.x + previewFrame.width * Number(root.subtitleStyle.positionX || 0.5) - width / 2
                    : previewFrame.x + (previewFrame.width - width) / 2
-                y: alignment === "top" ? previewFrame.y + previewFrame.height * safeMargin
-                  : alignment === "custom" ? previewFrame.y + previewFrame.height * Number(root.subtitleStyle.positionY || 0.90) - height / 2
-                                             : previewFrame.y + previewFrame.height - height - previewFrame.height * safeMargin - previewControls.height
+                y: followsOcrRegion
+                  ? dubbingOcrRoiOverlay.content.y + dubbingOcrRoiOverlay.content.height - height - Theme.paddingSmall
+                  : alignment === "top" ? previewFrame.y + previewFrame.height * safeMargin
+                    : alignment === "custom" ? previewFrame.y + previewFrame.height * Number(root.subtitleStyle.positionY || 0.90) - height / 2
+                                               : previewFrame.y + previewFrame.height - height - previewFrame.height * safeMargin - previewControls.height
                 radius: Theme.radiusSmall
                 color: "transparent"
                 z: 2
@@ -881,7 +864,7 @@ Rectangle {
         }
         Flow {
             Layout.fillWidth: true
-            visible: root.dubbing.dubbingOcrRoiVisible
+            visible: root.showOcrTools && root.dubbing.dubbingOcrRoiVisible
             spacing: Theme.paddingSmall
             Button {
                 text: root.ocrRoiEditMode ? qsTr("Done editing scan area") : qsTr("Edit OCR scan area")
@@ -902,7 +885,7 @@ Rectangle {
         }
         Rectangle {
             Layout.fillWidth: true
-            visible: root.dubbing.dubbingOcrRoiVisible
+            visible: root.showOcrTools && root.dubbing.dubbingOcrRoiVisible
                      && AppController.subtitleOcr.cropPreviewUrl.toString() !== ""
             Layout.preferredHeight: visible ? 180 : 0
             color: Theme.surfaceAlt
@@ -959,6 +942,7 @@ Rectangle {
         }
         RowLayout {
             Layout.fillWidth: true
+            visible: !root.hasLoadedSource
             FieldProxy { Layout.fillWidth: true; text: root.dubbing.sourceMediaPath; placeholderText: qsTr("Media file path") }
             PrimaryButton { text: qsTr("Browse"); iconName: "folder"; quiet: true; enabled: !root.dubbing.processing; onClicked: root.browseRequested() }
         }

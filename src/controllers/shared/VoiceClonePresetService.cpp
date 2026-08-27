@@ -42,7 +42,8 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
     QVariantList combined;
     QSet<QString> loadedIds;
 
-    // 1. Always load system built-in presets (61 master voices) from bundled resources
+    // 1. Always load the system built-in catalog from bundled resources.  The
+    // UI derives counts from the records that actually load successfully.
     QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_presets.json");
     if (!QFile::exists(bundled)) {
 #ifdef LASTUDIO_SOURCE_DIR
@@ -50,6 +51,32 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
         if (QFile::exists(sourceBundled)) bundled = sourceBundled;
 #endif
     }
+
+    auto resolveAudioPath = [](const QString &path) -> QString {
+        if (path.isEmpty()) return QString();
+        const QString local = PathUtils::urlToLocalPath(path);
+        if (QFileInfo(local).isAbsolute() && QFile::exists(local)) {
+            return local;
+        }
+        const QString filename = QFileInfo(local).fileName();
+        if (filename.isEmpty()) return local;
+
+        const QString appVoices = QCoreApplication::applicationDirPath() + QStringLiteral("/resources/voices/") + filename;
+        if (QFile::exists(appVoices)) return appVoices;
+
+#ifdef LASTUDIO_SOURCE_DIR
+        const QString srcVoices = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/resources/voices/") + filename;
+        if (QFile::exists(srcVoices)) return srcVoices;
+
+        const QString pkgVoices = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/vietnamese_voices_package/audio/") + filename;
+        if (QFile::exists(pkgVoices)) return pkgVoices;
+#endif
+
+        const QString dataVoices = PathUtils::dataDir() + QStringLiteral("/presets/voice_clone_refs/") + filename;
+        if (QFile::exists(dataVoices)) return dataVoices;
+
+        return appVoices;
+    };
 
     QFile bundledFile(bundled);
     if (bundledFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -65,6 +92,14 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
                 QVariantMap map = val.toObject().toVariantMap();
                 map.insert(QStringLiteral("isBuiltin"), true);
                 map.insert(QStringLiteral("canDelete"), false);
+
+                const QString rawAudio = map.value(QStringLiteral("audioPath")).toString();
+                const QString resolvedAudio = resolveAudioPath(rawAudio);
+                if (!resolvedAudio.isEmpty()) {
+                    map.insert(QStringLiteral("audioPath"), resolvedAudio);
+                    map.insert(QStringLiteral("referenceAudio"), resolvedAudio);
+                }
+
                 const QString id = map.value(QStringLiteral("id")).toString();
                 if (!id.isEmpty()) {
                     loadedIds.insert(id);
@@ -96,6 +131,14 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
                     map.insert(QStringLiteral("isBuiltin"), false);
                     map.insert(QStringLiteral("canDelete"), true);
                     map.insert(QStringLiteral("isUserPreset"), true);
+
+                    const QString rawAudio = map.value(QStringLiteral("audioPath")).toString();
+                    const QString resolvedAudio = resolveAudioPath(rawAudio);
+                    if (!resolvedAudio.isEmpty()) {
+                        map.insert(QStringLiteral("audioPath"), resolvedAudio);
+                        map.insert(QStringLiteral("referenceAudio"), resolvedAudio);
+                    }
+
                     combined.prepend(map);
                 }
             }

@@ -14,6 +14,7 @@ private slots:
     void serializesAndRestoresVersionedLinks();
     void rejectsMissingPortsAndMultipleSingleInputs();
     void buildsCanonicalDubbingWorkflowDefinition();
+    void requiresExplicitSourceSeparationStems();
     void commitsAndResolvesAtomicArtifacts();
     void validatesDubbingGraphAgainstNodeContracts();
     void validatesTypedTranscriptArtifacts();
@@ -22,6 +23,7 @@ private slots:
     void persistsReviewRequestsAtomically();
     void appendsOrderedRunJournalEvents();
     void resumesInterruptedRunFromJournalSnapshot();
+    void rejectsInterruptedRunWithMissingFileArtifact();
     void recordsCancellationSeparatelyFromFailure();
 };
 

@@ -13,13 +13,20 @@ namespace LAStudio {
 class DubbingProject
 {
 public:
-    static constexpr int CurrentSchemaVersion = 13;
+    static constexpr int CurrentSchemaVersion = 14;
 
     QString projectPath;
     QString sourceMediaPath;
     QString sourceHash;
     QString masterAudioPath;
+    // Normalized mono analysis input created by ingest.  It is never
+    // overwritten by source separation, because STT and recovery may still
+    // need this artifact when no vocals stem exists yet.
     QString analysisAudioPath;
+    // Actual speech stem returned by source separation.  Keeping this
+    // separate from analysisAudioPath prevents the UI/exporter from presenting
+    // analysis.wav as a completed Vocals artifact.
+    QString vocalsAudioPath;
     QString backgroundAudioPath;
     qint64 sourceDurationMs = 0;
     int sourceSampleRate = 0;

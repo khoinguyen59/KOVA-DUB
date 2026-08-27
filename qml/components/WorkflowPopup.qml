@@ -389,7 +389,7 @@ Popup {
                                 Text {
                                     Layout.fillWidth: true
                                     visible: workflowRow.modelData.error !== ""
-                                    text: workflowRow.modelData.error
+                                    text: AppController.explainError(workflowRow.modelData.error, "Workflow").summary
                                     color: Theme.danger
                                     font.pixelSize: 10
                                     elide: Text.ElideRight

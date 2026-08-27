@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "../../base"
 import LAStudio
@@ -13,9 +12,10 @@ Rectangle {
     signal openTranscriptEditorRequested()
     signal openAlignmentStudioRequested()
     signal continueRequested()
+    signal previousStepRequested()
 
     Layout.fillWidth: true
-    implicitHeight: layout.implicitHeight + Theme.paddingLarge * 2
+    implicitHeight: layout.implicitHeight + Theme.paddingMedium * 2
     radius: Theme.radiusMedium
     color: Qt.rgba(Theme.surfaceLevel2.r, Theme.surfaceLevel2.g, Theme.surfaceLevel2.b, 0.60)
     border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -24,8 +24,8 @@ Rectangle {
     ColumnLayout {
         id: layout
         anchors.fill: parent
-        anchors.margins: Theme.paddingLarge
-        spacing: Theme.paddingMedium
+        anchors.margins: Theme.paddingMedium
+        spacing: Theme.paddingSmall
 
         RowLayout {
             Layout.fillWidth: true
@@ -39,18 +39,22 @@ Rectangle {
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
                 Text {
                     text: qsTr("Kiểm tra và hiệu chỉnh văn bản nguồn trước khi dịch để đảm bảo bản dịch chính xác nhất.")
                     color: Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
                 }
             }
         }
 
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: actionsLayout.implicitHeight + Theme.paddingMedium * 2
+            implicitHeight: actionsLayout.implicitHeight + Theme.paddingSmall * 2
             radius: Theme.radiusSmall
             color: Qt.rgba(1, 1, 1, 0.03)
             border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -59,41 +63,66 @@ Rectangle {
             ColumnLayout {
                 id: actionsLayout
                 anchors.fill: parent
-                anchors.margins: Theme.paddingMedium
+                anchors.margins: Theme.paddingSmall
                 spacing: Theme.paddingSmall
 
                 Text {
                     Layout.fillWidth: true
-                    text: root.dubbing.segments.length > 0
-                          ? qsTr("Hiện có %1 phân đoạn lời thoại đã sẵn sàng duyệt.").arg(root.dubbing.segments.length)
+                    text: (root.dubbing.segments || []).length > 0
+                          ? qsTr("Hiện có %1 phân đoạn lời thoại đã sẵn sàng duyệt.").arg((root.dubbing.segments || []).length)
                           : qsTr("Chưa có phân đoạn nào. Vui lòng chạy bước Nhận dạng (Transcribe) trước.")
-                    color: root.dubbing.segments.length > 0 ? Theme.success : Theme.warning
+                    color: (root.dubbing.segments || []).length > 0 ? Theme.success : Theme.warning
                     font.pixelSize: Theme.fontSmall
                     font.bold: true
+                    wrapMode: Text.WordWrap
                 }
 
+                // Main Tool Actions
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.paddingSmall
 
                     PrimaryButton {
-                        text: qsTr("Mở Trình Sửa Phụ Đề")
+                        text: qsTr("Mở Trình Sửa Lời Thoại")
                         iconName: "edit"
-                        enabled: !root.dubbing.processing && root.dubbing.segments.length > 0
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0
                         onClicked: root.openTranscriptEditorRequested()
                     }
+
                     PrimaryButton {
-                        text: qsTr("Mở Alignment Studio")
+                        text: qsTr("Alignment Studio")
                         iconName: "alignment"
                         quiet: true
-                        enabled: !root.dubbing.processing && root.dubbing.normalizedAudioPath !== "" && root.dubbing.segments.length > 0
+                        Layout.preferredWidth: 130
+                        Layout.preferredHeight: 38
+                        enabled: !root.dubbing.processing && (root.dubbing.normalizedAudioPath || "") !== "" && (root.dubbing.segments || []).length > 0
                         onClicked: root.openAlignmentStudioRequested()
                     }
-                    Item { Layout.fillWidth: true }
+                }
+
+                // Navigation Row
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+
                     PrimaryButton {
-                        text: qsTr("Tiếp tục sang Dịch thuật")
+                        text: qsTr("⬅ Quay lại")
+                        iconName: "chevron-left"
+                        quiet: true
+                        Layout.preferredHeight: 38
+                        Layout.preferredWidth: 100
+                        onClicked: root.previousStepRequested()
+                    }
+
+                    PrimaryButton {
+                        text: qsTr("Tiếp tục sang Dịch thuật ➔")
                         iconName: "chevron-right"
-                        enabled: !root.dubbing.processing && root.stepComplete
+                        buttonColor: Theme.accent
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0
                         onClicked: root.continueRequested()
                     }
                 }

@@ -407,11 +407,13 @@ void WorkflowActivityManager::openWorkflow(const QString &id)
 void WorkflowActivityManager::openStudioRoute(const QString &routeId)
 {
     const QString normalized = routeId.trimmed();
-    // The Dubbing entry gate needs a real, explicit Leave action.  "welcome"
-    // is the only non-studio route this controller exposes; arbitrary route
-    // IDs remain rejected.
+    // The Dubbing entry gate needs a real, explicit Leave action.  The two
+    // non-studio feature routes below are also valid recovery destinations for
+    // structured errors; arbitrary route IDs remain rejected.
     if (normalized != QStringLiteral("welcome")
-        && !normalized.startsWith(QStringLiteral("studio-"))) return;
+        && !normalized.startsWith(QStringLiteral("studio-"))
+        && normalized != QStringLiteral("media-download")
+        && normalized != QStringLiteral("subtitle-ocr")) return;
     emit openRequested(normalized);
 }
 
