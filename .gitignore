@@ -128,3 +128,10 @@ LA-Studio/
 # Codex
 .codex/
 
+# Graphify rebuild cache and dated backups are local generated state. The
+# curated graph outputs remain versioned for architecture review.
+graphify-out/cache/ast/
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_python
+graphify-out/20??-??-??/
+
