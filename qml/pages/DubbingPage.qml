@@ -185,7 +185,7 @@ Item {
         if (nodeId === "adaptive-llm") {
             dubbingColabSetupDialog.stageIds = ["translate"]
         } else {
-            dubbingColabSetupDialog.stageIds = [root.stageIdForNode(nodeId)]
+            dubbingColabSetupDialog.stageIds = [root.colabStageIdForNode(nodeId)]
         }
         dubbingColabSetupDialog.open()
     }
@@ -360,6 +360,16 @@ Item {
         return nodeId
     }
 
+    // Workflow presentation ids and Colab setup ids are intentionally not
+    // the same: the header calls the isolation stage "isolator", while the
+    // controller/session contract is the durable "source-separate" id.
+    function colabStageIdForNode(nodeId) {
+        if (nodeId === "isolator") return "source-separate"
+        if (nodeId === "tts" || nodeId === "assign-voices") return "synthesize"
+        if (nodeId === "alignment-subtitle" || nodeId === "fit-timing") return "alignment"
+        return nodeId
+    }
+
     function actionNodeForStage(stageId) {
         var stages = dubbing.workflowStages || []
         for (var i = 0; i < stages.length; ++i)
@@ -480,6 +490,18 @@ Item {
         var familyId = config.familyId || node.selectedFamilyId || ""
         if (familyId === "")
             return true
+        var parameters = config.parameters || {}
+        var providerId = config.executionProvider || node.executionProvider
+                           || parameters.executionProvider || "local-dev"
+        if (providerId === "colab-direct" || providerId === "colab-gpu") {
+            var setupStageId = root.colabStageIdForNode(nodeId)
+            var setupStages = dubbing.colabSetupStages || []
+            for (var i = 0; i < setupStages.length; ++i) {
+                if (setupStages[i].id === setupStageId)
+                    return setupStages[i].verified !== true
+            }
+            return true
+        }
         if (node.executionProvider === "local-dev"
                 && node.providerState !== "ready"
                 && node.state !== "completed")

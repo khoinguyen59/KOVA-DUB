@@ -43,6 +43,43 @@ void TestMediaToolService::rejectsMissingMediaInputsExactlyOnce()
     QVERIFY(!result.at(2).toString().isEmpty());
 }
 
+void TestMediaToolService::extractsVideoThumbnailWithStagedFfmpeg()
+{
+    QTemporaryDir temporaryDirectory;
+    QVERIFY(temporaryDirectory.isValid());
+    const QString videoPath = temporaryDirectory.filePath(QStringLiteral("source.mp4"));
+    const QString thumbnailPath = temporaryDirectory.filePath(QStringLiteral("thumbnail.jpg"));
+    const QString argumentsPath = temporaryDirectory.filePath(QStringLiteral("arguments.txt"));
+    const QString ffmpegPath = temporaryDirectory.filePath(QStringLiteral("fake-ffmpeg.cmd"));
+    QVERIFY(writeFixtureFile(videoPath, QByteArrayLiteral("fixture")));
+    QVERIFY(writeFixtureFile(ffmpegPath, QByteArrayLiteral(
+        "@echo off\r\n"
+        "echo %* > \"" ) + argumentsPath.toLocal8Bit() + QByteArrayLiteral("\"\r\n"
+        "> \"%~dp0thumbnail.jpg\" echo thumbnail\r\n")));
+
+    const QByteArray previousFfmpeg = qgetenv("LASTUDIO_FFMPEG");
+    const bool hadFfmpeg = qEnvironmentVariableIsSet("LASTUDIO_FFMPEG");
+    qputenv("LASTUDIO_FFMPEG", ffmpegPath.toUtf8());
+
+    MediaToolService service;
+    QSignalSpy finished(&service, &MediaToolService::finished);
+    service.extractVideoThumbnail(videoPath, thumbnailPath);
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+    if (hadFfmpeg) qputenv("LASTUDIO_FFMPEG", previousFfmpeg);
+    else qunsetenv("LASTUDIO_FFMPEG");
+
+    QVERIFY(finished.constFirst().at(0).toBool());
+    QCOMPARE(finished.constFirst().at(1).toString(), thumbnailPath);
+    QVERIFY(QFileInfo(thumbnailPath).isFile());
+
+    QFile arguments(argumentsPath);
+    QVERIFY(arguments.open(QIODevice::ReadOnly));
+    const QByteArray captured = arguments.readAll();
+    QVERIFY(captured.contains("-ss 0"));
+    QVERIFY(captured.contains("-frames:v 1"));
+    QVERIFY(captured.contains(thumbnailPath.toLocal8Bit()));
+}
+
 void TestMediaToolService::passesConfiguredFontDirectoryToBurnInFilter()
 {
     QTemporaryDir temporaryDirectory;

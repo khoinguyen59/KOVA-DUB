@@ -11,6 +11,7 @@ Rectangle {
 
     signal nextStepRequested()
     signal previousStepRequested()
+    signal runRequested(string nodeId)
 
     function hasRenderableAudio() {
         if ((root.dubbing.dubbedVocalPath || "").length > 0) return true
@@ -101,7 +102,7 @@ Rectangle {
                 Layout.preferredHeight: 40
                 Layout.fillWidth: true
                 buttonColor: Theme.accent
-                onClicked: root.dubbing.runWorkflowNode("mix")
+                onClicked: root.runRequested("mix")
             }
 
             // Row 2: Navigation Buttons (Quay lại & Tiếp tục)

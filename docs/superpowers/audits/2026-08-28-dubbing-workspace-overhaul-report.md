@@ -30,6 +30,8 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | CTest toàn bộ | PASS 41/41, 0 fail |
 | QML route/smoke contract | PASS trong CTest và preview harness |
 | QML preview capture | PASS; production `Main.qml` đã chụp workspace với panel phải cố định, Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 2560×1440 và 3840×2160 logical |
+| Regression: Run thiếu model/Colab | PASS; `runWithoutSeparationSetupRequestsModelSelection` phát `workflowSetupRequired`, không phát `lastError`/global error |
+| Regression: video thumbnail | PASS; `importedVideoPublishesAsyncThumbnailUrl` tạo thumbnail JPEG bất đồng bộ bằng FFmpeg và publish `sourceThumbnailUrl` |
 | Media subprocess watchdog | PASS; `MediaIngestService`, `MediaToolService` và export `ffprobe` validation đều có single-shot deadline, kill/cleanup và regression test process treo |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
 | Graphify | PASS; đã refresh sau thay đổi ROI/QML và report; xem mục 9 |
@@ -115,6 +117,15 @@ Các đoạn hướng dẫn dài trong media acquisition và header của từng
 - Preview stem chuyển đổi không nhận buffer rỗng; process cũ bị dừng theo session generation để tránh phát chồng.
 - Export dùng staging file + validation + `AtomicMediaCommit`, không commit output nửa vời.
 
+### 4.7 Recheck hai lỗi người dùng vừa phát hiện
+
+Hai lỗi này đã được sửa ở source hiện tại:
+
+1. **Thiếu thumbnail sau khi chọn video.** `DubbingController::requestSourceThumbnail()` tạo cache theo đường dẫn tuyệt đối, kích thước và thời gian sửa file; `MediaToolService::extractVideoThumbnail()` chạy FFmpeg bằng `QProcess` bất đồng bộ với timeout/cleanup. QML dùng `Image` bất đồng bộ trong poster 16:9, giữ fallback loading nếu thumbnail chưa sẵn sàng hoặc FFmpeg không khả dụng. Vì vậy thumbnail không chặn việc mở video và không dùng audio/source normalized làm ảnh thay thế.
+2. **Run khi chưa setup Colab/model.** Tất cả Run trong review panel phải đi qua `DubbingPage.runStep()`. Hàm này kiểm tra family/provider/setup snapshot trước khi gọi controller. Nếu thiếu setup, nó mở `WorkflowNodeModelDialog`; nếu trạng thái cũ/persisted lọt qua QML gate, `DubbingController::workflowNodeSetupIssue()` là lớp bảo vệ thứ hai, phát `workflowSetupRequired` và ghi warning kỹ thuật vào log nhưng không gọi `setError()`. Do đó AppController không mở global dialog kiểu “Chưa thể tách giọng”; người dùng được đưa thẳng tới chọn model/route/Colab.
+
+Mapping Colab cũng đã được tách rõ: tên hiển thị `isolator` được đổi thành stage bền vững `source-separate` trước khi kiểm tra `colabSetupStages`, tránh tình trạng đã chọn đúng model nhưng lookup sai stage nên hiện lỗi giả.
+
 ## 5. Luồng dubbing chuẩn và các gate bắt buộc
 
 Luồng an toàn:
@@ -173,11 +184,11 @@ Preview harness: `scripts/preview_dubbing_ui.ps1 -Capture`.
 - Các bản responsive tương ứng `dubbing-preview-right-panel-final-*` cho `1600x900` và `2560x1440`.
 - `dubbing-qml-interaction-trace.json` ghi lại entry gate, source picker, Colab setup route và review state transition.
 
-Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, preview, timeline và panel phải cố định; không còn Task Controls bên trái. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance, safe ROI geometry và capture `dubbing-transcribe-ocr-right-panel-final-1280x720.png` được chạy lại, không còn glyph bị che hay ROI chạm playback controls. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
+Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, preview, timeline và panel phải cố định; không còn Task Controls bên trái. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance, safe ROI geometry và capture `dubbing-transcribe-ocr-right-panel-final-1280x720.png` được chạy lại, không còn glyph bị che hay ROI chạm playback controls. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build. Thumbnail fixture hiện dùng ảnh first-frame thật được tạo từ `out/dubbing-live-test/dubbing_live_walkthrough.mp4`, không phải bitmap mock.
 
 ## 9. Graphify và release hygiene
 
-Graphify đã được refresh sau thay đổi pane/copy/QML: `18.055` nodes, `31.497` edges sau clustering và `910` communities; `graph.html` aggregated có `910` community nodes và `2.163` cross-community edges. Graph health không có missing/dangling endpoint, self-loop hoặc collapsed edge; producer suppression có 12 site được ghi nhận bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
+Graphify đã được refresh sau thay đổi pane/copy/QML và hai fix thumbnail/model gate: `18.073` nodes, `31.548` edges sau graph build, `918` communities; `graph.html` aggregated có `918` community nodes và `2.186` cross-community edges. Graph health không có missing/dangling endpoint, self-loop hoặc collapsed edge; producer suppression có 12 site được ghi nhận bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
 
 Trước khi merge/push, chạy lại:
 
@@ -215,3 +226,16 @@ Trạng thái hiện tại: bản portable `0.0.8.6` đã qua build, CTest, QML 
 ## 11. Recheck release 0.0.8.6
 
 Sau khi sửa lỗi ROI editor có thể chạm playback controls, bản source hiện tại đã được build lại và kiểm thử lại: QML lint exit 0; CTest serial `41/41`; preview production `Main.qml` pass ở `1280×720`, `1600×900`, `2560×1440`, `3840×2160`; OCR preview final không còn ROI/subtitle chạm thanh playback; package smoke exit `0`; EXE File/ProductVersion `0.0.8.6`. Đây là bằng chứng cho toàn bộ contract/UI/workflow local trong phạm vi repo. Live Colab, GPU lease và một phiên dubbing đủ 8 task với model thật vẫn phải được nghiệm thu ở môi trường triển khai có credential/runtime tương ứng.
+
+## 12. Recheck bổ sung sau phản hồi lỗi runtime/model picker
+
+Build/test mới nhất sau hai bản sửa:
+
+- Build MSVC/Qt 6.9.3 thành công: `out/build/windows-msvc-release/LA-Studio-0.0.8.6.exe`.
+- `TestDubbingProject::runWithoutSeparationSetupRequestsModelSelection` PASS: cấu hình thiếu cho `source-separate` dừng trước runner, log vẫn có warning kỹ thuật, `workflowSetupRequired(node-model)` được phát và `lastError` vẫn rỗng.
+- `TestDubbingProject::importedVideoPublishesAsyncThumbnailUrl` PASS: file video được import, FFmpeg fake/managed process sinh JPEG, controller phát `sourceThumbnailChanged` và trả local URL hợp lệ.
+- CTest toàn bộ: `41/41` PASS, `0` fail; QML lint và QML route smoke PASS.
+- Preview `dubbing-preview-thumbnail-gate-final-1280x720.png` dùng full production `Main.qml`, có source video thật, canvas 16:9, panel phải cố định, task rail tiếng Anh ngắn và không có clipping/collision ở kích thước này.
+- Portable package đã được stage lại đúng layout 8.4; smoke exit code `0`, File/ProductVersion `0.0.8.6`, SHA-256 EXE `16B0776208E2D41E41D44F35A3E4E68D1694B540AA0E097CF692AF35060140EA`.
+
+Giới hạn còn lại không thay đổi: chưa có credential Colab/GPU để nghiệm thu inference thật và chưa chạy một media fixture qua đủ tám task với model AI thật. Đây là giới hạn môi trường kiểm thử, không phải lỗi route model picker hoặc thumbnail local.

@@ -863,6 +863,90 @@ QString DubbingController::workflowStatusText() const
     return QStringLiteral("Configure media, transcript, target text, and a TTS model");
 }
 
+QVariantMap DubbingController::workflowNodeSetupIssue(const QString &nodeId) const
+{
+    QString capabilityId;
+    if (nodeId == QStringLiteral("source-separate"))
+        capabilityId = QStringLiteral("voice-isolation");
+    else if (nodeId == QStringLiteral("transcribe"))
+        capabilityId = QStringLiteral("stt");
+    else if (nodeId == QStringLiteral("translate"))
+        capabilityId = QStringLiteral("translation");
+    else if (nodeId == QStringLiteral("synthesize"))
+        capabilityId = QStringLiteral("tts");
+    else
+        return {};
+
+    const auto issue = [&nodeId](const QString &message) {
+        return QVariantMap{
+            {QStringLiteral("nodeId"), nodeId},
+            {QStringLiteral("setupKind"), QStringLiteral("node-model")},
+            {QStringLiteral("message"), message}
+        };
+    };
+
+    const QVariantMap selection = m_workflowNodeConfigurations.value(nodeId).toMap();
+    const QVariantMap parameters = selection.value(QStringLiteral("parameters")).toMap();
+    const QString providerId = selection.value(
+        QStringLiteral("executionProvider"), parameters.value(
+        QStringLiteral("executionProvider"), QStringLiteral("local-dev"))).toString()
+        .trimmed().toLower();
+    const QString familyId = selection.value(
+        QStringLiteral("familyId"), parameters.value(QStringLiteral("familyId"))).toString().trimmed();
+    const QString modelId = selection.value(
+        QStringLiteral("modelId"), parameters.value(QStringLiteral("modelId"))).toString().trimmed();
+
+    if (selection.isEmpty() || (providerId == QStringLiteral("local-dev") && familyId.isEmpty())) {
+        return issue(QStringLiteral("Choose a model and execution route for %1 before running it.")
+                         .arg(visibleStepForNode(nodeId)));
+    }
+
+    ExecutionProvider provider = ExecutionProvider::LocalDev;
+    if (!executionProviderFromId(providerId, &provider)) {
+        return issue(QStringLiteral("Choose a supported execution route for %1 before running it.")
+                         .arg(visibleStepForNode(nodeId)));
+    }
+
+    if (provider == ExecutionProvider::ColabDirect) {
+        if (modelId.isEmpty() || !DubbingColabModelRoutes::supports(nodeId, modelId)) {
+            return issue(QStringLiteral("Choose an exact Colab model for %1 before running it.")
+                             .arg(visibleStepForNode(nodeId)));
+        }
+
+        bool verified = false;
+        for (const QVariant &entry : colabSetupStages()) {
+            const QVariantMap stage = entry.toMap();
+            if (stage.value(QStringLiteral("id")).toString() == nodeId) {
+                verified = stage.value(QStringLiteral("verified")).toBool();
+                break;
+            }
+        }
+        if (!verified) {
+            return issue(QStringLiteral("Connect and check the exact Colab worker for %1 before running it.")
+                             .arg(visibleStepForNode(nodeId)));
+        }
+        return {};
+    }
+
+    // API Gateway has its own credential/model validation in the runner. The
+    // manual action should still reach that route instead of being mistaken
+    // for a local model setup problem.
+    if (provider == ExecutionProvider::ApiGateway)
+        return {};
+
+    StudioConfiguration configuration;
+    configuration.capabilityId = capabilityId;
+    configuration.familyId = familyId;
+    configuration.runtimeId = selection.value(QStringLiteral("runtimeId")).toString();
+    configuration.runtimeVersion = selection.value(QStringLiteral("runtimeVersion")).toString();
+    configuration.selectedFiles = selection.value(QStringLiteral("selectedFiles")).toMap();
+    if (!StudioConfigurationResolver::resolve(configuration).isValid) {
+        return issue(QStringLiteral("The selected model or runtime for %1 is not ready. Choose an installed setup.")
+                         .arg(visibleStepForNode(nodeId)));
+    }
+    return {};
+}
+
 
 bool DubbingController::runWorkflow(const QString &outputPath)
 {
@@ -1133,6 +1217,18 @@ bool DubbingController::runCurrentStep(const QString &outputPath)
             setBusyError(QStringLiteral("Subtitle OCR can run beside STT only; wait for the current non-STT Dubbing task to finish."));
         else if (independentStt)
             setBusyError(QStringLiteral("Speech-to-Text can run beside Subtitle OCR only; wait for the current non-OCR Dubbing task to finish."));
+        return false;
+    }
+    const QVariantMap setupIssue = workflowNodeSetupIssue(step);
+    if (!setupIssue.isEmpty()) {
+        const QString message = setupIssue.value(QStringLiteral("message")).toString();
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Manual run paused for model setup node=%1: %2")
+                            .arg(step, message));
+        emit workflowSetupRequired(
+            setupIssue.value(QStringLiteral("nodeId")).toString(),
+            setupIssue.value(QStringLiteral("setupKind")).toString(), message);
+        emit workflowChanged();
         return false;
     }
     Logger::info(QStringLiteral("DubbingController"),

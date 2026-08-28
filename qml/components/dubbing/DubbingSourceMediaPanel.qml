@@ -49,6 +49,8 @@ Rectangle {
     readonly property bool thumbnailReady: root.hasLoadedSource
                                            && (mediaPlayer.mediaStatus === MediaPlayer.LoadedMedia
                                                || mediaPlayer.mediaStatus === MediaPlayer.BufferedMedia)
+    readonly property bool sourceThumbnailAvailable: root.dubbing.sourceThumbnailUrl
+                                                      && root.dubbing.sourceThumbnailUrl.toString().length > 0
     readonly property var subtitleConfiguration: root.dubbing.subtitleConfiguration || ({})
     readonly property var subtitleStyle: root.subtitleConfiguration.style || ({})
     // Target text is the normal final caption, but a reviewed STT/OCR source
@@ -274,6 +276,8 @@ Rectangle {
         // A newly selected/downloaded source should immediately receive the
         // canvas. Re-opening source setup remains an explicit user action.
         root.sourceSetupExpanded = !root.hasLoadedSource
+        if (root.dubbing.requestSourceThumbnail)
+            root.dubbing.requestSourceThumbnail()
     }
     onPreviewFocusModeChanged: {
         // A focused canvas must never be squeezed by optional download controls.
@@ -341,6 +345,8 @@ Rectangle {
     Component.onCompleted: {
         root.previewMode = root.hasDubbedPreview ? "dubbed" : "source"
         root.sourceSetupExpanded = !root.hasLoadedSource
+        if (root.dubbing.requestSourceThumbnail)
+            root.dubbing.requestSourceThumbnail()
     }
     Timer {
         id: sourceSwitchFallback
@@ -578,9 +584,20 @@ Rectangle {
                     anchors.fill: parent
                     visible: root.isVideoSource && !root.thumbnailReady
                     color: "#11121a"
+                    Image {
+                        id: sourceThumbnailImage
+                        objectName: "dubbingVideoThumbnailImage"
+                        anchors.fill: parent
+                        source: root.dubbing.sourceThumbnailUrl
+                        visible: root.sourceThumbnailAvailable && status === Image.Ready
+                        asynchronous: true
+                        cache: false
+                        fillMode: Image.PreserveAspectFit
+                    }
                     Column {
                         anchors.centerIn: parent
                         spacing: Theme.paddingSmall
+                        visible: !sourceThumbnailImage.visible
                         LineIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "video"; color: Theme.accentLight; width: 36; height: 36 }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter

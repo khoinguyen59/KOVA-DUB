@@ -158,6 +158,10 @@ QtObject {
         // black canvas with a fabricated source path.
         property string sourceMediaPath: "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/dubbing-live-test/dubbing_live_walkthrough.mp4"
         property string sourceMediaUrl: "file:///C:/Users/Nguyen%20Trong%20Khoi/Downloads/TTS/LA-Studio/out/dubbing-live-test/dubbing_live_walkthrough.mp4"
+        // Use the extracted first-frame fixture when the preview is still
+        // waiting for Qt Multimedia. Production obtains this URL from the
+        // asynchronous FFmpeg thumbnail cache in DubbingController.
+        property string sourceThumbnailUrl: "file:///C:/Users/Nguyen%20Trong%20Khoi/Downloads/TTS/LA-Studio/out/dubbing-live-test/dubbing_live_walkthrough-thumb.jpg"
         property string playbackMediaUrl: ""
         property string normalizedAudioPath: "C:/Users/Nguyen Trong Khoi/AppData/Local/LAStudio/cache/analysis.wav"
         property string vocalsPath: "C:/Users/Nguyen Trong Khoi/AppData/Local/LAStudio/cache/vocals.wav"

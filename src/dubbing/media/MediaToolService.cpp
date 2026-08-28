@@ -35,6 +35,14 @@ MediaToolService::MediaToolService(QObject *parent)
             this, &MediaToolService::onProcessTimeout);
 }
 
+MediaToolService::~MediaToolService()
+{
+    if (m_process.state() != QProcess::NotRunning) {
+        m_process.kill();
+        m_process.waitForFinished(1000);
+    }
+}
+
 QString MediaToolService::executablePath() const
 {
     return MediaRuntimeLocator::resolve().ffmpeg;
@@ -43,6 +51,11 @@ QString MediaToolService::executablePath() const
 bool MediaToolService::available() const
 {
     return !executablePath().isEmpty();
+}
+
+bool MediaToolService::busy() const
+{
+    return m_process.state() != QProcess::NotRunning;
 }
 
 void MediaToolService::muxVideoWithAudio(const QString &videoPath,
@@ -70,6 +83,7 @@ void MediaToolService::muxVideoWithAudio(const QString &videoPath,
     m_outputPath = outputPath;
     m_stderr.clear();
     m_processTimedOut = false;
+    m_operation = Operation::Mux;
     m_process.setProgram(executable);
     m_process.setWorkingDirectory(QFileInfo(executable).absolutePath());
     m_process.setProcessChannelMode(QProcess::SeparateChannels);
@@ -127,6 +141,49 @@ void MediaToolService::muxVideoWithAudio(const QString &videoPath,
         MediaProcessTimeout::kFfmpegTimeoutMs));
 }
 
+void MediaToolService::extractVideoThumbnail(const QString &videoPath,
+                                             const QString &outputPath)
+{
+    if (m_process.state() != QProcess::NotRunning) {
+        emit finished(false, outputPath, QStringLiteral("Another media operation is already running."));
+        return;
+    }
+    const QString executable = executablePath();
+    if (executable.isEmpty()) {
+        emit finished(false, outputPath,
+                      QStringLiteral("FFmpeg was not found. Install the managed media runtime or set LASTUDIO_FFMPEG."));
+        return;
+    }
+    if (!QFileInfo(videoPath).isFile()) {
+        emit finished(false, outputPath, QStringLiteral("The source video does not exist."));
+        return;
+    }
+    if (outputPath.trimmed().isEmpty()) {
+        emit finished(false, outputPath, QStringLiteral("A thumbnail output path is required."));
+        return;
+    }
+    QDir().mkpath(QFileInfo(outputPath).absolutePath());
+
+    m_outputPath = outputPath;
+    m_stderr.clear();
+    m_processTimedOut = false;
+    m_operation = Operation::Thumbnail;
+    m_process.setProgram(executable);
+    m_process.setWorkingDirectory(QFileInfo(executable).absolutePath());
+    m_process.setProcessChannelMode(QProcess::SeparateChannels);
+    m_process.setArguments({
+        QStringLiteral("-hide_banner"), QStringLiteral("-loglevel"), QStringLiteral("error"),
+        QStringLiteral("-y"), QStringLiteral("-ss"), QStringLiteral("0"),
+        QStringLiteral("-i"), videoPath,
+        QStringLiteral("-frames:v"), QStringLiteral("1"),
+        QStringLiteral("-vf"), QStringLiteral("scale=640:-2"),
+        QStringLiteral("-q:v"), QStringLiteral("3"), QStringLiteral("-an"), outputPath
+    });
+    m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kFfmpegTimeoutMs));
+}
+
 void MediaToolService::cancel()
 {
     m_processTimeout.stop();
@@ -151,12 +208,15 @@ void MediaToolService::onFinished(int exitCode, QProcess::ExitStatus status)
         : timedOut
             ? QStringLiteral("FFmpeg export timed out after %1 ms. Check the media runtime and try again.")
                   .arg(m_processTimeout.interval())
-            : QStringLiteral("FFmpeg export failed: %1")
+            : QStringLiteral("FFmpeg %1 failed: %2")
+                  .arg(m_operation == Operation::Thumbnail ? QStringLiteral("thumbnail extraction")
+                                                            : QStringLiteral("export"))
                   .arg(QString::fromLocal8Bit(m_stderr).trimmed());
     emit progress(ok ? 100 : 0);
     emit finished(ok, m_outputPath, error);
     m_outputPath.clear();
     m_stderr.clear();
+    m_operation = Operation::Mux;
 }
 
 void MediaToolService::onProcessError(QProcess::ProcessError error)
@@ -165,11 +225,16 @@ void MediaToolService::onProcessError(QProcess::ProcessError error)
     m_processTimeout.stop();
     m_processTimedOut = false;
     const QString outputPath = m_outputPath;
+    const Operation operation = m_operation;
     m_outputPath.clear();
     m_stderr.clear();
+    m_operation = Operation::Mux;
     emit progress(0);
     emit finished(false, outputPath,
-                  QStringLiteral("FFmpeg could not be started: %1").arg(m_process.errorString()));
+                  QStringLiteral("FFmpeg %1 could not be started: %2")
+                      .arg(operation == Operation::Thumbnail ? QStringLiteral("thumbnail extraction")
+                                                              : QStringLiteral("export"),
+                           m_process.errorString()));
 }
 
 void MediaToolService::onProcessTimeout()

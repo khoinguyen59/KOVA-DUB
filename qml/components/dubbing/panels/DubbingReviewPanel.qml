@@ -249,6 +249,7 @@ Rectangle {
             DubbingNormalizeStep {
                 visible: root.displayedStepId === "normalize" || root.displayedStepId === "ingest"
                 dubbing: root.dubbing
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
                 onPreviousStepRequested: root.previousStepRequested("normalize")
                 onNextStepRequested: root.nextStepRequested("normalize")
             }
@@ -256,6 +257,7 @@ Rectangle {
             DubbingSeparateStep {
                 visible: root.displayedStepId === "source-separate" || root.displayedStepId === "isolator"
                 dubbing: root.dubbing
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
                 playingSeparationStem: root.playingSeparationStem
                 onPreviousStepRequested: root.previousStepRequested("source-separate")
                 onNextStepRequested: root.nextStepRequested("source-separate")
@@ -267,6 +269,7 @@ Rectangle {
             DubbingTranscribeStep {
                 visible: root.displayedStepId === "transcribe"
                 dubbing: root.dubbing
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
                 ocrSetupEditable: root.ocrSetupEditable
                 onPreviousStepRequested: root.previousStepRequested("transcribe")
                 onNextStepRequested: root.nextStepRequested("transcribe")
@@ -285,6 +288,7 @@ Rectangle {
             DubbingTranslateStep {
                 visible: root.displayedStepId === "translate"
                 dubbing: root.dubbing
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
                 onPreviousStepRequested: root.previousStepRequested("translate")
                 onNextStepRequested: root.nextStepRequested("translate")
                 onFixRequested: root.fixRequested()
@@ -318,6 +322,7 @@ Rectangle {
             DubbingMixStep {
                 visible: root.displayedStepId === "mix"
                 dubbing: root.dubbing
+                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
                 onPreviousStepRequested: root.previousStepRequested("mix")
                 onNextStepRequested: root.nextStepRequested("mix")
             }

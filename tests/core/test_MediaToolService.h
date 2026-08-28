@@ -10,6 +10,7 @@ class TestMediaToolService : public QObject
 
 private slots:
     void rejectsMissingMediaInputsExactlyOnce();
+    void extractsVideoThumbnailWithStagedFfmpeg();
     void passesConfiguredFontDirectoryToBurnInFilter();
     void rendersLineSpacedAssWithStagedFfmpeg();
     void timesOutHungProcessExactlyOnce();

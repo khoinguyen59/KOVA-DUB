@@ -12,6 +12,7 @@ Rectangle {
     property bool stepComplete: false
 
     signal openOcrColabSetupRequested()
+    signal runRequested(string nodeId)
     signal nextStepRequested()
     signal previousStepRequested()
 
@@ -252,7 +253,7 @@ Rectangle {
                 Layout.preferredHeight: 40
                 Layout.fillWidth: true
                 buttonColor: Theme.accent
-                onClicked: root.dubbing.runWorkflowNode("transcribe")
+                onClicked: root.runRequested("transcribe")
             }
 
             // Row 2: Navigation Buttons (Quay lại & Tiếp tục)

@@ -32,6 +32,8 @@ private slots:
     void qualityModesExposeExpectedDefaultVoiceModel();
     void standardModesPreserveExplicitNodeModelsOnOpen();
     void sourceSeparationExposesModelSelection();
+    void runWithoutSeparationSetupRequestsModelSelection();
+    void importedVideoPublishesAsyncThumbnailUrl();
     void workflowStagesExposeEightUniquePresentationStages();
     void completedSttKeepsItsTaskBarCheckmarkWhenReconciliationIsPending();
     void targetLanguageUpdatesVoiceNodeLanguage();

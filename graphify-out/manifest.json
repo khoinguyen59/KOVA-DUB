@@ -1218,15 +1218,15 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.cpp": {
-    "mtime": 1787861298.2831295,
-    "seen": 1787863374.8313525,
-    "ast_hash": "b677644e9b1038e007df1f1d965172a3",
+    "mtime": 1787910454.2468932,
+    "seen": 1787912478.1536264,
+    "ast_hash": "de0d75c1709fc604f9ed22daf5c99ba2",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.h": {
-    "mtime": 1787861250.0175836,
-    "seen": 1787863374.831354,
-    "ast_hash": "cef300fe38b63a947034ab8e21e21d0d",
+    "mtime": 1787911269.0476,
+    "seen": 1787912478.1536288,
+    "ast_hash": "65909a36ff3abaca5af79239f7ba784c",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingExportJob.cpp": {
@@ -1776,15 +1776,15 @@
     "semantic_hash": ""
   },
   "src/dubbing/media/MediaToolService.cpp": {
-    "mtime": 1787891309.2238564,
-    "seen": 1787892328.367447,
-    "ast_hash": "2c954152698e4a9ae1ca331dc2ca6a4e",
+    "mtime": 1787911569.6855066,
+    "seen": 1787912478.168683,
+    "ast_hash": "05fd91bc291e8ca2c348c43732bfe1c5",
     "semantic_hash": ""
   },
   "src/dubbing/media/MediaToolService.h": {
-    "mtime": 1787891309.2238564,
-    "seen": 1787892328.367448,
-    "ast_hash": "24a9493b7dd6cdf6b5dd57ab69d804e7",
+    "mtime": 1787911569.6855066,
+    "seen": 1787912478.168685,
+    "ast_hash": "40eb1343f88a75f83a13777b9592efd3",
     "semantic_hash": ""
   },
   "src/dubbing/media/RemoteMediaImportService.cpp": {
@@ -4296,9 +4296,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Project.cpp": {
-    "mtime": 1787861298.288279,
-    "seen": 1787863374.8328714,
-    "ast_hash": "4c21968ac84425f57810cef79d076d22",
+    "mtime": 1787910463.149655,
+    "seen": 1787912478.155231,
+    "ast_hash": "3db0286329a2ec89a1ee94e8a132c281",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Segments.cpp": {
@@ -4314,9 +4314,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Workflow.cpp": {
-    "mtime": 1787861682.0327916,
-    "seen": 1787863374.8329728,
-    "ast_hash": "a3a4dae8ca60b199fa2bf85a6c3a927d",
+    "mtime": 1787911378.157054,
+    "seen": 1787912478.1554103,
+    "ast_hash": "f8df35c1799c418ed107985c7595b665",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingTranslationFix_Candidate.cpp": {
@@ -5952,15 +5952,15 @@
     "semantic_hash": ""
   },
   "tests/core/test_MediaToolService.cpp": {
-    "mtime": 1787891545.031552,
-    "seen": 1787892328.3860192,
-    "ast_hash": "7eccb7d29258269a7ed5091e992fc3ae",
+    "mtime": 1787910303.0499697,
+    "seen": 1787912478.1880505,
+    "ast_hash": "f5b4248b7434495a79700dfd57a5c837",
     "semantic_hash": ""
   },
   "tests/core/test_MediaToolService.h": {
-    "mtime": 1787891044.3726602,
-    "seen": 1787892328.3860204,
-    "ast_hash": "589ef37d0a3361b9495354caccf80cf2",
+    "mtime": 1787910303.0499697,
+    "seen": 1787912478.1880524,
+    "ast_hash": "02cb9eb0cc7f8518a11a68f97c2b8f48",
     "semantic_hash": ""
   },
   "tests/core/test_ModelsAndRuntimes.cpp": {
@@ -6090,15 +6090,15 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.cpp": {
-    "mtime": 1787907455.1591678,
-    "seen": 1787907930.0286539,
-    "ast_hash": "d505c87e1eba882434f8ae8603ffd711",
+    "mtime": 1787911921.6309931,
+    "seen": 1787912478.189676,
+    "ast_hash": "df829db7dbd6bdc5eb0750b6a64f0bbd",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.h": {
-    "mtime": 1787891044.3806756,
-    "seen": 1787892328.3875432,
-    "ast_hash": "8238eec99dc49f5853d0570113131ded",
+    "mtime": 1787911921.6309931,
+    "seen": 1787912478.1896777,
+    "ast_hash": "c5cb05a921c8426641e81af7ec822d29",
     "semantic_hash": ""
   },
   "tests/dubbing/test_TranslationProject.cpp": {
@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787907882.7953272,
-    "seen": 1787907930.0609605,
-    "ast_hash": "151334e2b7d9f6d82e4e46c872801825",
+    "mtime": 1787912332.3192596,
+    "seen": 1787912478.2166338,
+    "ast_hash": "0f3e6f25d347e4f512fa1ed933ec63a7",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {
@@ -6930,9 +6930,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-08-28-dubbing-studio-workspace-overhaul-design.md": {
-    "mtime": 1787856016.1323771,
-    "seen": 1787863374.9031336,
-    "ast_hash": "9efd86c740510995d8f95d0e891983fd",
+    "mtime": 1787908290.5130017,
+    "seen": 1787912478.217067,
+    "ast_hash": "e649c82efb24efeebf0b4f144e4bc7b4",
     "semantic_hash": ""
   },
   "resources/voices/aussie_podcaster.wav": {
@@ -7452,9 +7452,9 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.cpp": {
-    "mtime": 1787906891.4451365,
-    "seen": 1787907930.0287578,
-    "ast_hash": "e8633736c5e0d41b094929e11425d23a",
+    "mtime": 1787911579.1423695,
+    "seen": 1787912478.1896803,
+    "ast_hash": "9fcdc5960c315ee9ad71cc31b796b158",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.h": {

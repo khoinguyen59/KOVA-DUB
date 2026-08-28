@@ -21,6 +21,7 @@ Rectangle {
 
     signal nextStepRequested()
     signal previousStepRequested()
+    signal runRequested(string nodeId)
 
     Connections {
         target: AppController.player
@@ -129,7 +130,7 @@ Rectangle {
                     Layout.preferredHeight: 40
                     Layout.fillWidth: true
                     buttonColor: Theme.accent
-                    onClicked: root.dubbing.runWorkflowNode("ingest")
+                    onClicked: root.runRequested("ingest")
                 }
 
                 PrimaryButton {

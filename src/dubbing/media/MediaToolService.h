@@ -14,15 +14,19 @@ class MediaToolService final : public QObject
     Q_OBJECT
 public:
     explicit MediaToolService(QObject *parent = nullptr);
+    ~MediaToolService() override;
 
     QString executablePath() const;
     bool available() const;
+    bool busy() const;
     void muxVideoWithAudio(const QString &videoPath,
                            const QString &audioPath,
                            const QString &subtitlePath,
                            const QString &outputPath,
                            bool burnInSubtitles = false,
                            const QString &subtitleFontDirectory = QString());
+    void extractVideoThumbnail(const QString &videoPath,
+                               const QString &outputPath);
     void cancel();
 
 signals:
@@ -36,11 +40,17 @@ private slots:
     void onProcessTimeout();
 
 private:
+    enum class Operation {
+        Mux,
+        Thumbnail
+    };
+
     QProcess m_process;
     QTimer m_processTimeout;
     QString m_outputPath;
     QByteArray m_stderr;
     bool m_processTimedOut = false;
+    Operation m_operation = Operation::Mux;
 };
 
 } // namespace LAStudio

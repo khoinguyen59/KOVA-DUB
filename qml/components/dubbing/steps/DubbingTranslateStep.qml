@@ -10,6 +10,7 @@ Rectangle {
     property bool stepComplete: false
 
     signal fixRequested()
+    signal runRequested(string nodeId)
     signal nextStepRequested()
     signal previousStepRequested()
 
@@ -143,7 +144,7 @@ Rectangle {
                 Layout.preferredHeight: 40
                 Layout.fillWidth: true
                 buttonColor: Theme.accent
-                onClicked: root.dubbing.runWorkflowNode("translate")
+                onClicked: root.runRequested("translate")
             }
 
             // Row 2: Navigation Buttons (Quay lại & Tiếp tục)

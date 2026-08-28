@@ -2078,6 +2078,71 @@ void TestDubbingProject::sourceSeparationExposesModelSelection()
              QStringLiteral("voice-isolation"));
 }
 
+void TestDubbingProject::runWithoutSeparationSetupRequestsModelSelection()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    const QString mediaPath = dir.filePath(QStringLiteral("source.mp4"));
+    const QString normalizedPath = dir.filePath(QStringLiteral("master.wav"));
+    QVERIFY(writeFixtureFile(mediaPath, QByteArrayLiteral("video-placeholder")));
+    QVERIFY(writeFixtureFile(normalizedPath, QByteArrayLiteral("normalized-placeholder")));
+
+    DubbingProject project;
+    project.projectPath = dir.filePath(QStringLiteral("project.ladub.json"));
+    project.sourceMediaPath = mediaPath;
+    project.masterAudioPath = normalizedPath;
+    project.analysisAudioPath = normalizedPath;
+    project.workflowEntryMode = QStringLiteral("step");
+    QString saveError;
+    QVERIFY2(project.save(&saveError), qPrintable(saveError));
+
+    DubbingController controller(nullptr, nullptr);
+    QVERIFY(controller.openProject(project.projectPath));
+    QSignalSpy setupSpy(&controller, &DubbingController::workflowSetupRequired);
+
+    QVERIFY(!controller.runWorkflowNode(QStringLiteral("source-separate")));
+    QCOMPARE(setupSpy.count(), 1);
+    const QList<QVariant> request = setupSpy.constFirst();
+    QCOMPARE(request.at(0).toString(), QStringLiteral("source-separate"));
+    QCOMPARE(request.at(1).toString(), QStringLiteral("node-model"));
+    QVERIFY(request.at(2).toString().contains(QStringLiteral("model"), Qt::CaseInsensitive));
+    QVERIFY(!controller.processing());
+    QVERIFY(controller.lastError().isEmpty());
+}
+
+void TestDubbingProject::importedVideoPublishesAsyncThumbnailUrl()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    const QString mediaPath = dir.filePath(QStringLiteral("source.mp4"));
+    const QString ffmpegPath = dir.filePath(QStringLiteral("fake-ffmpeg.cmd"));
+    QVERIFY(writeFixtureFile(mediaPath, QByteArrayLiteral("video-placeholder")));
+    QVERIFY(writeFixtureFile(ffmpegPath, QByteArrayLiteral(
+        "@echo off\r\n"
+        "set \"last=\"\r\n"
+        ":next\r\n"
+        "if \"%~1\"==\"\" goto done\r\n"
+        "set \"last=%~1\"\r\n"
+        "shift\r\n"
+        "goto next\r\n"
+        ":done\r\n"
+        "> \"%last%\" echo thumbnail\r\n")));
+    const ScopedEnvironmentValue ffmpegOverride("LASTUDIO_FFMPEG", ffmpegPath.toUtf8());
+
+    DubbingController controller(nullptr, nullptr);
+    QVERIFY(controller.newProject(dir.filePath(QStringLiteral("project.ladub.json"))));
+    QSignalSpy thumbnailChanged(&controller, &DubbingController::sourceThumbnailChanged);
+    QVERIFY(controller.importMedia(mediaPath));
+
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.sourceThumbnailUrl().isEmpty(), 5000);
+    const QString thumbnailPath = controller.sourceThumbnailUrl().toLocalFile();
+    QVERIFY(QFileInfo(thumbnailPath).isFile());
+    QVERIFY(QFileInfo(thumbnailPath).size() > 0);
+    QVERIFY(thumbnailChanged.count() > 0);
+}
+
 void TestDubbingProject::workflowStagesExposeEightUniquePresentationStages()
 {
     DubbingController controller(nullptr, nullptr);

@@ -132,11 +132,26 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
     const QString header = readSourceFile(
         QStringLiteral("qml/components/dubbing/DubbingWorkflowStep.qml"));
     const QString voice = readSourceFile(QStringLiteral("qml/components/shared/VoiceGalleryDialog.qml"));
+    const QString separate = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingSeparateStep.qml"));
+    const QString normalize = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingNormalizeStep.qml"));
+    const QString transcribe = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingTranscribeStep.qml"));
+    const QString translate = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingTranslateStep.qml"));
+    const QString mix = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingMixStep.qml"));
 
     QVERIFY(page.contains(QStringLiteral("DubbingReviewPanel")));
     QVERIFY(page.contains(QStringLiteral("Right Pane: persistent task review and controls")));
     QVERIFY(!page.contains(QStringLiteral("DubbingTaskShelf {")));
     QVERIFY(!page.contains(QStringLiteral("DubbingContextDrawer {")));
+    QVERIFY(page.contains(QStringLiteral("function nodeNeedsModelSelection(nodeId)")));
+    QVERIFY(page.contains(QStringLiteral("nodeModelDialog.openFor(nodeId)")));
+    QVERIFY(page.contains(QStringLiteral("function colabStageIdForNode(nodeId)")));
+    QVERIFY(page.contains(QStringLiteral("root.colabStageIdForNode(nodeId)")));
+    QVERIFY(page.contains(QStringLiteral("onWorkflowSetupRequired(nodeId, setupKind, message)")));
     QVERIFY(page.contains(QStringLiteral("qmlPreviewSelectDubbingStep"))
             || readSourceFile(QStringLiteral("qml/Main.qml")).contains(
                 QStringLiteral("qmlPreviewSelectDubbingStep")));
@@ -145,6 +160,10 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
     QVERIFY(preview.contains(QStringLiteral("VideoOutput.PreserveAspectFit")));
     QVERIFY(preview.contains(QStringLiteral("Text.ElideMiddle")));
     QVERIFY(preview.contains(QStringLiteral("dubbingVideoThumbnail")));
+    QVERIFY(preview.contains(QStringLiteral("dubbingVideoThumbnailImage")));
+    QVERIFY(preview.contains(QStringLiteral("sourceThumbnailUrl")));
+    QVERIFY(preview.contains(QStringLiteral("asynchronous: true")));
+    QVERIFY(preview.contains(QStringLiteral("Image {")));
     QVERIFY(preview.contains(QStringLiteral("readonly property rect sourceContent")));
     QVERIFY(preview.contains(QStringLiteral("var controlsTop = previewControls.y - Theme.paddingSmall")));
     QVERIFY(preview.contains(QStringLiteral("dubbingOcrRoiOverlay.y + dubbingOcrRoiOverlay.height")));
@@ -156,6 +175,11 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
         "signal voiceSelected(string audioPath, string referenceText, string name, string familyId, string voiceId)")));
     QVERIFY(!readSourceFile(QStringLiteral(
         "qml/components/dubbing/steps/DubbingSynthesizeStep.qml")).contains(QStringLiteral("53+clone")));
+
+    for (const QString &step : {separate, normalize, transcribe, translate, mix}) {
+        QVERIFY(step.contains(QStringLiteral("signal runRequested")));
+        QVERIFY(!step.contains(QStringLiteral("root.dubbing.runWorkflowNode")));
+    }
 }
 
 } // namespace LAStudio

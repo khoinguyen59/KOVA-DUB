@@ -33,6 +33,7 @@ class ColabSession;
 class VoiceClonePresetService;
 class RemoteMediaImportService;
 class SubtitleOcrController;
+class MediaToolService;
 
 class DubbingController : public QObject
 {
@@ -44,6 +45,7 @@ class DubbingController : public QObject
     Q_PROPERTY(QString projectPath READ projectPath NOTIFY projectChanged)
     Q_PROPERTY(QString sourceMediaPath READ sourceMediaPath NOTIFY projectChanged)
     Q_PROPERTY(QUrl sourceMediaUrl READ sourceMediaUrl NOTIFY projectChanged)
+    Q_PROPERTY(QUrl sourceThumbnailUrl READ sourceThumbnailUrl NOTIFY sourceThumbnailChanged)
     Q_PROPERTY(QUrl playbackMediaUrl READ playbackMediaUrl NOTIFY previewChanged)
     Q_PROPERTY(QString normalizedAudioPath READ normalizedAudioPath NOTIFY projectChanged)
     Q_PROPERTY(QString vocalsPath READ vocalsPath NOTIFY projectChanged)
@@ -163,6 +165,7 @@ public:
         if (m_project.sourceMediaPath.isEmpty()) return QUrl();
         return QUrl::fromLocalFile(m_project.sourceMediaPath);
     }
+    QUrl sourceThumbnailUrl() const;
     QUrl playbackMediaUrl() const;
     QString sourceLanguage() const { return m_project.sourceLanguage; }
     QString targetLanguage() const { return m_project.targetLanguage; }
@@ -267,6 +270,7 @@ public:
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE void closeProject();
     Q_INVOKABLE bool importMedia(const QString &pathOrUrl);
+    Q_INVOKABLE bool requestSourceThumbnail();
     // Each non-empty line is an independent public URL. Share text is reduced
     // to its URL locally, then the managed CPU-only downloader stages it. The
     // URL is removed from memory as soon as the local media file is ready and
@@ -426,6 +430,7 @@ public:
 signals:
     void subtitleOcrProcessingChanged();
     void projectChanged();
+    void sourceThumbnailChanged();
     void segmentsChanged();
     void processingChanged();
     void errorChanged();
@@ -465,6 +470,11 @@ private:
     bool ensureAutomaticModel(const QString &nodeId, const QString &capabilityId,
                               bool loadSession);
     bool ensureAutomaticAdaptiveModel();
+    // A manual Run action must stop at model/worker setup when persisted
+    // configuration is missing or stale. This is the C++ safety net for
+    // QML's model-picker gate and prevents the runner from producing a
+    // misleading runtime failure first.
+    QVariantMap workflowNodeSetupIssue(const QString &nodeId) const;
     // Subtitle OCR owns a separate worker and may run beside an active STT
     // transcription only.  It must never bypass a batch, automatic workflow,
     // translation fix, or another non-STT production stage.
@@ -557,6 +567,9 @@ private:
     // Public links use the managed local CPU downloader; manual files bypass
     // every downloader entirely. Neither path uses a Colab or GPU worker.
     RemoteMediaImportService *m_remoteMediaImport = nullptr;
+    MediaToolService *m_thumbnailTools = nullptr;
+    QString m_sourceThumbnailPath;
+    QString m_pendingThumbnailOutputPath;
     QVariantList m_mediaQueueItems;
     QString m_activeMediaQueueDownloadId;
     QString m_activeMediaQueueItemId;

@@ -13,6 +13,7 @@
 #include "dubbing/fusion/DubbingTranscriptFusionService.h"
 #include "dubbing/timing/DubbingTimingService.h"
 #include "dubbing/timing/EspeakNgPhonemizer.h"
+#include "dubbing/media/MediaToolService.h"
 #include "dubbing/media/RemoteMediaImportService.h"
 #include "dubbing/workflow/DubbingWorkflowDefinition.h"
 #include "dubbing/workflow/DubbingWorkflowNodes.h"
@@ -32,6 +33,7 @@
 #include "remote/colab/ColabSession.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QFileInfo>
 #include <QFile>
 #include <QDir>
@@ -350,6 +352,84 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
 
 DubbingController::~DubbingController() = default;
 
+QUrl DubbingController::sourceThumbnailUrl() const
+{
+    if (m_sourceThumbnailPath.isEmpty()
+        || !QFileInfo(m_sourceThumbnailPath).isFile()
+        || QFileInfo(m_sourceThumbnailPath).size() <= 0)
+        return {};
+    return QUrl::fromLocalFile(m_sourceThumbnailPath);
+}
+
+bool DubbingController::requestSourceThumbnail()
+{
+    const QFileInfo sourceInfo(m_project.sourceMediaPath);
+    const QString suffix = sourceInfo.suffix().toLower();
+    const bool isVideo = suffix == QStringLiteral("mp4")
+        || suffix == QStringLiteral("mkv") || suffix == QStringLiteral("mov")
+        || suffix == QStringLiteral("webm") || suffix == QStringLiteral("avi");
+    if (!sourceInfo.isFile() || !isVideo || m_project.projectPath.isEmpty() || !m_thumbnailTools) {
+        if (m_thumbnailTools && m_thumbnailTools->busy())
+            m_thumbnailTools->cancel();
+        m_pendingThumbnailOutputPath.clear();
+        if (!m_sourceThumbnailPath.isEmpty()) {
+            m_sourceThumbnailPath.clear();
+            emit sourceThumbnailChanged();
+        }
+        return false;
+    }
+
+    const QByteArray cacheKey = sourceInfo.absoluteFilePath().toUtf8()
+        + QByteArrayLiteral("|") + QByteArray::number(sourceInfo.size())
+        + QByteArrayLiteral("|") + QByteArray::number(sourceInfo.lastModified().toMSecsSinceEpoch());
+    const QString key = QString::fromLatin1(
+        QCryptographicHash::hash(cacheKey, QCryptographicHash::Sha1).toHex());
+    QDir thumbnailDirectory(QFileInfo(m_project.projectPath).absolutePath()
+                            + QStringLiteral("/.la-studio/thumbnails"));
+    if (!thumbnailDirectory.mkpath(QStringLiteral("."))) {
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Cannot create source thumbnail cache directory: %1")
+                            .arg(thumbnailDirectory.absolutePath()));
+        return false;
+    }
+    const QString outputPath = thumbnailDirectory.filePath(key + QStringLiteral(".jpg"));
+    if (m_sourceThumbnailPath == outputPath && QFileInfo(outputPath).isFile()
+        && QFileInfo(outputPath).size() > 0)
+        return true;
+
+    if (m_sourceThumbnailPath != outputPath) {
+        m_sourceThumbnailPath.clear();
+        emit sourceThumbnailChanged();
+    }
+    if (m_thumbnailTools->busy()) {
+        // Keep an earlier extraction alive when it is for this same source;
+        // otherwise cancel it and retry after QProcess has emitted finished.
+        if (m_pendingThumbnailOutputPath == outputPath)
+            return true;
+        m_pendingThumbnailOutputPath = outputPath;
+        m_thumbnailTools->cancel();
+        QTimer::singleShot(100, this, [this]() { requestSourceThumbnail(); });
+        return true;
+    }
+    if (QFileInfo(outputPath).isFile() && QFileInfo(outputPath).size() > 0) {
+        m_sourceThumbnailPath = outputPath;
+        m_pendingThumbnailOutputPath.clear();
+        emit sourceThumbnailChanged();
+        return true;
+    }
+    if (!m_thumbnailTools->available()) {
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Source thumbnail skipped because FFmpeg is unavailable."));
+        return false;
+    }
+
+    m_pendingThumbnailOutputPath = outputPath;
+    Logger::info(QStringLiteral("DubbingController"),
+                 QStringLiteral("Extracting source thumbnail: %1").arg(sourceInfo.absoluteFilePath()));
+    m_thumbnailTools->extractVideoThumbnail(sourceInfo.absoluteFilePath(), outputPath);
+    return true;
+}
+
 DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine *tts,
                                      TranslationEngine *translation,
                                      ModelManager *models, RuntimeManager *runtimes, QObject *parent)
@@ -361,6 +441,26 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
     // Public-media download is a CPU-only, app-owned operation. It is not an
     // AI route and must never require, create, or reuse a Colab credential.
     m_remoteMediaImport = new RemoteMediaImportService({}, this);
+    m_thumbnailTools = new MediaToolService(this);
+    connect(m_thumbnailTools, &MediaToolService::finished, this,
+            [this](bool success, const QString &outputPath, const QString &error) {
+        // A source can change while FFmpeg is extracting. Only publish the
+        // result belonging to the currently requested cache file.
+        if (outputPath.isEmpty() || outputPath != m_pendingThumbnailOutputPath)
+            return;
+        m_pendingThumbnailOutputPath.clear();
+        if (success && QFileInfo(outputPath).isFile() && QFileInfo(outputPath).size() > 0) {
+            m_sourceThumbnailPath = outputPath;
+            Logger::info(QStringLiteral("DubbingController"),
+                         QStringLiteral("Source thumbnail ready: %1").arg(outputPath));
+        } else {
+            m_sourceThumbnailPath.clear();
+            Logger::warning(QStringLiteral("DubbingController"),
+                            QStringLiteral("Source thumbnail unavailable: %1")
+                                .arg(error.isEmpty() ? QStringLiteral("FFmpeg produced no image") : error));
+        }
+        emit sourceThumbnailChanged();
+    });
     connect(m_remoteMediaImport, &RemoteMediaImportService::transferProgress, this,
             [this](qint64 receivedBytes, qint64 totalBytes) {
         const int index = mediaQueueIndex(m_activeMediaQueueDownloadId);

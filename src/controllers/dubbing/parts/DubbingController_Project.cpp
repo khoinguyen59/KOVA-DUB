@@ -101,6 +101,7 @@ bool DubbingController::newProject(const QString &path)
     m_project.speakers.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("speaker-1")},
                                           {QStringLiteral("name"), QStringLiteral("Speaker 1")},
                                           {QStringLiteral("voice"), QVariantMap()} });
+    requestSourceThumbnail();
     emit projectChanged();
     emit segmentsChanged();
     refreshCloneVoicePresets();
@@ -181,6 +182,7 @@ bool DubbingController::openProject(const QString &path)
     // Sync paths to runner
     m_runner->setPreviewPath(QFileInfo(m_project.projectPath).absolutePath() + QStringLiteral("/preview.wav"));
     m_runner->setExportPath(QString());
+    requestSourceThumbnail();
     
     emit projectChanged();
     emit segmentsChanged();
@@ -243,6 +245,7 @@ bool DubbingController::saveProjectAs(const QString &path)
     const QString previousPath = m_project.projectPath;
     m_project.projectPath = localPath;
     if (saveProject()) {
+        requestSourceThumbnail();
         emit projectChanged();
         return true;
     }
@@ -402,6 +405,7 @@ void DubbingController::closeProject()
     setWorkflowMode(QStringLiteral("idle"));
     setCurrentStep(QStringLiteral("import"));
     m_runner->cancel();
+    requestSourceThumbnail();
     if (m_workflowRunner) m_workflowRunner->setJournal(nullptr);
     m_workflowJournal.reset();
     emit projectChanged();
@@ -469,6 +473,7 @@ bool DubbingController::importMedia(const QString &pathOrUrl)
     m_runner->setExportPath(QString());
     setWorkflowMode(QStringLiteral("idle"));
     setCurrentStep(QStringLiteral("ingest"));
+    requestSourceThumbnail();
     emit projectChanged();
     emit segmentsChanged();
     emit workflowChanged();
