@@ -32,7 +32,7 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | QML preview capture | PASS; đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 1920×1080, 3840×2160 logical |
 | Media subprocess watchdog | PASS; `MediaIngestService`, `MediaToolService` và export `ffprobe` validation đều có single-shot deadline, kill/cleanup và regression test process treo |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
-| Graphify | cập nhật sau source/docs cuối cùng; xem mục 9 |
+| Graphify | PASS; cập nhật sau commit watchdog `c0713cc`; xem mục 9 |
 | Live Colab GPU | Chưa chạy trong lần recheck |
 | Full media E2E 1→8 bằng model thật | Chưa chạy trong lần recheck |
 | Packaging/EXE mới | PASS; package 8.4-style tại `out/LA-Studio-0.0.8.5/`, EXE File/ProductVersion `0.0.8.5`, portable QML smoke exit 0 |
@@ -174,7 +174,7 @@ Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task 
 
 ## 9. Graphify và release hygiene
 
-Graphify đã được cập nhật cho code graph sau commit release-evidence `0f7d726c`: 18.035 nodes, 31.450 edges sau clustering và 921 communities; `graph.html` aggregated có 921 community nodes và 2.120 cross-community edges. Graph health không có dangling/missing endpoint, self-loop hoặc collapsed edge; producer suppression vẫn được ghi chú bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
+Graphify đã được cập nhật cho code graph sau commit watchdog `c0713cc`: 18.053 nodes, 31.495 edges sau clustering và 882 communities; `graph.html` aggregated có 882 community nodes và 2.010 cross-community edges (65 community mỏng được ẩn trong phần hiển thị). Graph health không có dangling/missing endpoint, self-loop hoặc collapsed edge; producer suppression vẫn được ghi chú bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
 
 Trước khi merge/push, chạy lại:
 
@@ -190,7 +190,7 @@ git diff --check
 
 Package verification PASS bằng `scripts/package.ps1` với `-SkipInstaller -PortableInternalLayout`: `out/LA-Studio-0.0.8.5/LA-Studio-0.0.8.5.exe` có File/ProductVersion `0.0.8.5`; `platforms/qwindows.dll`, `Qt6Core.dll`, `media-tools/ffmpeg.exe`, `subtitle-ocr/tesseract.exe`, notebook Colab và `data/presets/voice_clone_refs/vieneu_Minh_Đức.wav` đều tồn tại. Package script cũng xác nhận staging manifest/license manifest và portable QML smoke exit code 0. Đây là internal package vì lệnh cho phép eSpeak payload unsigned đã SHA-256-verify; live Colab E2E vẫn là release boundary bên ngoài môi trường này.
 
-GitHub delivery PASS: branch `main` đã push thành công tới `origin` (`https://github.com/khoinguyen59/KOVA-DUB.git`). Các commit chính của đợt này gồm implementation `c9c795d5`, release/graph evidence `0f7d726c` và `2207447101`, cùng các docs delivery follow-up; không có push rejection.
+GitHub delivery PASS: branch `main` đã push thành công tới `origin` (`https://github.com/khoinguyen59/KOVA-DUB.git`). Các commit chính của đợt này gồm implementation `c9c795d5`, release/graph evidence `0f7d726c` và `2207447101`, các docs delivery follow-up, cùng watchdog hardening `c0713cc`; graph refresh được commit cùng tài liệu này trước lần push cuối.
 
 ## 10. Tiêu chí chấp nhận trước khi gọi là production-ready
 

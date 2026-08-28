@@ -310,6 +310,8 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 - [x] **Step 3: Wire watchdog lifecycle.** Start each timer after process launch, stop on finish/error/cancel, kill on timeout and preserve stage-specific error text for the UI guidance catalog.
 - [x] **Step 4: Run focused and full verification.** New regressions and the complete CTest matrix pass `41/41`.
 
+Implementation evidence: watchdog hardening is committed as `c0713cc`; the refreshed Graphify artifacts and indexed report are delivered in the follow-up documentation commit.
+
 ## Plan self-review
 
 - Spec coverage: all nine acceptance criteria are mapped to Tasks 1–11; no requirement is left only in prose.
