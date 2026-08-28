@@ -5860,11 +5860,12 @@ void TestDubbingProject::mediaBatchQueueWiresSerialRealOutputs()
     QVERIFY(!sourcePanelText.contains(QStringLiteral("openDouyinBrowserSession")));
     QVERIFY(!sourcePanelText.contains(QStringLiteral("Choose Douyin cookies")));
 
-    QVERIFY(acquisitionPanelText.contains(QStringLiteral("Download public links locally")));
-    QVERIFY(acquisitionPanelText.contains(QStringLiteral("managed yt-dlp adapter")));
+    QVERIFY(acquisitionPanelText.contains(QStringLiteral("localMediaDownloadAddLinksButton")));
+    QVERIFY(acquisitionPanelText.contains(QStringLiteral("manualMediaFilesButton")));
     QVERIFY(acquisitionPanelText.contains(QStringLiteral("Choose optional Douyin cookies")));
-    QVERIFY(acquisitionPanelText.contains(QStringLiteral("Files folder in Colab's left sidebar")));
     QVERIFY(acquisitionPanelText.contains(QStringLiteral("enqueueMediaLinks(publicLinks.text)")));
+    QVERIFY(!acquisitionPanelText.contains(QStringLiteral("managed yt-dlp adapter")));
+    QVERIFY(!acquisitionPanelText.contains(QStringLiteral("Files folder in Colab's left sidebar")));
     QVERIFY(!acquisitionPanelText.contains(QStringLiteral("connectWorkflowColabStage(\"media-download")));
     QVERIFY(!acquisitionPanelText.contains(QStringLiteral("Worker URL")));
     QVERIFY(!acquisitionPanelText.contains(QStringLiteral("Session token")));

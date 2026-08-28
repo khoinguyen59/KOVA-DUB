@@ -49,13 +49,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Hòa âm giữa giọng lồng tiếng mới và nhạc nền/âm thanh môi trường gốc.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

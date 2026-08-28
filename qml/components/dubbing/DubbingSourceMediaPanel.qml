@@ -39,8 +39,8 @@ Rectangle {
     // Link/download settings are useful before a source is chosen, but must not
     // consume the video canvas once an editor is working on an OCR scan area.
     property bool sourceSetupExpanded: true
-    // A loaded source gets a compact, scrollable change/download drawer.  This
-    // leaves the canvas usable even when an operator deliberately re-opens it.
+    // A loaded source gets a compact, scrollable source setup area. This
+    // leaves the canvas usable when an operator deliberately re-opens it.
     readonly property int sourceSetupMaximumHeight: root.hasLoadedSource ? 110 : 540
     // This is a display frame only. It never crops or stretches the source:
     // VideoOutput continues to preserve the source pixels inside the frame.
@@ -249,9 +249,9 @@ Rectangle {
     }
 
     // Selection can originate from the native file dialog, a downloaded-media
-    // row, or an automated preflight Fix action.  Keep the post-selection
+    // row, or an automated preflight Fix action. Keep the post-selection
     // visual state deterministic instead of relying only on a later QML
-    // property-notify turn to collapse the download drawer.
+    // property-notify turn to collapse the source setup area.
     function collapseSourceSetupAfterSelection() {
         root.sourceSetupExpanded = false
     }
@@ -449,7 +449,7 @@ Rectangle {
                     }
                 }
                 /* Source management is deliberately outside the loaded-source
-                   toolbar. The left task shelf owns Upload and source setup. */
+                   toolbar. The right task panel owns workflow actions. */
                 Button {
                     id: sourceSetupToggle
                     objectName: "dubbingSourceSetupToggle"

@@ -5940,9 +5940,9 @@
     "semantic_hash": ""
   },
   "tests/core/test_MediaIngestService.cpp": {
-    "mtime": 1787891545.0325525,
-    "seen": 1787892328.3860168,
-    "ast_hash": "7455bdc870973386197cc14a02d03d0d",
+    "mtime": 1787907455.1591678,
+    "seen": 1787907930.0263276,
+    "ast_hash": "62c93c8694e9fd555493eede71075fb3",
     "semantic_hash": ""
   },
   "tests/core/test_MediaIngestService.h": {
@@ -6090,9 +6090,9 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.cpp": {
-    "mtime": 1787891545.0340674,
-    "seen": 1787892328.3875415,
-    "ast_hash": "f53f1c5ff441266cd684fd09c57bb48e",
+    "mtime": 1787907455.1591678,
+    "seen": 1787907930.0286539,
+    "ast_hash": "d505c87e1eba882434f8ae8603ffd711",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.h": {
@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787902805.0093615,
-    "seen": 1787902889.7082834,
-    "ast_hash": "2be907718bf1e681c0eb2dad9ed20a5b",
+    "mtime": 1787907882.7953272,
+    "seen": 1787907930.0609605,
+    "ast_hash": "151334e2b7d9f6d82e4e46c872801825",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {
@@ -6912,9 +6912,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-28-dubbing-studio-workspace-overhaul-plan.md": {
-    "mtime": 1787902825.837796,
-    "seen": 1787902889.7084615,
-    "ast_hash": "779cbef495dacac7c979849cc25d95bf",
+    "mtime": 1787907855.873121,
+    "seen": 1787907930.0611541,
+    "ast_hash": "b50ec4202f6c5964117829baac776535",
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-08-27-unified-colab-10-10-design.md": {
@@ -7452,9 +7452,9 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.cpp": {
-    "mtime": 1787902087.8390765,
-    "seen": 1787902760.4396675,
-    "ast_hash": "afaec31c0a4425d01950e32ea18a9285",
+    "mtime": 1787906891.4451365,
+    "seen": 1787907930.0287578,
+    "ast_hash": "e8633736c5e0d41b094929e11425d23a",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.h": {

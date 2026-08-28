@@ -41,13 +41,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Dịch lời thoại sang ngôn ngữ đích có kiểm soát độ dài âm tiết (Phoneme Duration Budget) để khớp khẩu hình.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

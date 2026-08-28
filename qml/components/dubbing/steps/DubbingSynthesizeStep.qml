@@ -451,12 +451,6 @@ Rectangle {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text {
-                        Layout.fillWidth: true
-                        text: qsTr("Voice samples come from the selected catalog and saved profiles.")
-                        color: Theme.textSecondary
-                        font.pixelSize: 10
-                    }
                     PrimaryButton {
                         text: qsTr("Làm mới danh sách")
                         iconName: "refresh"

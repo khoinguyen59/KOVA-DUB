@@ -1,18 +1,18 @@
 # Dubbing Studio Workspace Overhaul Design
 
 **Date:** 2026-08-28  
-**Status:** Design approved in chat; implementation awaits spec review  
+**Status:** Implemented and verified in the 0.0.8.6 source/package
 **Scope:** Production Qt 6/QML Dubbing workspace, task navigation, model/Colab entry points, media preview, OCR/subtitle presentation, voice catalog consistency, QA evidence and portable packaging
 
 ## Goal
 
-Make the Dubbing Studio workspace content-first and operationally direct: the video/timeline remain visible, task actions are discoverable from the left shelf, configuration opens on demand, and every blocked action leads to the exact recovery choice instead of a dead-end error.
+Make the Dubbing Studio workspace content-first and operationally direct: the video/timeline remain visible, task actions are available in the persistent right panel, configuration switches within that panel, and every blocked action leads to the exact recovery choice instead of a dead-end error.
 
 ## Resolved interpretation
 
-The current right-side control panel is not removed functionally. Its three contexts—results, detailed configuration and handoff—become an on-demand right drawer opened by compact feature buttons in the left task shelf. The drawer must not consume a permanent three-column width when it is closed.
+The current right-side control panel remains the primary task surface. The production page removes the separate left `Task Controls` shelf and keeps Results, detailed configuration and Handoff in one persistent right panel. The panel switches between `DubbingReviewPanel` and `DubbingNodeInspector` without destroying workflow state.
 
-The source version remains `0.0.8.5`. The final artifact uses the portable directory layout already used by the 8.4 artifact: the versioned executable is at the package root beside its runtime folders.
+The source version is `0.0.8.6`. The artifact uses the portable directory layout already used by the 8.4 artifact: the versioned executable is at the package root beside its runtime folders.
 
 ## Product and interaction design
 
@@ -23,13 +23,13 @@ The source version remains `0.0.8.5`. The final artifact uses the portable direc
 - The active task keeps its existing selected visual state. No Vietnamese text is permanently rendered in the compact task bar.
 - Task names come from one route/task registry; QML does not duplicate counts or labels in individual pages.
 
-### Left task shelf and right drawer
+### Right task panel
 
-- The always-visible left shelf contains compact, labeled feature buttons: `Results`, `Settings`, `Model`, `Colab`, `Upload`, and `Handoff` where the current task supports them.
-- `Results`, `Settings`, and `Handoff` open the right drawer with the corresponding existing content. The drawer has an accessible close button, a stable width bound, and a `ScrollView` for variable content.
+- The left side contains only the application navigation rail; the separate `Task Controls`/`DubbingTaskShelf` is not instantiated by the production Dubbing page.
+- The persistent right panel exposes `Results`, `Settings` and `Handoff` tabs and keeps the existing step buttons and signals.
 - `Colab` is the single entry point for Colab configuration. The duplicate `Manage Colab route` action is removed from the Dubbing task UI and no second dialog path is kept.
-- Drawer state is local to the Dubbing page. Opening one context closes the previous context without destroying workflow state.
-- At small desktop widths the drawer overlays the content rather than squeezing the video below its minimum usable width.
+- Settings switches the same right column to `DubbingNodeInspector`; switching context does not destroy workflow state.
+- At small desktop widths the right panel uses a bounded 240–560 px layout width and the central preview retains its usable minimum width.
 
 ### Action gating and recovery
 
@@ -47,7 +47,7 @@ The source version remains `0.0.8.5`. The final artifact uses the portable direc
 - The preview shows a first-frame thumbnail or a generated/fallback poster while media is loading. Image loading is asynchronous and failures expose a textual recovery hint.
 - OCR scan-region editing is rendered only inside the Transcribe/OCR task. Other tasks do not show OCR setup controls.
 - Without OCR, subtitles use a stable default lower safe region. With OCR enabled, the subtitle overlay follows the accepted OCR region. The overlay is clickable and opens inline editing; initial setup is not required merely to view or edit subtitles.
-- Subtitle/thumbnail and path labels use bounded text with middle elision and a tooltip for the full path. No path may overlap an icon, play button or drawer boundary.
+- Subtitle/thumbnail and path labels use bounded text with middle elision and a tooltip for the full path. No path may overlap an icon, play button or right-panel boundary.
 
 ## Voice and model catalog
 
@@ -67,18 +67,18 @@ The source version remains `0.0.8.5`. The final artifact uses the portable direc
 
 ## Responsive and accessibility constraints
 
-- The design is validated at 1280×720, 1600×900, 1920×1080 and a 4K desktop viewport. The first target keeps the central preview usable when the drawer is open.
+- The design is validated at 1280×720, 1600×900, 1920×1080 and a 4K desktop viewport. The first target keeps the central preview usable beside the persistent right panel.
 - All scrollable variable-height content is clipped inside a `ScrollView`/`Flickable` with a bounded content width. Dialogs remain within the overlay height with a safe margin.
 - Buttons have at least 36×36 px visual/hit bounds on desktop, with a preferred 40 px height. Focus, hover and pressed states do not shift surrounding layout.
 - Primary and secondary text use the existing centralized theme tokens and maintain readable contrast. Icon-only actions have tooltips/accessibility names.
-- The drawer and task tooltips are keyboard reachable; color is not the sole indicator of ready, blocked or active state.
+- The right-panel tabs and task tooltips are keyboard reachable; color is not the sole indicator of ready, blocked or active state.
 
 ## Implementation units
 
 The implementation will first trace and then modify only the production surfaces required by this design:
 
-- `qml/pages/DubbingPage.qml` for shell composition, drawer lifecycle, media toolbar and task-context routing.
-- `qml/components/dubbing/DubbingWorkflowHeader.qml` and `qml/components/dubbing/panels/DubbingTaskShelf.qml` for compact task actions and bilingual hover labels.
+- `qml/pages/DubbingPage.qml` for shell composition, persistent right-panel lifecycle, media toolbar and task-context routing.
+- `qml/components/dubbing/DubbingWorkflowHeader.qml` and `qml/components/dubbing/DubbingWorkflowStep.qml` for task actions and bilingual hover labels.
 - Existing Dubbing step components for OCR visibility, run/model/upload gates and subtitle editing.
 - `qml/components/shared/WorkflowNodeModelDialog.qml`, `qml/components/dubbing/DubbingColabSetupDialog.qml`, `qml/components/dubbing/DubbingArtifactUploadPanel.qml`, and `qml/components/shared/VoiceGalleryDialog.qml` for contextual model, remote, upload and voice behavior.
 - Catalog/controller C++ only where the existing public state cannot express a source-stable voice count, runtime compatibility or a contextual gate.
@@ -88,15 +88,15 @@ No generated build output, user project data or unrelated existing worktree chan
 
 ## Acceptance criteria
 
-1. Production QML smoke loads `Main.qml`, reaches the Dubbing route, opens/closes the left-triggered drawer, opens the contextual model/Colab dialog, and returns without QML warnings that indicate a runtime failure.
+1. Production QML smoke loads `Main.qml`, reaches the Dubbing route, verifies the persistent right panel and contextual model/Colab dialog, and returns without QML warnings that indicate a runtime failure.
 2. The top task bar has compact English labels and bilingual hover/focus tooltips without horizontal clipping at 1280×720.
-3. Closing the right drawer leaves the preview and timeline in a two-region content-first layout; opening it overlays or boundedly reserves space without overlapping controls.
+3. The preview and timeline remain beside the persistent right panel in a bounded content-first layout without overlapping controls.
 4. Colab configuration has one Dubbing entry point; Upload is reachable and accepts the declared artifact contract; Run/Open model route to setup instead of dead-ending.
 5. The video viewport remains 16:9 and contains 16:9, 9:16 and 1:1 sources without crop or geometry jump. A thumbnail is visible during load.
 6. OCR controls appear only for Transcribe/OCR. Subtitle editing is available from the default overlay and from the OCR region when OCR is active.
 7. All voice counts in the Dubbing and voice gallery surfaces match the catalog source. ViNeU/OmniVoice behavior follows compatibility metadata and never claims unsupported cloning.
 8. Automated unit/regression tests and production QML route smoke pass. A screenshot at the agreed preview size is reviewed for clipping, collision, overflow and unreadable text.
-9. Graphify is updated after source changes. The implementation is committed and pushed only after verification. The portable 8.5 package is built with the 8.4 layout command and its required runtime manifests pass.
+9. Graphify is updated after source changes. The implementation is committed and pushed only after verification. The portable 8.6 package is built with the 8.4 layout command and its required runtime manifests pass.
 
 ## Verification evidence to record
 

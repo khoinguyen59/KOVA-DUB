@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor the production Dubbing workspace into a content-first, drawer-driven UI with truthful model/voice counts, direct Colab/upload recovery, safe media preview and verified portable packaging.
+**Goal:** Refactor the production Dubbing workspace into a content-first UI with a persistent right task panel, truthful model/voice counts, direct Colab/upload recovery, safe media preview and verified portable packaging.
 
-**Architecture:** Keep `DubbingController` and its workflow graph as the only workflow authority. Make `DubbingPage` compose a compact left task shelf, a central media/timeline workspace and an on-demand right context drawer; existing review/inspector components remain the drawer content instead of being duplicated. Use catalog metadata and existing controller signals for model/voice truth, and add only narrow QML/C++ contracts where the current public state cannot represent the requested behavior.
+**Architecture:** Keep `DubbingController` and its workflow graph as the only workflow authority. Make `DubbingPage` compose the application navigation rail, a central media/timeline workspace and one persistent right task panel. Remove the visual `DubbingTaskShelf` from the production Dubbing page; keep `DubbingReviewPanel` as the default right panel and switch that same column to `DubbingNodeInspector` for detailed settings. Use catalog metadata and existing controller signals for model/voice truth, and add only narrow QML/C++ contracts where the current public state cannot represent the requested behavior.
 
 **Tech Stack:** Qt 6.9 QML, Qt Quick Controls/Layout, Qt Multimedia, C++20/MSVC, CMake/Ninja, QtTest, PowerShell packaging, graphify.
 
@@ -92,37 +92,35 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 - [x] **Step 5: Run `ctest --test-dir out/build/windows-msvc-release -C Release -R QmlRouteSmoke --output-on-failure`.** The test reaches the Dubbing route and completes its existing route trace.
 
-### Task 3: Replace the permanent right panel with a left-triggered context drawer
+### Task 3: Remove the left Task Controls shelf and restore the persistent right panel
 
 **Files:**
-- Create: `qml/components/dubbing/panels/DubbingContextDrawer.qml`
-- Modify: `qml/components/dubbing/panels/DubbingTaskShelf.qml`
 - Modify: `qml/pages/DubbingPage.qml`
 - Modify: `qml/components/dubbing/DubbingWorkflowHeader.qml`
-- Modify: `qml/components/dubbing/panels/DubbingReviewPanel.qml` only where drawer sizing/scrolling requires it
-- Modify: `qml/components/dubbing/DubbingNodeInspector.qml` only where drawer sizing/scrolling requires it
+- Modify: `qml/components/dubbing/panels/DubbingReviewPanel.qml` only where right-panel sizing/scrolling requires it
+- Modify: `qml/components/dubbing/DubbingNodeInspector.qml` only where right-panel sizing/scrolling requires it
+- Retain: `qml/components/dubbing/panels/DubbingTaskShelf.qml` for source compatibility, but do not instantiate it in the production Dubbing page
 
 **Interfaces:**
 - Consumes: the current `DubbingReviewPanel` signals and `DubbingNodeInspector` node binding.
-- Produces: `DubbingTaskShelf::contextRequested(string contextId)`, `DubbingContextDrawer::contextId`, `opened`, `closed`, and the existing review/inspector signals forwarded unchanged.
+- Produces: a persistent right-panel column, with the existing review/inspector signals wired directly to the page; no overlay drawer is required for the main workflow.
 
-- [x] **Step 1: Write the drawer contract test first.** The production QML smoke and `TestDubbingWorkspaceContract` exercise the drawer open/close, central preview, clipping and nested content-scroll contracts.
+- [x] **Step 1: Write the right-panel contract test first.** The production QML smoke and `TestDubbingWorkspaceContract` exercise the persistent panel, central preview, clipping and nested content-scroll contracts.
 
-- [x] **Step 2: Create the drawer shell.** Implement a Qt Quick `Drawer` with `edge: Qt.RightEdge`, width bounded to `Math.min(520, Math.max(320, parent.width * 0.30))`, `height: parent.height`, `clip: true`, and step-specific inner `ScrollView`/`ListView` content. The inner-scroll choice avoids nested scrolling over transcript and synthesis lists.
+- [x] **Step 2: Restore the right column.** Keep the panel width bounded to 240–560 px, `Layout.fillHeight: true`, `clip: true`, and step-specific inner `ScrollView`/`ListView` content. The inner-scroll choice avoids nested scrolling over transcript and synthesis lists.
 
-- [x] **Step 3: Convert the task shelf into compact feature actions.** Replace its always-rendered `DubbingNodeSettingsPanel` body with buttons for `Results`, `Settings`, `Model`, `Colab`, `Upload` and `Handoff`. Keep the current step title/status as a compact summary above the buttons.
+- [x] **Step 3: Remove the visual Task Controls shelf.** Do not instantiate `DubbingTaskShelf` in `DubbingPage`; keep workflow actions in the persistent right review panel and the existing modal dialogs.
 
-- [x] **Step 4: Wire the contexts in `DubbingPage.qml`.** Remove the direct right-pane `DubbingReviewPanel` and `DubbingNodeInspector` layout children. Host them inside `DubbingContextDrawer`, map `results` to `DubbingReviewPanel`, `settings` to `DubbingNodeInspector`, and keep the existing callback wiring to `nodeModelDialog`, `translationFixDialog`, `dubbingArtifactUploadDialog`, `transcriptEditor`, `subtitleEditor`, `exportOptionsDialog` and playback handlers.
+- [x] **Step 4: Wire the persistent panel in `DubbingPage.qml`.** Keep `DubbingReviewPanel` in the right layout column, switch that column to `DubbingNodeInspector` for detailed settings, and preserve the existing callback wiring to `nodeModelDialog`, `translationFixDialog`, `dubbingArtifactUploadDialog`, `transcriptEditor`, `subtitleEditor`, `exportOptionsDialog` and playback handlers.
 
-- [x] **Step 5: Remove the duplicate header Colab/Workflow actions.** Keep one left-shelf Colab button and retain only actions that are global to the editor in the header. The old `Manage Colab route` path is not rendered in the Dubbing shelf.
+- [x] **Step 5: Keep one Colab route.** Retain the single contextual Colab/model route in the right panel and header-level global actions only; do not reintroduce a duplicate Task Controls Colab shelf.
 
-- [x] **Step 6: Verify layout at 1280×720.** Production QML smoke and visual capture show the drawer and shelf without squeezing the preview below its minimum width.
+- [x] **Step 6: Verify layout at 1280×720.** Production QML smoke and visual capture show the right panel and preview without a left Task Controls shelf or horizontal overlap.
 
 ### Task 4: Make Run, Open model and Upload direct recovery actions
 
 **Files:**
-- Modify: `qml/pages/DubbingPage.qml` (`runStep()`, model/Colab callbacks and drawer actions)
-- Modify: `qml/components/dubbing/panels/DubbingTaskShelf.qml`
+- Modify: `qml/pages/DubbingPage.qml` (`runStep()`, model/Colab callbacks and right-panel actions)
 - Modify: `qml/components/dubbing/DubbingArtifactUploadPanel.qml`
 - Modify: `qml/components/shared/WorkflowNodeModelDialog.qml`
 - Modify: `qml/components/dubbing/DubbingColabSetupDialog.qml` only for contextual stage handoff
@@ -133,7 +131,7 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 - Consumes: `workflowNodes`, `workflowNodeConfigurations`, `colabModelOptionsForNode()`, `defaultColabModelForNode()`, `selectWorkflowColabModel()`, `runWorkflowNode()`, and the existing artifact upload callbacks.
 - Produces: one contextual gate function in `DubbingPage.qml` that either runs the node or opens the model dialog with the correct `nodeId` and `capabilityId`.
 
-- [x] **Step 1: Add a failing QML gate contract.** The shelf Run path preserves the node id and opens `WorkflowNodeModelDialog` before a terminal error route.
+- [x] **Step 1: Add a failing QML gate contract.** The right-panel Run path preserves the node id and opens `WorkflowNodeModelDialog` before a terminal error route.
 
 - [x] **Step 2: Implement `ensureNodeExecutionRoute(nodeId)`.** The QML gate checks configuration/readiness and either runs the node or opens the model dialog with the preserved node id.
 
@@ -159,7 +157,7 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 - [x] **Step 1: Add the failing preview assertions.** Contract tests and QML smoke assert the three-action toolbar, 16:9 frame and thumbnail/loading object.
 
-- [x] **Step 2: Remove persistent source-management controls.** Loaded preview toolbar no longer contains source management; shelf/pre-selection paths retain source acquisition.
+- [x] **Step 2: Remove persistent source-management controls.** Loaded preview toolbar no longer contains source management; right-panel/pre-selection paths retain source acquisition.
 
 - [x] **Step 3: Implement first-frame thumbnail behavior.** `MediaPlayer` remains non-autoplaying; `VideoOutput` renders the first frame and the neutral poster is visible until `LoadedMedia`/`BufferedMedia`.
 
@@ -232,13 +230,13 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 - Consumes: the production `Main.qml` route, existing smoke fixture media and QML object names.
 - Produces: a repeatable screenshot/inspection procedure and an indexed report of every requested requirement with evidence, defects and fixes.
 
-- [x] **Step 1: Extend smoke navigation.** Production smoke and preview hooks cover task metadata, drawer open/close, model/Colab/upload routing, OCR visibility and subtitle placement/editing contracts.
+- [x] **Step 1: Extend smoke navigation.** Production smoke and preview hooks cover task metadata, persistent right-panel visibility, model/Colab/upload routing, OCR visibility and subtitle placement/editing contracts.
 
 - [x] **Step 2: Run QML at each target size.** Preview captures were run for 1280×720, 1600×900, 1920×1080 and 3840×2160 logical viewports.
 
 - [x] **Step 3: Inspect images.** Captures were visually inspected; the subtitle/control collision found in the first OCR capture was fixed and the capture rerun.
 
-- [x] **Step 4: Write the indexed report.** The indexed report includes sections 1–10 and the remaining external-runtime boundary.
+- [x] **Step 4: Write the indexed report.** The indexed report includes sections 1–10, the persistent right-panel correction, compact-copy UI change and the remaining external-runtime boundary.
 
 ### Task 9: Update graphify and run the complete verification matrix
 
@@ -318,7 +316,7 @@ Implementation evidence: watchdog hardening is committed as `c0713cc`; the refre
 - Modify: `qml/components/dubbing/DubbingSourceMediaPanel.qml`
 - Modify: `tests/dubbing/test_DubbingWorkspaceContract.cpp`
 - Modify: `docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md`
-- Generated: `out/ui-demo/dubbing-*-8.6-final-*`, `out/LA-Studio-0.0.8.6/`
+- Generated: `out/ui-demo/dubbing-*-right-panel-final-*`, `out/LA-Studio-0.0.8.6/`
 
 **Interfaces:**
 - Consumes: production `Main.qml`, the real fixture MP4, Qt 6.9.3/MSVC release toolchain and the existing portable package layout.
@@ -331,9 +329,11 @@ Implementation evidence: watchdog hardening is committed as `c0713cc`; the refre
 - [x] **Step 5: Rebuild and package 8.6.** `scripts/build.ps1` and `scripts/package.ps1` complete with `-Version '0.0.8.6'`, `-SkipInstaller`, `-PortableInternalLayout`; package smoke exits 0, version metadata is 0.0.8.6 and required runtime/model artifacts are present.
 - [x] **Step 6: Refresh Graphify and report evidence.** `graphify update`, clustering, HTML export and multigraph diagnosis complete with no dangling endpoint, self-loop or collapsed edge; report records the environment warnings and the remaining live-runtime boundary.
 
+- [x] **Step 7: Correct the pane direction and reduce instructional copy.** Remove the `DubbingTaskShelf` and `DubbingContextDrawer` instances from the production page, keep `DubbingReviewPanel`/`DubbingNodeInspector` in the right layout column, and remove long acquisition/step-header instructions while retaining controls, statuses, paths and error guidance.
+
 ## Plan self-review
 
 - Spec coverage: all nine acceptance criteria are mapped to Tasks 1–12; no requirement is left only in prose.
 - Placeholder scan: no prohibited placeholder token or unspecified handling step was found.
-- Type/contract consistency: the plan keeps existing controller methods as inputs and defines the only new QML signal (`contextRequested(string)`) and drawer property (`contextId`) before later tasks consume them.
+- Type/contract consistency: the plan keeps existing controller methods and review/inspector signals as inputs; the production page uses a persistent right-panel column and retains preview compatibility hooks without requiring a drawer instance.
 - Scope boundary: the plan does not delete user data, rewrite unrelated generated outputs, or turn the unsigned internal runtime into a public release.

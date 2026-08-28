@@ -38,7 +38,6 @@ Item {
     property bool dubbingTimelineMinimized: false
 
     property int dubbingHistoryPanelWidth: 260
-    property int dubbingTaskShelfWidth: 240
     property int dubbingPreviewPanelWidth: 1040
     property int dubbingTimelinePanelHeight: 300
     property int dubbingStepPanelWidth: 360
@@ -48,8 +47,7 @@ Item {
     readonly property int minimumDubbingTimelinePanelHeight: 120
     readonly property int dubbingTimelineResizeHandleHeight: 28
     // These breakpoints are derived from the actual non-overlapping minima:
-    // History 240 + handle 8 + task shelf 220 + handle 8 + preview 540 +
-    // handle 8 + review 280 + four layout gaps.
+    // optional history + preview 420 + right task panel 240 + two layout gaps.
     readonly property bool compactDubbingControls: dubbingWorkspaceScroller.width < 1450
     // History is optional chrome.
     readonly property bool compactDubbingHistory: dubbingWorkspaceScroller.width < 1080
@@ -131,7 +129,7 @@ Item {
         return exportOptionsDialog ? exportOptionsDialog.qmlSmokeExportRoutesCheck() : 1
     }
 
-    // Production route contract for the content-first Dubbing workspace.
+    // Production route contract for the right-panel Dubbing workspace.
     // Keep this intentionally strict: it is exercised by QmlRouteSmoke at
     // desktop and compact sizes before a portable package is accepted.
     function qmlSmokeDubbingWorkspaceContractCheck() {
@@ -139,22 +137,20 @@ Item {
             console.warn("Dubbing workspace contract: " + reason)
             return false
         }
-        if (!dubbingWorkflowHeader || !dubbingTaskShelf || !sourceMediaPanel
-                || !dubbingContextDrawer)
+        if (!dubbingWorkflowHeader || !dubbingStepReviewPanel
+                || !dubbingNodeInspector || !sourceMediaPanel)
             return fail("required component missing")
         if (!dubbingWorkflowHeader.qmlSmokeTaskRailCheck
                 || !dubbingWorkflowHeader.qmlSmokeTaskRailCheck())
             return fail("task rail")
-        if (!dubbingTaskShelf.qmlSmokeFeatureActionsCheck
-                || !dubbingTaskShelf.qmlSmokeFeatureActionsCheck())
-            return fail("feature actions")
         if (!sourceMediaPanel.qmlSmokeWorkspaceContractCheck
                 || !sourceMediaPanel.qmlSmokeWorkspaceContractCheck())
             return fail("media workspace")
-        if (dubbingContextDrawer.objectName !== "dubbingContextDrawer"
-                || dubbingContextDrawer.width <= 0
-                || dubbingContextDrawer.width > Math.max(320, Math.min(520, root.width * 0.31 + 1)))
-            return fail("drawer bounds")
+        if (dubbingStepReviewPanel.objectName !== "dubbingStepReviewPanel"
+                || dubbingStepReviewPanel.width <= 0
+                || dubbingStepReviewPanel.width > Math.max(320, Math.min(560, root.width * 0.46 + 1)))
+            return fail("right panel bounds (page=" + root.width
+                        + ", panel=" + dubbingStepReviewPanel.width + ")")
         return true
     }
 
@@ -164,19 +160,19 @@ Item {
             root.dubbingReviewActiveTab = 2
         else if (root.contextDrawerId === "results")
             root.dubbingReviewActiveTab = 0
-        dubbingContextDrawer.openContext(root.contextDrawerId)
+        root.isAdvancedNodeInspectorOpen = root.contextDrawerId === "settings"
         return true
     }
 
-    // Developer-only visual verification hook.  The drawer is a Popup-owned
-    // item, so the capture harness must grab this item directly instead of
-    // grabbing the underlying page and accidentally omitting the overlay.
+    // Compatibility hook for the preview harness.  The production workspace
+    // now keeps the task review/settings panel in the right layout column;
+    // there is no overlay drawer to mount over the media canvas.
     function qmlPreviewContextDrawer() {
-        return dubbingContextDrawer
+        return root.isAdvancedNodeInspectorOpen ? dubbingNodeInspector : dubbingStepReviewPanel
     }
 
     function qmlPreviewCloseContextDrawer() {
-        dubbingContextDrawer.close()
+        root.isAdvancedNodeInspectorOpen = false
         return true
     }
 
@@ -572,7 +568,7 @@ Item {
                         : (root.dubbing.workflowMode === "step" ? qsTr("Sẵn sàng chạy node") : qsTr("Sẵn sàng"))
             defaultExportPath: root.defaultExportPath()
             historyOpen: root.isHistoryOpen
-            settingsOpen: dubbingContextDrawer.opened
+            settingsOpen: root.isAdvancedNodeInspectorOpen
             projectStatusOpen: root.isProjectStatusPanelOpen
             onStepSelected: function(stepId) {
                 root.followRunningStep = false
@@ -580,12 +576,7 @@ Item {
                 root.isAdvancedNodeInspectorOpen = false
             }
             onHistoryToggled: root.isHistoryOpen = !root.isHistoryOpen
-            onSettingsToggled: {
-                if (dubbingContextDrawer.opened)
-                    dubbingContextDrawer.close()
-                else
-                    dubbingContextDrawer.openContext("results")
-            }
+            onSettingsToggled: root.isAdvancedNodeInspectorOpen = !root.isAdvancedNodeInspectorOpen
             onProjectStatusToggled: projectSetupDialog.openFor(
                                         root.dubbing.workflowMode === "automatic" ? "automatic" : "step", false)
             onGenerateRequested: automaticPreflightDialog.openPreflight()
@@ -746,81 +737,6 @@ Item {
                         }
                     }
 
-                    // Left Pane 2: Modular Task Shelf
-                    DubbingTaskShelf {
-                        id: dubbingTaskShelf
-                        dubbing: root.dubbing
-                        displayedStepId: root.displayedStepId
-                        workflowNode: root.workflowNode(root.displayedStepId)
-                        stepTitle: root.stepTitle(root.displayedStepId)
-                        canRunStep: root.canRunStep(root.displayedStepId)
-                        canRerunStep: root.canRerunStep(root.displayedStepId)
-                        stepRunReady: root.stepRunReady(root.displayedStepId)
-                        nextNodeId: root.nextNodeId(root.displayedStepId)
-                        nextNodeReady: root.nextNodeReady(root.displayedStepId)
-                        ocrSetupEditable: root.ocrSetupEditable()
-                        visible: !root.previewFocusMode
-                        Layout.preferredWidth: root.dubbingTaskShelfWidth
-                        onHideRequested: {
-                            root.isNodeInspectorOpen = false
-                            root.isAdvancedNodeInspectorOpen = false
-                        }
-                        onContextRequested: function(contextId) {
-                            root.contextDrawerId = contextId
-                            if (contextId === "handoff")
-                                root.dubbingReviewActiveTab = 2
-                            else if (contextId === "results")
-                                root.dubbingReviewActiveTab = 0
-                            else if (contextId === "settings") {
-                                root.isAdvancedNodeInspectorOpen = true
-                            }
-                            dubbingContextDrawer.openContext(contextId)
-                        }
-                        onConfigureNodeRequested: function(nodeId) {
-                            root.contextDrawerId = "model"
-                            nodeModelDialog.openFor(nodeId)
-                        }
-                        onColabRequested: function(nodeId) {
-                            root.contextDrawerId = "model"
-                            nodeModelDialog.openFor(nodeId)
-                        }
-                        onRunStepRequested: function(nodeId) { root.runStep(nodeId) }
-                        onRunNextStepRequested: function(nodeId) { root.runNextNode(nodeId) }
-                        onFixRequested: translationFixDialog.openForAll()
-                        onArtifactUploadRequested: function(nodeId) { dubbingArtifactUploadDialog.openFor(nodeId) }
-                        onSourceUploadRequested: mediaFileDialog.open()
-                    }
-
-                    Rectangle {
-                        id: dubbingTaskShelfResizeHandle
-                        objectName: "dubbingTaskShelfResizeHandle"
-                        Layout.preferredWidth: 8
-                        Layout.fillHeight: true
-                        radius: 4
-                        color: taskShelfResizeHover.hovered || taskShelfResizeDrag.active
-                               ? Theme.accent : Qt.rgba(Theme.textSecondary.r, Theme.textSecondary.g, Theme.textSecondary.b, 0.28)
-                        visible: false
-                        ToolTip.visible: taskShelfResizeHover.hovered
-                        ToolTip.text: qsTr("Drag to resize task controls")
-                        HoverHandler { id: taskShelfResizeHover; cursorShape: Qt.SizeHorCursor }
-                        DragHandler {
-                            id: taskShelfResizeDrag
-                            property int pressWidth: 0
-                            target: null
-                            xAxis.enabled: true
-                            yAxis.enabled: false
-                            onActiveChanged: {
-                                if (active)
-                                    pressWidth = root.dubbingTaskShelfWidth
-                            }
-                            onTranslationChanged: {
-                                if (active)
-                                    root.dubbingTaskShelfWidth = root.clampedDubbingPanelWidth(
-                                                pressWidth + translation.x, 200, 480)
-                            }
-                        }
-                    }
-
                     // Center Pane: Central Video/Media Canvas & Toolbar
                     Item {
                         id: dubbingPreviewWorkspace
@@ -878,6 +794,75 @@ Item {
                         }
                     }
 
+                    // Right Pane: persistent task review and controls.
+                    // Keep this in the RowLayout so it remains visible beside
+                    // the media canvas instead of disappearing into an overlay.
+                    DubbingReviewPanel {
+                        id: dubbingStepReviewPanel
+                        dubbing: root.dubbing
+                        displayedStepId: root.displayedStepId
+                        workflowNode: root.workflowNode(root.displayedStepId)
+                        stepTitle: root.stepTitle(root.displayedStepId)
+                        canRunStep: root.canRunStep(root.displayedStepId)
+                        canRerunStep: root.canRerunStep(root.displayedStepId)
+                        stepRunReady: root.stepRunReady(root.displayedStepId)
+                        nextNodeId: root.nextNodeId(root.displayedStepId)
+                        nextNodeReady: root.nextNodeReady(root.displayedStepId)
+                        sourceMediaPanel: sourceMediaPanel
+                        selectedSegment: root.selectedSegment
+                        activeTab: root.dubbingReviewActiveTab
+                        ocrSetupEditable: root.ocrSetupEditable()
+                        playingSeparationStem: root.playingSeparationStem
+                        playingVoiceClipPath: root.playingVoiceClipPath
+                        visible: !root.isAdvancedNodeInspectorOpen && !root.previewFocusMode
+                        Layout.preferredWidth: root.dubbingStepPanelWidth
+                        Layout.minimumWidth: root.compactDubbingControls ? 240 : 320
+                        Layout.maximumWidth: 560
+                        Layout.fillHeight: true
+                        onConfigureNodeRequested: function(nodeId) { nodeModelDialog.openFor(nodeId) }
+                        onVoiceModelRequested: function(nodeId) {
+                            root.contextDrawerId = "model"
+                            Qt.callLater(function() { nodeModelDialog.openFor(nodeId) })
+                        }
+                        onRunStepRequested: function(nodeId) { root.runStep(nodeId) }
+                        onRunNextStepRequested: function(nodeId) { root.runNextNode(nodeId) }
+                        onNextStepRequested: function(stepId) { root.goToNextStep(stepId) }
+                        onPreviousStepRequested: function(stepId) { root.goToPreviousStep(stepId) }
+                        onFixRequested: translationFixDialog.openForAll()
+                        onFixSegmentRequested: function(index) { translationFixDialog.openForSegment(index) }
+                        onArtifactUploadRequested: function(nodeId) { dubbingArtifactUploadDialog.openFor(nodeId) }
+                        onOpenOcrColabSetupRequested: root.openOcrColabSetup()
+                        onOpenTranscriptEditorRequested: transcriptEditor.open()
+                        onOpenSubtitleEditorRequested: subtitleEditor.open()
+                        onOpenAlignmentStudioRequested: root.openAlignmentStudioFromReview()
+                        onOpenExportDialogRequested: exportOptionsDialog.open()
+                        onPlaySeparationRequested: function(kind, path) {
+                            AppController.player.playSeparationStem(kind, path)
+                        }
+                        onVoiceClipPlaybackRequested: function(path) { root.playVoiceClip(path) }
+                        onSeparationPlaybackStopped: root.stopSeparationPlayback()
+                        onSegmentSelected: function(index) { sourceMediaPanel.seekToSegment(index) }
+                    }
+
+                    // Right Pane Alt: deep settings inspector.
+                    DubbingNodeInspector {
+                        id: dubbingNodeInspector
+                        dubbing: root.dubbing
+                        nodeId: root.displayedStepId
+                        node: root.workflowNode(root.displayedStepId)
+                        nodeTitle: root.stepTitle(root.displayedStepId)
+                        visible: root.isAdvancedNodeInspectorOpen && !root.previewFocusMode
+                        Layout.preferredWidth: root.dubbingStepPanelWidth
+                        Layout.minimumWidth: root.compactDubbingControls ? 240 : 320
+                        Layout.maximumWidth: 560
+                        Layout.fillHeight: true
+                        onCloseRequested: root.isAdvancedNodeInspectorOpen = false
+                        onVoiceModelRequested: function(nodeId) {
+                            root.contextDrawerId = "model"
+                            Qt.callLater(function() { nodeModelDialog.openFor(nodeId) })
+                        }
+                    }
+
                 }
             }
 
@@ -902,76 +887,6 @@ Item {
                 onSegmentSelected: function(index) {
                     sourceMediaPanel.seekToSegment(index)
                 }
-            }
-        }
-    }
-
-    // The right-side review/inspector content is an on-demand drawer.  It is
-    // intentionally outside the workspace RowLayout so the media canvas does
-    // not lose width when the user only wants to preview the source.
-    DubbingContextDrawer {
-        id: dubbingContextDrawer
-        parent: Overlay.overlay
-        contextId: root.contextDrawerId
-        onClosed: root.isAdvancedNodeInspectorOpen = false
-
-        DubbingReviewPanel {
-            id: dubbingStepReviewPanel
-            anchors.fill: parent
-            dubbing: root.dubbing
-            displayedStepId: root.displayedStepId
-            workflowNode: root.workflowNode(root.displayedStepId)
-            stepTitle: root.stepTitle(root.displayedStepId)
-            canRunStep: root.canRunStep(root.displayedStepId)
-            canRerunStep: root.canRerunStep(root.displayedStepId)
-            stepRunReady: root.stepRunReady(root.displayedStepId)
-            nextNodeId: root.nextNodeId(root.displayedStepId)
-            nextNodeReady: root.nextNodeReady(root.displayedStepId)
-            sourceMediaPanel: sourceMediaPanel
-            selectedSegment: root.selectedSegment
-            activeTab: root.dubbingReviewActiveTab
-            ocrSetupEditable: root.ocrSetupEditable()
-            playingSeparationStem: root.playingSeparationStem
-            playingVoiceClipPath: root.playingVoiceClipPath
-            visible: dubbingContextDrawer.contextId === "results"
-                     || dubbingContextDrawer.contextId === "handoff"
-            onConfigureNodeRequested: function(nodeId) { nodeModelDialog.openFor(nodeId) }
-            onVoiceModelRequested: function(nodeId) {
-                root.contextDrawerId = "model"
-                Qt.callLater(function() { nodeModelDialog.openFor(nodeId) })
-            }
-            onRunStepRequested: function(nodeId) { root.runStep(nodeId) }
-            onRunNextStepRequested: function(nodeId) { root.goToNextStep(nodeId) }
-            onNextStepRequested: function(stepId) { root.goToNextStep(stepId) }
-            onPreviousStepRequested: function(stepId) { root.goToPreviousStep(stepId) }
-            onFixRequested: translationFixDialog.openForAll()
-            onFixSegmentRequested: function(index) { translationFixDialog.openForSegment(index) }
-            onArtifactUploadRequested: function(nodeId) { dubbingArtifactUploadDialog.openFor(nodeId) }
-            onOpenOcrColabSetupRequested: root.openOcrColabSetup()
-            onOpenTranscriptEditorRequested: transcriptEditor.open()
-            onOpenSubtitleEditorRequested: subtitleEditor.open()
-            onOpenAlignmentStudioRequested: root.openAlignmentStudioFromReview()
-            onOpenExportDialogRequested: exportOptionsDialog.open()
-            onPlaySeparationRequested: function(kind, path) {
-                AppController.player.playSeparationStem(kind, path)
-            }
-            onVoiceClipPlaybackRequested: function(path) { root.playVoiceClip(path) }
-            onSeparationPlaybackStopped: root.stopSeparationPlayback()
-            onSegmentSelected: function(index) { sourceMediaPanel.seekToSegment(index) }
-        }
-
-        DubbingNodeInspector {
-            id: dubbingNodeInspector
-            anchors.fill: parent
-            dubbing: root.dubbing
-            nodeId: root.displayedStepId
-            node: root.workflowNode(root.displayedStepId)
-            nodeTitle: root.stepTitle(root.displayedStepId)
-            visible: dubbingContextDrawer.contextId === "settings"
-            onCloseRequested: dubbingContextDrawer.close()
-            onVoiceModelRequested: function(nodeId) {
-                root.contextDrawerId = "model"
-                Qt.callLater(function() { nodeModelDialog.openFor(nodeId) })
             }
         }
     }

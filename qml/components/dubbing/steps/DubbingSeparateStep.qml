@@ -43,13 +43,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Tách riêng lời thoại gốc (Vocals) để nhận dạng và giữ lại nhạc nền (BGM) để ghép thành phẩm.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

@@ -4,12 +4,12 @@
 - cluster-only mode — file stats not available
 
 ## Summary
-- 18055 nodes · 31497 edges · 909 communities (841 shown, 68 thin omitted)
+- 18055 nodes · 31497 edges · 910 communities (841 shown, 69 thin omitted)
 - Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 2842 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `afa63fd0`
+- Built from commit: `f1c35d9b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,12 +20,11 @@
 - QObject
 - QTemporaryDir
 - DubbingJobRunner
-- Settings
 - TtsEngine
+- Settings
 - VoiceIsolatorController
 - ColabTtsController
 - AppUpdateService
-- SourceSeparationService
 - Settings.cpp
 - DubbingSynthesisJob
 - .warning
@@ -47,31 +46,32 @@
 - whisper_full_params
 - SubtitleOcrRuntimeService
 - LlamaTranslationInterface::Api
-- QStringList
 - DubbingColabCoordinatorService
 - VoiceCloneReferenceIsolatorController
 - server.cjs
 - TranslationController
-- properties
 - test_SubtitleOcrController.cpp
 - DubbingController_Preflight.cpp
 - validate_data.py
+- SourceSeparationService
 - MediaIngestService
+- DubbingController_Workflow.cpp
 - AudioPlayer
 - DubbingTranslationJob
 - QCborValue
-- DubbingController_Workflow.cpp
+- StudioSessionViewModel
 - DownloadManager
+- properties
 - persistAfterEdit
 - SubtitleOcrController::onProcessFinished
 - WorkflowGraphRunner
 - DubbingVoiceCloneWorkerMock
 - AlignmentExecutionService
-- StudioSessionViewModel
 - LlmChatController
 - CrispAlignmentInterface
 - OmnivoiceInterface
 - mocks/TtsEngine.cpp
+- CrispVibeVoiceInterface
 - mocks/AppController.cpp
 - CapabilityFamilyModel.cpp
 - .info
@@ -84,11 +84,13 @@
 - WorkflowNodeDefinition
 - Python Development Patterns
 - Security Checklist
+- QStringList
 - ApiServerService
 - CatalogManager
 - DouyinBrowserSessionService
 - RuntimeHostClient
 - test_design_system_mode.py
+- properties
 - TtsSharedModelSession
 - CapabilityFamilyModel
 - SttEngine
@@ -98,7 +100,6 @@
 - ColabVoiceCloneController
 - HFHubClient
 - $defs
-- StudioSessionViewModel.cpp
 - StudioCapabilityRegistry
 - WorkflowActivityManager
 - test_RemoteExecution.cpp
@@ -110,7 +111,7 @@
 - OcrE2ERunner.cpp
 - WorkflowGraph
 - run_live_colab_acceptance.py
-- ApiServerService.cpp
+- StudioSessionViewModel.cpp
 - ColabSession
 - engine/TtsEngineInstance.cpp
 - WorkflowReviewRequest
@@ -130,8 +131,6 @@
 - VoiceIsolatorModelSession
 - TranslationController.cpp
 - ColabSttRequest
-- $ref
-- AI agent response — local download and resumable Dubbing projects
 - KokoroVietnameseInterface
 - VieneuTtsInterface
 - ColabAlignmentController
@@ -152,13 +151,14 @@
 - Design
 - Canvas Design System
 - design_system.py
-- QProcess
 - CapabilityNodeExecutor
 - WorkflowRunEvent
 - Prerequisites
 - RTStream Reference
+- AI agent response — local download and resumable Dubbing projects
 - VibevoiceInterface
 - dataDir
+- ApiServerService.cpp
 - DubbingProject
 - test_ColabVoiceCloneRunner.cpp
 - Cloud Security Checklist
@@ -196,10 +196,11 @@
 - Redis Patterns
 - Test-Driven Development (TDD)
 - TestTailwindConfigGenerator
-- properties
+- $ref
 - LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py
 - LocalizationManager
 - QTcpSocket
+- TimedWord
 - DubbingTranslationFixService::testConnection
 - search
 - Complete API Reference
@@ -212,7 +213,6 @@
 - DubbingController_Colab.cpp
 - DubbingMediaQueueManager
 - LlmChatController.cpp
-- TimedWord
 - MediaToolService
 - QString
 - Logo Usage Rules
@@ -236,6 +236,7 @@
 - DubbingRunCoordinator
 - DownloadInstallService
 - ColabSession.cpp
+- SeparationWorker
 - TranslationInferenceRequest
 - normalize
 - ColabChatMock
@@ -244,11 +245,14 @@
 - search
 - Motion Patterns
 - Capture Reference
-- ApiServer_Endpoints.cpp
+- properties
+- language
+- properties
 - loadAsFloat
 - ModelDownloadWorkerService
 - HistoryRepository.cpp
 - CapabilityFamilyModel_Filtering.cpp
+- ModelManager
 - DubbingVoiceReference
 - InferenceCancellationToken
 - HostedOmnivoiceBackend
@@ -262,8 +266,6 @@
 - Logo AI Prompt Engineering
 - Docker Patterns
 - ExampleManager.cpp
-- DubbingTranscriptionJob.cpp
-- ColabVoiceCloneController.cpp
 - ModelManager.cpp
 - VoxCpm2Backend.cpp
 - TimedSpeechPipeline.cpp
@@ -277,8 +279,8 @@
 - UI Styling Skill
 - Use Cases
 - readme
-- HttpResponse
 - QTcpServer
+- DubbingTranscriptionJob.cpp
 - DubbingTranslationFixService.cpp
 - DubbingTranslationFix_Candidate.cpp
 - create
@@ -288,10 +290,10 @@
 - Workflow
 - Frontend Development Patterns
 - React Testing
-- CrispVibeVoiceInterface
 - Báo Cáo Kiểm Toán Chuyên Sâu Trải Nghiệm Người Dùng (GUI UX, Usability & Ergonomics Audit)
 - package.ps1
 - DubbingSynthesisJob.cpp
+- ColabVoiceCloneController.cpp
 - HostedLlamaTranslationBackend
 - ColabSeparationRunner
 - SttEngineInstance
@@ -301,9 +303,9 @@
 - Tailwind CSS Customization
 - Generative Media Guide
 - SherpaOnnxRuntime
-- properties
 - Báo cáo recheck tổng thể — Dubbing Studio Workspace
 - 3. Kế hoạch triển khai theo task
+- ApiServer_Endpoints.cpp
 - match
 - CapabilityStudioAction
 - IModelSession
@@ -311,15 +313,15 @@
 - analyzeSpeechOverlaps
 - SubtitleParseResult
 - ColabTranslationRunner
-- QString
 - C++ Testing (Agent Skill)
 - During the session
 - TailwindConfigGenerator
 - QJsonDocument
+- properties
+- HttpResponse
 - FileAccessService
 - ColabVoiceDesignController.cpp
 - recommendedThreadCount
-- ModelManager
 - AlignmentRefinementConfiguration
 - RuntimeHostWorker
 - engine/SttEngineInstance.cpp
@@ -329,12 +331,15 @@
 - BM25
 - ws_listener.py
 - Quy tac duy tri
+- SeparationResult
 - VoiceDesignPresetService
+- QTimer
 - WorkflowActivityManager::WorkflowActivityManager
 - QSet
 - resolve
 - SttWorker
 - GatewaySttRunner
+- QString
 - CatalogMock
 - Visual Companion Guide
 - Routing by Task Type
@@ -344,13 +349,12 @@
 - shadcn/ui Theming & Customization
 - AcceptanceFixture
 - catalog.schema.json
-- properties
 - LA Studio release-candidate test matrix
 - CrispVoxCpm2Interface
 - VibevoiceInterface.h
+- ApiServerService::handleTranscriptionRequest
 - AlignmentExecutionService.cpp
 - activeWorkflows
-- DownloadInstall_ArchiveSafety.cpp
 - RuntimeInfo
 - StudioConfiguration
 - ColabSubtitleOcrRunner
@@ -362,7 +366,7 @@
 - FoundationModels: On-Device LLM (iOS 26)
 - Plan Orchestrate
 - Security Scan Skill
-- properties
+- name
 - LA Studio — hồ sơ bàn giao cho AI agent
 - RuntimeHostManager
 - ColabAlignmentController.cpp
@@ -378,17 +382,14 @@
 - E2E Testing Patterns
 - React Performance
 - Streaming & Playback
-- language
 - 3. Proposed Technical Decisions and Rationale
 - LlamaTranslationInterface
 - VieneuTtsInterface.h
 - WhisperInterface.h
 - paddle_ocr_worker.py
 - smoke_remote_preflight.ps1
-- ApiServer_HttpParser.cpp
 - DubbingTranslationFix_Config.cpp
 - instance
-- discoverLocalModels
 - ModelInfo
 - VoiceCloningUtils
 - DubbingSpeechBudget
@@ -399,9 +400,8 @@
 - Search & Indexing Guide
 - Testing CLAUDE.md Skills Documentation
 - setError
-- fuse
 - DubbingTranslationJob.cpp
-- DownloadInstallService.cpp
+- DownloadInstallService::onDownloadFinished
 - RemoteModelCatalogController.cpp
 - QString
 - SubtitleOcrRoiService
@@ -417,15 +417,12 @@
 - TestShadcnInstaller
 - CatalogRefreshTest
 - Persuasion Principles for Skill Design
-- name
-- policy
 - Tri nho du an LA Studio
 - 3. Nhật Ký Chi Tiết Các Tác Vụ Đã Thực Hiện
 - Global Constraints
 - Dubbing Studio Workspace Overhaul Design
 - Normalizer
 - douyin_browser_session.py
-- QTimer
 - SubtitleOcrController_Media.cpp
 - ColabSeparationRequest
 - managedTesseractPath
@@ -447,7 +444,10 @@
 - InstanceRegistry
 - QMutex
 - build.ps1
+- HttpRequest
 - renderClip
+- fuse
+- SubtitleOcrExportService
 - managedTessdataPath
 - DictionaryStore
 - WorkflowPlanNode
@@ -465,9 +465,8 @@
 - resolve
 - WasapiLoopbackThread
 - IStudioAction
-- DownloadInstallService::onDownloadFinished
 - DownloadInstallService::enqueueModelFile
-- SubtitleOcrExportService
+- DownloadInstall_ArchiveSafety.cpp
 - WorkerThreadHost
 - transcribe
 - QwenSttBackend
@@ -486,16 +485,16 @@
 - Qwen3-TTS-12Hz-1.7B-Base/manifest.json
 - Qwen3-TTS-12Hz-1.7B-CustomVoice/manifest.json
 - Qwen3-TTS-12Hz-1.7B-VoiceDesign/manifest.json
-- properties
 - LA Studio — Kế hoạch chuyển inference sang API Gateway và Colab GPU độc lập
 - Remote feature acceptance audit
 - Api
 - RecognitionItem
-- HttpRequest
 - CustomVoice
+- DownloadInstallService.cpp
 - canTranscribeForProvider
 - SubtitleOcrController_Project.cpp
 - GatewayTtsController.cpp
+- discoverLocalModels
 - QmlLogger
 - TranslationService
 - EspeakNgPhonemizer.cpp
@@ -532,6 +531,7 @@
 - vieneu_tts_params_v2
 - whisper_token_data
 - VietnameseTextProcessor.cpp
+- QVariantMap
 - SttJobSnapshot
 - test_MediaToolService.cpp
 - mocks/AudioRecorder.cpp
@@ -549,11 +549,10 @@
 - 2.3 Release-blocking defects
 - vieneu_init_params
 - LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py
+- onSocketReadyRead
 - TtsEngine
-- QVariantMap
 - TranslationController::TranslationController
 - BackendResult
-- EventWorkerLoaded
 - Brainstorming Ideas Into Designs
 - Brand
 - Slide Strategies
@@ -626,7 +625,6 @@
 - Translation and LLM Chat exact-model remote audit
 - Text-to-Speech exact-model Colab audit
 - Voice Cloning and Voice Design exact-model Colab audit
-- crispasr_open_params_v1
 - kokoro_vi_init_params
 - .missingSymbols
 - NormalizationOptions
@@ -641,6 +639,7 @@
 - SttBackend
 - state
 - NormalizationResult
+- state
 - FakeTestBackend
 - LA Studio third-party notices
 - stop-server.sh
@@ -678,6 +677,7 @@
 - .isValid
 - StateProcessing
 - Asset
+- currentSchema
 - 1. Core Principles
 - Classes & Class Hierarchies (C.*)
 - graphify reference: query, path, explain
@@ -698,17 +698,16 @@
 - Test evidence and release gate
 - ISttRuntime
 - ITtsRuntime
-- ov_init_params
 - DubbingTranslationJob::DubbingTranslationJob
 - LlmChatController.h
 - setColabModel
+- DownloadInstallService::DownloadInstallService
 - notebookForColabModel
 - selectProvider
 - GatewayTtsController.h
 - GatewayTtsController::GatewayTtsController
 - Result
 - estimatedRamBytes
-- state
 - Brand Guidelines Template
 - Functions (F.*)
 - Resource Management (R.*)
@@ -780,6 +779,7 @@
 - Example: TDD Skill Bulletproofing
 - VoxCPM2
 - ColabVoiceIsolatorController.h
+- 2026-08-15 - completed: direct upload for all Dubbing task outputs
 - 2026-08-15 — completed: generalized Dubbing manual Colab handoff
 - 2026-08-15 - completed: internal package 0.0.7.1
 - 2026-08-15 — completed: package 0.0.7.2
@@ -837,7 +837,7 @@
 - Antigravity CLI (`agy`) Tool Mapping
 - VieNeu-TTS v3 Turbo
 - Batch 0.0.2.19: Direct Colab / Dubbing preflight / Activity
-- Phase 12 — Video Dubbing end-to-end
+- Phase 0 — Baseline và abstraction
 - Phase 13 — Remote-first model management
 - Phase 2 — Translation qua API Gateway
 - Phase 4 — Speech-to-Text qua API Gateway
@@ -863,7 +863,7 @@
 - find-polluter.sh
 - test-academic.md
 - .test_add_components_no_config
-- .test_init_default_project_root
+- .test_add_components_already_installed
 - .test_init_dry_run
 - .test_check_shadcn_config_exists
 - .test_get_installed_components_empty
@@ -897,6 +897,7 @@
 - karaokeLines
 - clearColabCatalog
 - clearGatewayCatalog
+- playOutput
 - lastSamplePreview
 - playOutput
 - lastSamplePreview
@@ -931,7 +932,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (909 total, 68 thin omitted)
+## Communities (910 total, 69 thin omitted)
 
 ### Community 0 - "DubbingController"
 Cohesion: 0.01
@@ -957,13 +958,13 @@ Nodes (119): saveFloat, QJsonObject, QString, QVariantList, fromJson, load, merg
 Cohesion: 0.02
 Nodes (89): ColabSeparationRunner, ColabSession, SubtitleOcrController, DubbingExportJob, DubbingJobRunner, clearError, errorOccurred, ingestFinished (+81 more)
 
-### Community 6 - "Settings"
+### Community 6 - "TtsEngine"
+Cohesion: 0.05
+Nodes (78): QByteArray, QList, QObject, QString, QStringList, QVariantMap, QVector, SessionConfiguration (+70 more)
+
+### Community 7 - "Settings"
 Cohesion: 0.02
 Nodes (82): Q_OBJECT, QObject, QString, Settings, apiServerAllowLanChanged, apiServerApiKeyChanged, apiServerEnabledChanged, apiServerPortChanged (+74 more)
-
-### Community 7 - "TtsEngine"
-Cohesion: 0.05
-Nodes (77): QByteArray, QList, QObject, QString, QStringList, QVariantMap, QVector, SessionConfiguration (+69 more)
 
 ### Community 8 - "VoiceIsolatorController"
 Cohesion: 0.04
@@ -977,153 +978,153 @@ Nodes (70): AudioPlayer, ColabSession, ColabTtsController, cancelProcessing, col
 Cohesion: 0.05
 Nodes (69): qreal, AppUpdateService, AppUpdateService::AppUpdateService(), checkForUpdates, checkingChanged, clearError, currentVersion, downloadStateChanged (+61 more)
 
-### Community 11 - "SourceSeparationService"
-Cohesion: 0.03
-Nodes (66): SeparationErrorCode, computeSourceHash(), QAtomicInt, QObject, QString, shared_ptr, Q_OBJECT, QObject (+58 more)
-
-### Community 12 - "Settings.cpp"
+### Community 11 - "Settings.cpp"
 Cohesion: 0.04
 Nodes (75): QString, preparedSettingsIniPath(), apiServerAllowLan, apiServerApiKey, apiServerEnabled, apiServerPort, automaticUpdateChecks, device (+67 more)
 
-### Community 13 - "DubbingSynthesisJob"
+### Community 12 - "DubbingSynthesisJob"
 Cohesion: 0.03
 Nodes (71): ColabSession, ColabTtsRunner, ColabVoiceCloneRunner, DubbingSynthesisJob, completed, failed, m_cacheSettings, m_chunkIndex (+63 more)
 
-### Community 14 - ".warning"
+### Community 13 - ".warning"
 Cohesion: 0.07
 Nodes (67): Audio, quint16, adaptiveVieneuV3FrameCap(), appendLe16(), appendLe32(), configureVieneuSeaG2pDict(), configureVieneuV3NativeQualityEnv(), copyBundledVieneuV3VoicesJson() (+59 more)
 
-### Community 15 - "DubbingController::DubbingController"
+### Community 14 - "DubbingController::DubbingController"
 Cohesion: 0.06
 Nodes (63): ModelManager, QObject, RuntimeManager, SttSessionController, TranslationEngine, TtsEngine, completeCurrentMediaQueueItem, completeCurrentMediaQueueStage (+55 more)
 
-### Community 16 - "LlmChatEngine"
+### Community 15 - "LlmChatEngine"
 Cohesion: 0.04
 Nodes (59): atomic_bool, GatewayClient, Q_OBJECT, QList, QObject, QString, QVariantMap, shared_ptr (+51 more)
 
-### Community 17 - "TtsEngineInstance"
+### Community 16 - "TtsEngineInstance"
 Cohesion: 0.03
 Nodes (67): EventCancelProcessing, EventUnload, EventWorkerFinished, sampleRate, samples, EngineState, Q_ENUM, Q_INVOKABLE (+59 more)
 
-### Community 18 - "DesignSystemGenerator"
+### Community 17 - "DesignSystemGenerator"
 Cohesion: 0.05
 Nodes (26): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict. (+18 more)
 
-### Community 19 - "RemoteMediaImportService"
+### Community 18 - "RemoteMediaImportService"
 Cohesion: 0.05
 Nodes (62): QHostAddress, QTemporaryFile, QByteArray, QObject, QString, QStringList, DouyinBrowserSessionService, Q_OBJECT (+54 more)
 
-### Community 20 - "ModelsPathMigrationService"
+### Community 19 - "ModelsPathMigrationService"
 Cohesion: 0.05
 Nodes (58): DownloadManager, DownloadManager, ModelManager, QObject, QString, Settings, SttEngine, TtsEngine (+50 more)
 
-### Community 21 - "HistoryService"
+### Community 20 - "HistoryService"
 Cohesion: 0.06
 Nodes (50): AudioRecorder, AudioRecorder, Q_OBJECT, QObject, QString, QVariantList, QVector, TtsEngine (+42 more)
 
-### Community 22 - "SttSessionController"
+### Community 21 - "SttSessionController"
 Cohesion: 0.03
 Nodes (63): atomic_bool, ExecutionProvider, QObject, QVariantList, QVariantMap, shared_ptr, StudioSelectionRepository, SttSessionController (+55 more)
 
-### Community 23 - "SubtitleOcrController.cpp"
+### Community 22 - "SubtitleOcrController.cpp"
 Cohesion: 0.07
 Nodes (66): Operation, QString, SubtitleOcrController::completeCancellation(), SubtitleOcrController::completeRun(), SubtitleOcrController::fail(), SubtitleOcrController::onColabRecognitionFinished(), QByteArray, SubtitleOcrController::completeProbe() (+58 more)
 
-### Community 24 - "test_ModelsAndRuntimes.cpp"
+### Community 23 - "test_ModelsAndRuntimes.cpp"
 Cohesion: 0.05
 Nodes (56): DubbingTranslationRequest, ModelManager, RuntimeManager, Settings, CapabilityFamilyModel, QVariantMap, QString, resolve (+48 more)
 
-### Community 25 - "DubbingController.cpp"
+### Community 24 - "DubbingController.cpp"
 Cohesion: 0.07
 Nodes (62): activityNodeId(), artifactMatchesActiveStage(), artifactProductionNodeId(), automaticDefaultFamilyId(), ModelSessionRegistry, qint64, QString, QVariantList (+54 more)
 
-### Community 26 - "DubbingTranslationFixService"
+### Community 25 - "DubbingTranslationFixService"
 Cohesion: 0.03
 Nodes (61): ColabSession, DubbingTranslationFixService, cancel, chatUrl, clearError, cliModelOptions, completed, connectionTested (+53 more)
 
-### Community 27 - "DubbingProjectLifecycleService"
+### Community 26 - "DubbingProjectLifecycleService"
 Cohesion: 0.07
 Nodes (48): QObject, QString, QVariantMap, DubbingProjectLifecycleService, clearHistory, createAutoProject, defaultProjectsDirectory, deleteHistoryItem (+40 more)
 
-### Community 28 - "Bao cao tong hop LA Studio"
+### Community 27 - "Bao cao tong hop LA Studio"
 Cohesion: 0.03
 Nodes (65): 2026-08-11 - Compact Dubbing controls and complete OCR package isolation, 2026-08-11 - Dubbing eight-stage contract and OCR bootstrap `.8`, 2026-08-11 - Dubbing entry setup and compact-pane regression closure, 2026-08-11 - Dubbing fixed-pane toolbar and OCR single-transaction bootstrap, 2026-08-11 - Dubbing layout-minimum correction, 2026-08-11 - Dubbing pane contract and Subtitle OCR no-venv bootstrap, 2026-08-12 - Subtitle OCR bootstrap `.12`: narrow, observable GPU stack, 2026-08-12 - Subtitle OCR bootstrap `.13`: direct CUDA wheel, deterministic resolver (+57 more)
 
-### Community 29 - "CrispKokoroInterface"
+### Community 28 - "CrispKokoroInterface"
 Cohesion: 0.05
 Nodes (48): crispasr_kokoro_resolve_fallback_voice_fn, crispasr_kokoro_resolve_model_for_lang_fn, crispasr_session_open_explicit_fn, crispasr_session_set_length_scale_fn, CrispKokoroInterface, crispasr_kokoro_resolve_fallback_voice, crispasr_kokoro_resolve_model_for_lang, crispasr_pcm_free (+40 more)
 
-### Community 30 - "whisper_full_params"
+### Community 29 - "whisper_full_params"
 Cohesion: 0.03
 Nodes (63): ggml_abort_callback, whisper_full_params, abort_callback, abort_callback_user_data, audio_ctx, beam_search, carry_initial_prompt, debug_mode (+55 more)
 
-### Community 31 - "SubtitleOcrRuntimeService"
+### Community 30 - "SubtitleOcrRuntimeService"
 Cohesion: 0.04
 Nodes (51): RuntimeProcessPhase, QVariantList, QVariantMap, DownloadManager, PendingKind, Q_ENUM, Q_OBJECT, qint64 (+43 more)
 
-### Community 32 - "LlamaTranslationInterface::Api"
+### Community 31 - "LlamaTranslationInterface::Api"
 Cohesion: 0.07
 Nodes (57): ChatTokenCallback, llama_model, llama_token, llama_vocab, atomic_bool, QByteArray, QLibrary, QList (+49 more)
 
-### Community 33 - "QStringList"
-Cohesion: 0.06
-Nodes (33): FILE, crispasr_align_result, crispasr_session_result, QLibrary, crispContainsPath(), crispDllLoadPriority(), crispPreloadRuntimeDlls(), crispReleasePreloadedRuntimeDlls() (+25 more)
-
-### Community 34 - "DubbingColabCoordinatorService"
+### Community 32 - "DubbingColabCoordinatorService"
 Cohesion: 0.05
 Nodes (54): defaultLanguageForTtsModel(), defaultModelForNode(), defaultVoiceForTtsModel(), QString, QVariantList, normalizedNodeId(), normalizedTtsLanguage(), notebookForModel() (+46 more)
 
-### Community 35 - "VoiceCloneReferenceIsolatorController"
+### Community 33 - "VoiceCloneReferenceIsolatorController"
 Cohesion: 0.07
 Nodes (52): cacheRoot(), ColabVoiceIsolatorController, copyAtomically(), ColabVoiceIsolatorController, QByteArray, QObject, QString, VoiceIsolatorController (+44 more)
 
-### Community 36 - "server.cjs"
+### Community 34 - "server.cjs"
 Cohesion: 0.06
 Nodes (57): bootstrapPage(), brandMarkup(), broadcast(), browserLauncherForPlatform(), chmodOwnerOnly(), clients, companionUrl(), computeAcceptKey() (+49 more)
 
-### Community 37 - "TranslationController"
+### Community 35 - "TranslationController"
 Cohesion: 0.04
 Nodes (47): ColabSession, ColabTranslationRunner, GatewayTranslationRunner, atomic_bool, Provider, Q_OBJECT, QML_UNCREATABLE, QObject (+39 more)
 
-### Community 38 - "properties"
-Cohesion: 0.04
-Nodes (60): type, $ref, type, enum, additionalProperties, type, items, type (+52 more)
-
-### Community 39 - "test_SubtitleOcrController.cpp"
+### Community 36 - "test_SubtitleOcrController.cpp"
 Cohesion: 0.08
 Nodes (50): batchFrameFfmpegScript(), configure(), QByteArray, QObject, QString, QTcpServer, SubtitleOcrController, Q_OBJECT (+42 more)
 
-### Community 40 - "DubbingController_Preflight.cpp"
+### Community 37 - "DubbingController_Preflight.cpp"
 Cohesion: 0.06
 Nodes (53): activeDownloadKeys, advanceAutomaticSetup, appendAutomaticEvent, automaticModel, automaticPreflight, cancelMediaQueue, captureNewAutomaticDownloads, configureRemoteRewriteFromGateway (+45 more)
 
-### Community 41 - "validate_data.py"
+### Community 38 - "validate_data.py"
 Cohesion: 0.08
 Nodes (45): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract(), _check_catalog_contract() (+37 more)
 
-### Community 42 - "MediaIngestService"
+### Community 39 - "SourceSeparationService"
+Cohesion: 0.05
+Nodes (49): SourceSeparationService, Creator, QString, unique_ptr, Creator, QMap, QString, SeparationBackendFactory (+41 more)
+
+### Community 40 - "MediaIngestService"
 Cohesion: 0.06
 Nodes (57): ExitStatus, ProcessError, QObject, QString, Stage, Q_OBJECT, QByteArray, QFutureWatcher (+49 more)
 
-### Community 43 - "AudioPlayer"
+### Community 41 - "DubbingController_Workflow.cpp"
+Cohesion: 0.07
+Nodes (55): RemoteEndpointKind, SubtitleOcrController, applyStoredSubtitleOcrConfiguration, canRunIndependentAudioSttAlongsideCurrentWork, canRunIndependentSubtitleOcrAlongsideCurrentWork, exportMedia, rerunStep, runCurrentStep (+47 more)
+
+### Community 42 - "AudioPlayer"
 Cohesion: 0.07
 Nodes (52): AudioDecodeResult, data, error, AudioPlaybackSession, AudioPlayer, AudioPlayer::AudioPlayer(), errorOccurred, loadingChanged (+44 more)
 
-### Community 44 - "DubbingTranslationJob"
+### Community 43 - "DubbingTranslationJob"
 Cohesion: 0.04
 Nodes (55): ColabSession, ColabTranslationRunner, DubbingTranslationJob, completed, failed, m_colabRunner, m_colabSession, m_colabSessionConnection (+47 more)
 
-### Community 45 - "QCborValue"
+### Community 44 - "QCborValue"
 Cohesion: 0.08
 Nodes (31): atomic_bool, ProgressCallback, QCborMap, QString, QVector, Result, shared_ptr, unique_ptr (+23 more)
 
-### Community 46 - "DubbingController_Workflow.cpp"
-Cohesion: 0.07
-Nodes (53): RemoteEndpointKind, applyStoredSubtitleOcrConfiguration, canRunIndependentAudioSttAlongsideCurrentWork, canRunIndependentSubtitleOcrAlongsideCurrentWork, exportMedia, rerunStep, runCurrentStep, runSubtitleOcrIndependently (+45 more)
+### Community 45 - "StudioSessionViewModel"
+Cohesion: 0.05
+Nodes (43): StudioState, IStudioAction, Q_INVOKABLE, qint64, QObject, QString, QVariantMap, StudioSessionViewModel (+35 more)
 
-### Community 47 - "DownloadManager"
+### Community 46 - "DownloadManager"
 Cohesion: 0.08
 Nodes (54): HFHubClient, qint64, QObject, QString, QVariantList, QVariantMap, DownloadEntry, bytesReceived (+46 more)
+
+### Community 47 - "properties"
+Cohesion: 0.04
+Nodes (54): $ref, properties, additionalProperties, properties, type, items, type, component (+46 more)
 
 ### Community 48 - "persistAfterEdit"
 Cohesion: 0.07
@@ -1145,25 +1146,25 @@ Nodes (34): QByteArray, QHash, QList, QObject, QTcpServer, QTcpSocket, DubbingSt
 Cohesion: 0.04
 Nodes (40): AlignmentExecutionService, completed, failed, m_cancelled, m_diagnostics, m_duration, m_errorCode, m_errorMessage (+32 more)
 
-### Community 53 - "StudioSessionViewModel"
-Cohesion: 0.05
-Nodes (42): StudioState, IStudioAction, Q_INVOKABLE, qint64, QObject, QString, QVariantMap, StudioSessionViewModel (+34 more)
-
-### Community 54 - "LlmChatController"
+### Community 53 - "LlmChatController"
 Cohesion: 0.04
 Nodes (40): Provider, Q_OBJECT, QML_UNCREATABLE, QObject, QString, QVariantList, LlmChatController, activeConversationChanged (+32 more)
 
-### Community 55 - "CrispAlignmentInterface"
+### Community 54 - "CrispAlignmentInterface"
 Cohesion: 0.05
 Nodes (48): align_words_fn, CrispAlignmentInterface, align, load, m_alignWords, m_error, m_library, m_resultCount (+40 more)
 
-### Community 56 - "OmnivoiceInterface"
+### Community 55 - "OmnivoiceInterface"
 Cohesion: 0.06
 Nodes (45): QLibrary, QString, OmnivoiceInterface, m_lastError, m_lib, m_loadedPath, ov_audio_free, ov_duration_sec_to_tokens (+37 more)
 
-### Community 57 - "mocks/TtsEngine.cpp"
+### Community 56 - "mocks/TtsEngine.cpp"
 Cohesion: 0.06
 Nodes (39): QByteArray, qint64, QList, QObject, QString, QStringList, QVariantList, QVariantMap (+31 more)
+
+### Community 57 - "CrispVibeVoiceInterface"
+Cohesion: 0.07
+Nodes (34): crispasr_session_set_tts_steps_fn, crispContainsPath(), crispDllLoadPriority(), crispPreloadRuntimeDlls(), crispReleasePreloadedRuntimeDlls(), crispRuntimeDependencyDirs(), crispUnloadLibraryAndDependencies(), HMODULE (+26 more)
 
 ### Community 58 - "mocks/AppController.cpp"
 Cohesion: 0.06
@@ -1213,305 +1214,305 @@ Nodes (48): 1. Readability Counts, 2. Explicit is Better Than Implicit, 3. EAFP 
 Cohesion: 0.04
 Nodes (48): 10. Dependency Security, 1. Secrets Management, 2. Input Validation, 3. SQL Injection Prevention, 4. Authentication & Authorization, 5. XSS Prevention, 6. CSRF Protection, 7. Rate Limiting (+40 more)
 
-### Community 70 - "ApiServerService"
+### Community 70 - "QStringList"
+Cohesion: 0.06
+Nodes (32): FILE, crispasr_align_result, crispasr_session_result, QLibrary, crispasr_open_params_v1, abi_version, flash_attn, n_gpu_layers (+24 more)
+
+### Community 71 - "ApiServerService"
 Cohesion: 0.05
 Nodes (48): ApiServerService, allowLanChanged, apiKeyChanged, availableModelEntries, availableVoiceEntries, buildHealthDocument, buildModelsDocument, buildSourceDocument (+40 more)
 
-### Community 71 - "CatalogManager"
+### Community 72 - "CatalogManager"
 Cohesion: 0.07
 Nodes (42): applyLastudioPickMetadata(), CatalogManager, CatalogManager::CatalogManager(), catalogUpdated, errorOccurred, fetchRemoteCatalog, isUpdatingChanged, CatalogManager::languageSet() (+34 more)
 
-### Community 72 - "DouyinBrowserSessionService"
+### Community 73 - "DouyinBrowserSessionService"
 Cohesion: 0.09
 Nodes (46): appendPythonCandidate(), applicationScript(), ExitStatus, Operation, QObject, QString, QStringList, defaultProfile() (+38 more)
 
-### Community 73 - "RuntimeHostClient"
+### Community 74 - "RuntimeHostClient"
 Cohesion: 0.09
 Nodes (47): decodeRuntimeHostCbor(), ExitStatus, ProcessError, QCborMap, QObject, QString, quint64, QVector (+39 more)
 
-### Community 74 - "test_design_system_mode.py"
+### Community 75 - "test_design_system_mode.py"
 Cohesion: 0.07
 Nodes (24): _contrast_ratio(), _derive_dark_palette(), _filter_anti_patterns_for_mode(), _palette_is_dark(), _query_wants_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface., WCAG contrast ratio for two hex colors, or None if either is invalid. (+16 more)
 
-### Community 75 - "TtsSharedModelSession"
+### Community 76 - "properties"
+Cohesion: 0.05
+Nodes (48): type, $ref, $ref, type, properties, pattern, type, items (+40 more)
+
+### Community 77 - "TtsSharedModelSession"
 Cohesion: 0.09
 Nodes (43): ModelSessionState, optional, QList, QObject, QString, SessionConfiguration, TtsEngine, IModelSession (+35 more)
 
-### Community 76 - "CapabilityFamilyModel"
+### Community 78 - "CapabilityFamilyModel"
 Cohesion: 0.05
 Nodes (44): CapabilityFamilyModel, availableLanguagesChanged, data, firstFamilyId, languageFilterChanged, m_availableLanguages, m_capabilityId, m_items (+36 more)
 
-### Community 77 - "SttEngine"
+### Community 79 - "SttEngine"
 Cohesion: 0.08
 Nodes (44): QList, QObject, QString, QStringList, QVariantMap, QVector, SessionConfiguration, Q_ENUM (+36 more)
 
-### Community 78 - "TranslationEngine"
+### Community 80 - "TranslationEngine"
 Cohesion: 0.08
 Nodes (46): QList, QObject, QString, QStringList, SessionConfiguration, shared_ptr, State, TranslationEngineInstance (+38 more)
 
-### Community 79 - "generate_catalog.py"
+### Community 81 - "generate_catalog.py"
 Cohesion: 0.09
 Nodes (45): add_size_bytes(), apply_license_policy(), attach_hub_sidecar_files(), collect_hf_download_model_ids(), enrich_category_items_with_family_hub_files(), enrich_families_with_hf_stats(), fetch_hf_model_stat(), generate_catalog() (+37 more)
 
-### Community 80 - "QUrl"
+### Community 82 - "QUrl"
 Cohesion: 0.12
 Nodes (41): playbackMediaUrl, QUrl, cropPreviewUrl, sourceUrl, QByteArray, qint64, QString, Q_OBJECT (+33 more)
 
-### Community 81 - "ColabVoiceCloneController"
+### Community 83 - "ColabVoiceCloneController"
 Cohesion: 0.04
 Nodes (40): ColabVoiceCloneController, colabStateChanged, errorOccurred, m_activateColabWhenVerified, m_activeSessionRevision, m_activeText, m_activeVoiceName, m_cancellation (+32 more)
 
-### Community 82 - "HFHubClient"
+### Community 84 - "HFHubClient"
 Cohesion: 0.06
 Nodes (44): CURLcode, atomic_bool, curl_off_t, HFHubClient, QFile, qint64, QObject, QString (+36 more)
 
-### Community 83 - "$defs"
+### Community 85 - "$defs"
 Cohesion: 0.06
 Nodes (46): additionalProperties, required, type, $defs, catalogItem, family, familyStats, modelCategory (+38 more)
 
-### Community 84 - "StudioSessionViewModel.cpp"
-Cohesion: 0.10
-Nodes (42): RegistryManager, optional, QString, QVariantList, QVariantMap, SessionConfiguration, activateLoadedModel, activeModelId (+34 more)
-
-### Community 85 - "StudioCapabilityRegistry"
+### Community 86 - "StudioCapabilityRegistry"
 Cohesion: 0.08
 Nodes (41): ModelSessionRegistry, cpuUsage, QString, StudioCapabilityDescriptor, actionId, configurationTitle, displayName, id (+33 more)
 
-### Community 86 - "WorkflowActivityManager"
+### Community 87 - "WorkflowActivityManager"
 Cohesion: 0.06
 Nodes (44): AlignmentExecutionService, ColabAlignmentController, ColabTtsController, ColabVoiceCloneController, ColabVoiceDesignController, ColabVoiceIsolatorController, DubbingController, GatewayTtsController (+36 more)
 
-### Community 87 - "test_RemoteExecution.cpp"
+### Community 88 - "test_RemoteExecution.cpp"
 Cohesion: 0.11
 Nodes (39): QDir, QString, Q_OBJECT, QObject, resolveNotebookFile(), TestRemoteExecution, colabCapabilityCatalogRequiresSupportedContractVersion, colabCapabilityCatalogUsesDirectWorkerOnly (+31 more)
 
-### Community 88 - "Tailwind CSS Utility Reference"
+### Community 89 - "Tailwind CSS Utility Reference"
 Cohesion: 0.05
 Nodes (43): Arbitrary Values, Aspect Ratio, Background Colors, Border Color, Border Radius, Border Style, Border Width, Borders (+35 more)
 
-### Community 89 - "ColabWorkerClient.cpp"
+### Community 90 - "ColabWorkerClient.cpp"
 Cohesion: 0.17
 Nodes (41): DownloadProgressCallback, audioMimeTypeForPath(), chatContent(), ColabWorkerClient::alignAudioFile(), ColabWorkerClient::cancelSeparationJob(), ColabWorkerClient::cancelTranscriptionJob(), ColabWorkerClient::cancelVoiceJob(), ColabWorkerClient::configure() (+33 more)
 
-### Community 90 - "RuntimeHostServer"
+### Community 91 - "RuntimeHostServer"
 Cohesion: 0.08
 Nodes (42): QLocalServer, configureHardenedDllSearch(), main(), constantTimeEquals(), QCborMap, QObject, QString, quint64 (+34 more)
 
-### Community 91 - "DubbingTranscriptionJob"
+### Community 92 - "DubbingTranscriptionJob"
 Cohesion: 0.05
 Nodes (43): ColabAlignmentRunner, ColabSession, DubbingTranscriptionJob, completed, failed, m_alignmentCancel, m_alignmentModelId, m_alignmentSession (+35 more)
 
-### Community 92 - "ColabVoiceDesignController"
+### Community 93 - "ColabVoiceDesignController"
 Cohesion: 0.05
 Nodes (36): ColabVoiceDesignController, colabStateChanged, errorOccurred, m_activateColabWhenVerified, m_activeDescription, m_activeSessionRevision, m_activeText, m_cancellation (+28 more)
 
-### Community 93 - "OcrE2ERunner.cpp"
+### Community 94 - "OcrE2ERunner.cpp"
 Cohesion: 0.09
 Nodes (39): Arguments, benchmarkSamples, error, ffmpegPath, ffprobePath, inputPath, outputRoot, paddleCachePath (+31 more)
 
-### Community 94 - "WorkflowGraph"
+### Community 95 - "WorkflowGraph"
 Cohesion: 0.07
 Nodes (42): QJsonValue, QByteArray, QJsonObject, QString, QStringList, WorkflowDataType, QList, QVariantMap (+34 more)
 
-### Community 95 - "run_live_colab_acceptance.py"
+### Community 96 - "run_live_colab_acceptance.py"
 Cohesion: 0.17
 Nodes (36): AcceptanceError, assert_audio_file(), Check, content_type_for(), encode_multipart(), exact_model_preflight(), exact_model_rejection_probe(), expect_wav() (+28 more)
 
-### Community 96 - "ApiServerService.cpp"
-Cohesion: 0.09
-Nodes (42): allowLan, apiKey, ApiServerService::ApiServerService(), applySettingsState, baseUrl, bindAddress, clearLastError, enabled (+34 more)
+### Community 97 - "StudioSessionViewModel.cpp"
+Cohesion: 0.12
+Nodes (41): RegistryManager, optional, QString, QVariantList, QVariantMap, SessionConfiguration, activateLoadedModel, activeModelId (+33 more)
 
-### Community 97 - "ColabSession"
+### Community 98 - "ColabSession"
 Cohesion: 0.06
 Nodes (31): ColabSession, endpoint, m_allowInsecureLocalhostForTests, m_bearerToken, m_checking, m_endpoint, m_expectedCapability, m_expectedModel (+23 more)
 
-### Community 98 - "engine/TtsEngineInstance.cpp"
+### Community 99 - "engine/TtsEngineInstance.cpp"
 Cohesion: 0.11
 Nodes (42): EngineEvent, EngineState, qint64, QString, QVariant, QVariantList, QVariantMap, QVector (+34 more)
 
-### Community 99 - "WorkflowReviewRequest"
+### Community 100 - "WorkflowReviewRequest"
 Cohesion: 0.07
 Nodes (39): QJsonObject, QString, atomic_bool, QDateTime, QString, QVariant, safeId(), setError() (+31 more)
 
-### Community 100 - "Coding Standards & Best Practices"
+### Community 101 - "Coding Standards & Best Practices"
 Cohesion: 0.05
 Nodes (41): 1. Long Functions, 1. Readability First, 2. Deep Nesting, 2. KISS (Keep It Simple, Stupid), 3. DRY (Don't Repeat Yourself), 3. Magic Numbers, 4. YAGNI (You Aren't Gonna Need It), API Design Standards (+33 more)
 
-### Community 101 - "Windows Desktop E2E Testing"
+### Community 102 - "Windows Desktop E2E Testing"
 Cohesion: 0.05
 Nodes (41): Add Stable Identifiers to Qt Widgets, Anti-Patterns, Artifact Management, base_page.py, Caveats, CI/CD Integration, config.py, conftest.py (+33 more)
 
-### Community 102 - "run"
+### Community 103 - "run"
 Cohesion: 0.10
 Nodes (40): SubtitleOcrController::beginPaddleRecognitionChunk(), SubtitleOcrController::pumpRecognitionQueue(), SubtitleOcrController::cacheKeyMaterial(), QVariantMap, beginPaddleRecognitionChunk, localEngineVersion, localRouteReady, localRuntimeState (+32 more)
 
-### Community 103 - "TranslationModelSession"
+### Community 104 - "TranslationModelSession"
 Cohesion: 0.10
 Nodes (40): ModelSessionState, optional, QList, QObject, QString, SessionConfiguration, TranslationEngine, IModelSession (+32 more)
 
-### Community 104 - "test_SttSession.cpp"
+### Community 105 - "test_SttSession.cpp"
 Cohesion: 0.08
 Nodes (32): ColabSttMock, m_pending, m_request, m_requests, m_server, m_statusRequests, m_uploadedBytes, QByteArray (+24 more)
 
-### Community 105 - "scripts/core.py"
+### Community 106 - "scripts/core.py"
 Cohesion: 0.08
 Nodes (40): _contains_phrase(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _file_signature(), _get_bm25(), _legacy_successor_guidance(), _load_csv() (+32 more)
 
-### Community 106 - "ColabAlignmentRequest"
+### Community 107 - "ColabAlignmentRequest"
 Cohesion: 0.06
 Nodes (39): ColabAlignmentRequest, allowInsecureLocalhost, audioPath, bearerToken, cancellation, language, model, outputFormat (+31 more)
 
-### Community 107 - "SttModelSession"
+### Community 108 - "SttModelSession"
 Cohesion: 0.10
 Nodes (38): ModelSessionState, optional, QList, QObject, QString, SessionConfiguration, SttEngine, IModelSession (+30 more)
 
-### Community 108 - "SubtitleOcrPipeline.cpp"
+### Community 109 - "SubtitleOcrPipeline.cpp"
 Cohesion: 0.10
 Nodes (38): QVariantList, QVector, SubtitleOcrController::segmentsFromVariant(), SubtitleOcrController::segmentsToVariant(), QByteArray, qint64, QString, QVector (+30 more)
 
-### Community 109 - "QThread"
+### Community 110 - "QThread"
 Cohesion: 0.11
 Nodes (32): QThread, QByteArray, QDir, QHash, QObject, QString, QTcpServer, QTcpSocket (+24 more)
 
-### Community 110 - "Examples"
+### Community 111 - "Examples"
 Cohesion: 0.05
 Nodes (39): Anti-Patterns, Authoring Custom Plugins, Avoid Barrel Files, Basic Config, Be Explicit with Import Extensions, Build Optimization, Client-Side Access, Common Pitfalls (+31 more)
 
-### Community 111 - "AudioRecorder"
+### Community 112 - "AudioRecorder"
 Cohesion: 0.06
 Nodes (32): QAudioSource, QIODevice, QScopedPointer, AudioRecorder, AudioRecorder::AudioRecorder(), finished, levelChanged, m_buffer (+24 more)
 
-### Community 112 - "instance"
+### Community 113 - "instance"
 Cohesion: 0.17
 Nodes (19): instance, ColabSession, QObject, DubbingController::colabSessionForStage(), StudioConfigurationResolver, resolve, appControllerScopesColabSessionsPerCapability, automaticSetupKeepsVerifiedDirectColabRouteAndReportsCurrentStage (+11 more)
 
-### Community 113 - "VoiceIsolatorModelSession"
+### Community 114 - "VoiceIsolatorModelSession"
 Cohesion: 0.11
 Nodes (37): ModelSessionState, optional, QList, QObject, QString, SessionConfiguration, VoiceIsolatorController, IModelSession (+29 more)
 
-### Community 114 - "TranslationController.cpp"
+### Community 115 - "TranslationController.cpp"
 Cohesion: 0.11
 Nodes (39): QString, QVariantList, QVariantMap, addHistory, addSegment, applyPatches, autosave, cancel (+31 more)
 
-### Community 115 - "ColabSttRequest"
+### Community 116 - "ColabSttRequest"
 Cohesion: 0.06
 Nodes (37): ColabSttRequest, allowInsecureLocalhost, bearerToken, cancellation, language, model, samples, workerUrl (+29 more)
 
-### Community 116 - "$ref"
-Cohesion: 0.06
-Nodes (39): items, type, items, type, items, type, $ref, items (+31 more)
-
-### Community 117 - "AI agent response — local download and resumable Dubbing projects"
-Cohesion: 0.05
-Nodes (39): 2026-08-14 — completed: package 0.0.6.9, 2026-08-15 - completed: direct upload for all Dubbing task outputs, 2026-08-15 - completed: project-first gate and package 0.0.7.0, 2026-08-15 - Dubbing OCR/Colab controls and per-task artifact handoff, 2026-08-15 - Per-task Colab upload visibility fix, 2026-08-16 — completed: valid FLAC STT recovery and package 0.0.7.4, 2026-08-17 — completed: independent Dubbing STT/OCR control (0.0.7.5), 2026-08-22 — completed: Dubbing recheck, no new package (+31 more)
-
-### Community 118 - "KokoroVietnameseInterface"
+### Community 117 - "KokoroVietnameseInterface"
 Cohesion: 0.09
 Nodes (30): appendIfMissing(), dllLoadPriority(), DWORD, Fn, QString, QStringList, kokoro_vi_context, KokoroVietnameseInterface (+22 more)
 
-### Community 119 - "VieneuTtsInterface"
+### Community 118 - "VieneuTtsInterface"
 Cohesion: 0.05
 Nodes (39): VieneuTtsInterface, m_lastError, m_loadedPath, vieneu_audio_free, vieneu_encode_reference, vieneu_free, vieneu_init, vieneu_init_default_params (+31 more)
 
-### Community 120 - "ColabAlignmentController"
+### Community 119 - "ColabAlignmentController"
 Cohesion: 0.05
 Nodes (33): ColabAlignmentController, colabStateChanged, completed, failed, m_activateColabWhenVerified, m_activeSessionRevision, m_cancellation, m_colabActive (+25 more)
 
-### Community 121 - "DubbingExportJob"
+### Community 120 - "DubbingExportJob"
 Cohesion: 0.05
 Nodes (38): DubbingExportJob, exported, failed, m_expectSubtitle, m_exportAudioPath, m_exportBurnIn, m_exportDestination, m_exportStagingPath (+30 more)
 
-### Community 122 - "ColabVoiceIsolatorController"
+### Community 121 - "ColabVoiceIsolatorController"
 Cohesion: 0.05
 Nodes (36): ColabVoiceIsolatorController, backgroundSamplesChanged, colabStateChanged, errorOccurred, m_activateColabWhenVerified, m_activeSessionRevision, m_backgroundPath, m_backgroundSamples (+28 more)
 
-### Community 123 - "Brand Guidelines v1.0"
+### Community 122 - "Brand Guidelines v1.0"
 Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
 
-### Community 124 - "How It Works"
+### Community 123 - "How It Works"
 Cohesion: 0.05
 Nodes (37): Accessibility, Advanced Patterns (Concepts), AnimatePresence `mode`, Anti-Patterns, Appropriate Scenarios, Architecture & Patterns, Avoid Using Motion When, Button Interaction (+29 more)
 
-### Community 125 - "5. Findings chi tiết và phương án fix"
+### Community 124 - "5. Findings chi tiết và phương án fix"
 Cohesion: 0.05
 Nodes (36): 10. Thứ tự fix khuyến nghị, 11. Acceptance criteria cuối cùng, 12. Trạng thái audit, 1. Kết luận điều hành, 2. Ranh giới bằng chứng, 3. Đánh giá 16 tài liệu, 4. Kiểm tra 8 task, 5. Findings chi tiết và phương án fix (+28 more)
 
-### Community 126 - "AlignmentModelSession"
+### Community 125 - "AlignmentModelSession"
 Cohesion: 0.11
 Nodes (35): AlignmentExecutionService, AlignmentModelSession, activateConfiguration, activeConfiguration, activeSignature, canProcess, clearError, loadedConfigurations (+27 more)
 
-### Community 127 - "GatewayTtsController"
+### Community 126 - "GatewayTtsController"
 Cohesion: 0.06
 Nodes (31): GatewayTtsController, errorOccurred, gatewayModelChanged, gatewayStateChanged, gatewayVoiceChanged, m_activeText, m_activeVoice, m_cancellation (+23 more)
 
-### Community 128 - "RuntimeManager.cpp"
+### Community 127 - "RuntimeManager.cpp"
 Cohesion: 0.12
 Nodes (37): CatalogManager, QDir, QString, QStringList, QVariantList, deriveEngineFamily(), deriveVariant(), Q_INVOKABLE (+29 more)
 
-### Community 129 - "ColabChatRequest"
+### Community 128 - "ColabChatRequest"
 Cohesion: 0.06
 Nodes (37): ColabChatRequest, allowInsecureLocalhost, bearerToken, contextTokens, maxTokens, messages, model, repeatPenalty (+29 more)
 
-### Community 130 - "CrispQwen3TtsInterface"
+### Community 129 - "CrispQwen3TtsInterface"
 Cohesion: 0.06
 Nodes (35): crispasr_session_get_speaker_name_fn, crispasr_session_is_custom_voice_fn, crispasr_session_is_voice_design_fn, crispasr_session_n_speakers_fn, crispasr_session_set_codec_path_fn, crispasr_session_set_float_fn, crispasr_session_set_instruct_fn, crispasr_session_set_int_fn (+27 more)
 
-### Community 131 - "Lich su cap san pham"
+### Community 130 - "Lich su cap san pham"
 Cohesion: 0.05
 Nodes (37): 2026-07-30 den 2026-08-01, 2026-08-02 — 0.0.2.16 PaddleOCR baseline, 2026-08-02 — 0.0.2.17 Dubbing batch, 2026-08-02 - C4 saved voice local correction (source `1e05fb2`), 2026-08-03 - 0.0.2.18 transcript reconciliation, 2026-08-03 - 0.0.2.19 Direct Colab and workflow readiness, 2026-08-04 - 0.0.2.20 Dubbing and Voice Clone reference cleanup, 2026-08-04 - 0.0.2.21 Dubbing entry and automatic setup (+29 more)
 
-### Community 132 - "LlmChatModelSession"
+### Community 131 - "LlmChatModelSession"
 Cohesion: 0.10
 Nodes (35): LlmChatEngine, ModelSessionState, optional, QList, QObject, QString, SessionConfiguration, IModelSession (+27 more)
 
-### Community 133 - "HardwareManager"
+### Community 132 - "HardwareManager"
 Cohesion: 0.06
 Nodes (28): Q_INVOKABLE, Q_OBJECT, QObject, QString, QVariantList, HardwareManager, hardwareInfoChanged, m_canPollVramUsage (+20 more)
 
-### Community 134 - "TranslationWorkerMock"
+### Community 133 - "TranslationWorkerMock"
 Cohesion: 0.10
 Nodes (29): QByteArray, QDir, QList, QObject, QPointer, QString, QTcpServer, QTcpSocket (+21 more)
 
-### Community 135 - "Design"
+### Community 134 - "Design"
 Cohesion: 0.06
 Nodes (35): Banner Design (Built-in), Banner: Design Rules, Banner: Quick Size Reference, Banner: Top Art Styles, Banner: Workflow, CIP Design (Built-in), CIP: Generate Brief, CIP: Generate Mockups (+27 more)
 
-### Community 136 - "Canvas Design System"
+### Community 135 - "Canvas Design System"
 Cohesion: 0.06
 Nodes (35): 1. Visual Communication First, 2. Minimal Text Integration, 3. Expert Craftsmanship, 4. Systematic Patterns, Analog Meditation, Approach, Canvas Boundaries, Canvas Design System (+27 more)
 
-### Community 137 - "design_system.py"
+### Community 136 - "design_system.py"
 Cohesion: 0.08
 Nodes (30): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides() (+22 more)
 
-### Community 138 - "QProcess"
-Cohesion: 0.09
-Nodes (29): SourceSeparationService, QProcess, Creator, QString, unique_ptr, Creator, QMap, QString (+21 more)
-
-### Community 139 - "CapabilityNodeExecutor"
+### Community 137 - "CapabilityNodeExecutor"
 Cohesion: 0.09
 Nodes (29): CapabilityNodeExecutor, m_adapter, m_completed, m_inputs, m_parameters, m_pendingArtifact, m_started, m_typeId (+21 more)
 
-### Community 140 - "WorkflowRunEvent"
+### Community 138 - "WorkflowRunEvent"
 Cohesion: 0.10
 Nodes (34): QJsonObject, QList, QString, QDateTime, QJsonObject, QString, quint64, isTerminalEvent() (+26 more)
 
-### Community 141 - "Prerequisites"
+### Community 139 - "Prerequisites"
 Cohesion: 0.06
 Nodes (34): Accessibility, Available Domains, Available Stacks, Common Rules for Professional UI, Common Sticking Points, Example Workflow, How to Use This Skill, Icons & Visual Elements (+26 more)
 
-### Community 142 - "RTStream Reference"
+### Community 140 - "RTStream Reference"
 Cohesion: 0.06
 Nodes (35): AI Pipelines, Alert Delivery, Alerts, Audio Indexing, Batch Config Summary, Collection RTStream Methods, Complete Workflow, Connect RTStream (+27 more)
 
-### Community 143 - "VibevoiceInterface"
+### Community 141 - "AI agent response — local download and resumable Dubbing projects"
+Cohesion: 0.06
+Nodes (35): 2026-08-14 — completed: package 0.0.6.9, 2026-08-15 - completed: project-first gate and package 0.0.7.0, 2026-08-15 - Dubbing OCR/Colab controls and per-task artifact handoff, 2026-08-15 - Per-task Colab upload visibility fix, 2026-08-16 — completed: valid FLAC STT recovery and package 0.0.7.4, 2026-08-17 — completed: independent Dubbing STT/OCR control (0.0.7.5), 2026-08-22 — completed: Dubbing recheck, no new package, 2026-08-22 — completed: internal portable package 0.0.7.6 (+27 more)
+
+### Community 142 - "VibevoiceInterface"
 Cohesion: 0.06
 Nodes (30): QLibrary, QString, VibevoiceInterface, m_lib, vv_audio_free, vv_capi_load, vv_capi_tts, vv_capi_unload (+22 more)
 
-### Community 144 - "dataDir"
+### Community 143 - "dataDir"
 Cohesion: 0.14
 Nodes (32): Level, MessageObserver, QString, dataDirectoryOverride(), PathUtils, backendsDir, cacheDir, dataDir (+24 more)
+
+### Community 144 - "ApiServerService.cpp"
+Cohesion: 0.11
+Nodes (34): allowLan, apiKey, ApiServerService::ApiServerService(), applySettingsState, baseUrl, bindAddress, clearLastError, enabled (+26 more)
 
 ### Community 145 - "DubbingProject"
 Cohesion: 0.06
@@ -1661,9 +1662,9 @@ Nodes (29): Common Rationalizations, Debugging Integration, Example: Bug Fix, Fi
 Cohesion: 0.06
 Nodes (16): Test adding colors multiple times., Test adding full color palette., Test adding custom spacing., Test adding custom breakpoints., Test TailwindConfigGenerator class., Test that adding same plugin twice doesn't duplicate., Test plugin recommendations for Next.js., Test initialization with default settings. (+8 more)
 
-### Community 182 - "properties"
+### Community 182 - "$ref"
 Cohesion: 0.07
-Nodes (31): properties, type, type, properties, $ref, type, type, type (+23 more)
+Nodes (31): items, type, items, type, $ref, items, type, items (+23 more)
 
 ### Community 183 - "LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py"
 Cohesion: 0.13
@@ -1677,57 +1678,57 @@ Nodes (28): QTranslator, QObject, QString, QVariantList, Settings, Q_OBJECT, QML
 Cohesion: 0.08
 Nodes (22): QTcpSocket, QByteArray, QObject, QPointer, QString, QTcpServer, QTcpSocket, Q_OBJECT (+14 more)
 
-### Community 186 - "DubbingTranslationFixService::testConnection"
+### Community 186 - "TimedWord"
+Cohesion: 0.14
+Nodes (29): onAlignmentFinished, buildSentenceChunks(), chunkCharacters(), chunkDuration(), clauseEnd(), qint64, QString, QVariantList (+21 more)
+
+### Community 187 - "DubbingTranslationFixService::testConnection"
 Cohesion: 0.11
 Nodes (29): cliArgumentsForLog(), CliInvocation, createCliDiagnosticLogPath(), buildPrompt, cliExecutablePath, cliFailureMessage, cliInvocation, executeCliAttempt (+21 more)
 
-### Community 187 - "search"
+### Community 188 - "search"
 Cohesion: 0.10
 Nodes (8): Resolve a deprecated in-domain alias, or expose a cross-domain redirect., Main search function with auto-domain detection, search(), _style_search_destination(), TestDiagnosticsContracts, TestSearchDomains, read_rows(), TestStyleTaxonomy
 
-### Community 188 - "Complete API Reference"
+### Community 189 - "Complete API Reference"
 Cohesion: 0.07
 Nodes (30): Audio Methods, Audio Object, Audio Properties, Collection Methods, Collections, Complete API Reference, Enums & Constants, Exceptions (+22 more)
 
-### Community 189 - "Báo Cáo Kiểm Toán Chuyên Sâu & Ma Trận Khắc Phục Lỗi Giao Diện GUI Toàn Diện (LA-Studio)"
+### Community 190 - "Báo Cáo Kiểm Toán Chuyên Sâu & Ma Trận Khắc Phục Lỗi Giao Diện GUI Toàn Diện (LA-Studio)"
 Cohesion: 0.07
 Nodes (29): 1. MA TRẬN PHÂN BỔ LỖI, 2. CHI TIẾT NHÓM LỖI MÀU SẮC & TƯƠNG PHẢN, 3. CHI TIẾT NHÓM LỖI BỐ CỤC, NHỒI NHÉT & ĐÈ CHỮ, 4. CHI TIẾT NHÓM LỖI TRÀN KHUNG & THIẾU CUỘN (CLIPPING & SCROLLING), 5. CHI TIẾT NHÓM LỖI TƯƠNG TÁC & CỐ ĐỊNH PIXEL CỨNG, 6. THIẾT KẾ LẠI HỆ THỐNG TOKEN MÀU SẮC CHUẨN HÓA (`Theme.qml` 2.0), 7. GIẢI PHÁP TÁI CẤU TRÚC TỪNG TRANG & LỘ TRÌNH THỰC THI, Báo Cáo Kiểm Toán Chuyên Sâu & Ma Trận Khắc Phục Lỗi Giao Diện GUI Toàn Diện (LA-Studio) (+21 more)
 
-### Community 190 - "CrispTranslationInterface"
+### Community 191 - "CrispTranslationInterface"
 Cohesion: 0.09
 Nodes (26): crispasr_session, CrispTranslationInterface, load, m_error, m_library, m_session, m_sessionClose, m_sessionOpen (+18 more)
 
-### Community 191 - "WhisperInterface"
+### Community 192 - "WhisperInterface"
 Cohesion: 0.07
 Nodes (29): QLibrary, WhisperInterface, context_default_params, free_context, full_default_params, full_get_segment_t0, full_get_segment_t1, full_get_segment_text (+21 more)
 
-### Community 192 - "RuntimeHostSharedBuffer"
+### Community 193 - "RuntimeHostSharedBuffer"
 Cohesion: 0.12
 Nodes (25): QSharedMemory, QCborMap, qint64, QString, quint32, QVector, unique_ptr, RuntimeHostSharedBuffer (+17 more)
 
-### Community 193 - "GatewayModelCatalog.cpp"
+### Community 194 - "GatewayModelCatalog.cpp"
 Cohesion: 0.09
 Nodes (24): QPair, QObject, QString, Q_OBJECT, QObject, SttAudioDecoder, errorOccurred, finished (+16 more)
 
-### Community 194 - "LogViewService"
+### Community 195 - "LogViewService"
 Cohesion: 0.11
 Nodes (25): qint64, QObject, QString, formatLogContent(), Q_OBJECT, qint64, QML_UNCREATABLE, QObject (+17 more)
 
-### Community 195 - "DubbingController_Colab.cpp"
+### Community 196 - "DubbingController_Colab.cpp"
 Cohesion: 0.12
 Nodes (29): colabCapabilityForStage, colabSessionForStage, refreshColabSetupSnapshot, selectedColabModelForStage, stageRequiredForCurrentTranscriptAction, stageUsesDirectColab, configuredSynthesisProvider(), ColabSession (+21 more)
 
-### Community 196 - "DubbingMediaQueueManager"
+### Community 197 - "DubbingMediaQueueManager"
 Cohesion: 0.09
 Nodes (22): QObject, QString, DubbingMediaQueueManager, addMediaQueueItem, cancelDownload, clearMediaQueue, itemReadyForImport, m_cookieFile (+14 more)
 
-### Community 197 - "LlmChatController.cpp"
+### Community 198 - "LlmChatController.cpp"
 Cohesion: 0.16
 Nodes (29): QString, clearConversation, copyMessage, deleteConversation, ensureActive, gatewayActive, gatewayModel, newConversation (+21 more)
-
-### Community 198 - "TimedWord"
-Cohesion: 0.14
-Nodes (28): buildSentenceChunks(), chunkCharacters(), chunkDuration(), clauseEnd(), qint64, QString, QVariantList, QVariantMap (+20 more)
 
 ### Community 199 - "MediaToolService"
 Cohesion: 0.10
@@ -1795,7 +1796,7 @@ Nodes (28): type, type, type, type, type, type, additionalProperties, type (+20 
 
 ### Community 215 - "properties"
 Cohesion: 0.07
-Nodes (28): items, type, type, items, type, properties, additionalProperties, type (+20 more)
+Nodes (28): type, enum, additionalProperties, type, items, type, type, minLength (+20 more)
 
 ### Community 216 - "CrispNemotronSttInterface"
 Cohesion: 0.09
@@ -1821,669 +1822,669 @@ Nodes (27): DownloadInstallService, enqueueRecommendedSetup, errorOccurred, inst
 Cohesion: 0.19
 Nodes (27): capabilityDisplayName(), bearerTokenForRequest, beginVerifiedSession, cancelVerification, checkConnection, clear, ColabSession::ColabSession(), connectTemporaryWorker (+19 more)
 
-### Community 222 - "TranslationInferenceRequest"
+### Community 222 - "SeparationWorker"
+Cohesion: 0.09
+Nodes (23): computeSourceHash(), QAtomicInt, QObject, QString, shared_ptr, Q_OBJECT, QObject, shared_ptr (+15 more)
+
+### Community 223 - "TranslationInferenceRequest"
 Cohesion: 0.09
 Nodes (24): QString, QVariantList, TranslationProgressCallback, LlamaTranslationBackend, loadModel, m_configuration, m_runtime, translate (+16 more)
 
-### Community 223 - "normalize"
+### Community 224 - "normalize"
 Cohesion: 0.13
 Nodes (23): QString, QVariantMap, isTtsSavedVoiceProfileSetting(), localTtsSupportsSavedVoiceProfile(), QString, QVariant, QVariantList, QVariantMap (+15 more)
 
-### Community 224 - "ColabChatMock"
+### Community 225 - "ColabChatMock"
 Cohesion: 0.11
 Nodes (21): ColabChatMock, m_holdResponse, m_pending, m_request, m_server, m_socket, QByteArray, QDir (+13 more)
 
-### Community 225 - "ColabTtsMock"
+### Community 226 - "ColabTtsMock"
 Cohesion: 0.11
 Nodes (21): ColabTtsMock, m_pending, m_request, m_server, m_socket, QByteArray, QDir, QObject (+13 more)
 
-### Community 226 - "DirectMediaServer"
+### Community 227 - "DirectMediaServer"
 Cohesion: 0.08
 Nodes (18): ColabMediaDownloadWorkerMock, m_requests, m_result, m_server, QList, QObject, QTcpServer, QTcpSocket (+10 more)
 
-### Community 227 - "search"
+### Community 228 - "search"
 Cohesion: 0.12
 Nodes (24): detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+16 more)
 
-### Community 228 - "Motion Patterns"
+### Community 229 - "Motion Patterns"
 Cohesion: 0.07
 Nodes (26): Accordion, AnimatePresence contract, Anti-Patterns, Button feedback, Choosing the right pattern, Code Examples, Constraints / Non-Goals, Core Concepts (+18 more)
 
-### Community 229 - "Capture Reference"
+### Community 230 - "Capture Reference"
 Cohesion: 0.07
 Nodes (27): Capture Reference, CaptureClient, CaptureClient Methods, CaptureSession, CaptureSession Methods, CaptureSession Properties, Channel Groups, Channel Properties (+19 more)
 
-### Community 230 - "ApiServer_Endpoints.cpp"
-Cohesion: 0.13
-Nodes (26): currentVoiceSettings, onNewConnection, buildWavBytes(), QByteArray, parseHeaders(), trimPart(), ApiServerService::availableModelEntries(), ApiServerService::availableVoiceEntries() (+18 more)
+### Community 231 - "properties"
+Cohesion: 0.07
+Nodes (27): type, studioConfig, type, $ref, type, items, type, $ref (+19 more)
 
-### Community 231 - "loadAsFloat"
+### Community 232 - "language"
+Cohesion: 0.08
+Nodes (27): language, nonVerbalTag, items, type, items, type, additionalProperties, properties (+19 more)
+
+### Community 233 - "properties"
+Cohesion: 0.07
+Nodes (27): type, type, properties, type, type, type, type, additionalProperties (+19 more)
+
+### Community 234 - "loadAsFloat"
 Cohesion: 0.17
 Nodes (23): AudioFileDecoder, decode, decodeMono, QString, decodeWithFfmpeg(), decodeWithQt(), ffmpegPath(), isRiffWave() (+15 more)
 
-### Community 232 - "ModelDownloadWorkerService"
+### Community 235 - "ModelDownloadWorkerService"
 Cohesion: 0.10
 Nodes (20): QObject, QString, Q_OBJECT, QNetworkAccessManager, QNetworkReply, QObject, QString, ModelDownloadWorkerService (+12 more)
 
-### Community 233 - "HistoryRepository.cpp"
+### Community 236 - "HistoryRepository.cpp"
 Cohesion: 0.31
 Nodes (26): QJsonArray, QString, QStringList, QVariantList, QVector, HistoryRepository, addSttHistoryItem, addTtsHistoryItem (+18 more)
 
-### Community 234 - "CapabilityFamilyModel_Filtering.cpp"
+### Community 237 - "CapabilityFamilyModel_Filtering.cpp"
 Cohesion: 0.13
 Nodes (26): hasFamilyFile, toVariantMap, updateItems, CapabilityFamilyModel::capabilityForFamily(), CapabilityFamilyModel::data(), CapabilityFamilyModel::firstFamilyId(), CapabilityFamilyModel::hasFamilyFile(), CapabilityFamilyModel::isFileInstalled() (+18 more)
 
-### Community 235 - "DubbingVoiceReference"
+### Community 238 - "ModelManager"
+Cohesion: 0.08
+Nodes (25): QVector, Q_ENUM, Q_INVOKABLE, Q_OBJECT, QAbstractListModel, QML_UNCREATABLE, QVector, ModelManager (+17 more)
+
+### Community 239 - "DubbingVoiceReference"
 Cohesion: 0.10
 Nodes (25): buildCandidates(), Candidate, endMs, score, speakerId, startMs, text, clamp01() (+17 more)
 
-### Community 236 - "InferenceCancellationToken"
+### Community 240 - "InferenceCancellationToken"
 Cohesion: 0.09
 Nodes (24): atomic_bool, shared_ptr, InferenceCancellationToken, m_flag, GatewaySttRequest, allowInsecureLocalhost, apiKey, cancellation (+16 more)
 
-### Community 237 - "HostedOmnivoiceBackend"
+### Community 241 - "HostedOmnivoiceBackend"
 Cohesion: 0.14
 Nodes (25): function, QString, QVariantList, QVariantMap, QVector, function, QString, QVariantMap (+17 more)
 
-### Community 238 - "TranslationBackend"
+### Community 242 - "TranslationBackend"
 Cohesion: 0.10
 Nodes (21): QString, QVariantList, TranslationProgressCallback, CrispTranslationBackend, loadModel, m_configuration, m_runtime, translate (+13 more)
 
-### Community 239 - "TranslationWorker"
+### Community 243 - "TranslationWorker"
 Cohesion: 0.09
 Nodes (25): Creator, QHash, QString, TranslationBackendFactory, m_creators, QObject, shared_ptr, Q_OBJECT (+17 more)
 
-### Community 240 - "ColabVoiceCloneRunner"
+### Community 244 - "ColabVoiceCloneRunner"
 Cohesion: 0.09
 Nodes (26): ColabVoiceCloneRunner, cancel, clone, ColabVoiceCloneRunner::ColabVoiceCloneRunner(), d, deleteProfile, failed, finished (+18 more)
 
-### Community 241 - "WorkflowArtifactReference"
+### Community 245 - "WorkflowArtifactReference"
 Cohesion: 0.13
 Nodes (24): QJsonObject, QString, qint64, QString, QVariantMap, safeId(), setError(), WorkflowArtifactReference (+16 more)
 
-### Community 242 - "test_ColabVoiceDesignRunner.cpp"
+### Community 246 - "test_ColabVoiceDesignRunner.cpp"
 Cohesion: 0.11
 Nodes (20): QByteArray, QDir, QObject, QPointer, QString, QTcpServer, QTcpSocket, Q_OBJECT (+12 more)
 
-### Community 243 - "TranslationGatewayMock"
+### Community 247 - "TranslationGatewayMock"
 Cohesion: 0.11
 Nodes (19): QByteArray, QObject, QPointer, QString, QTcpServer, QTcpSocket, Q_OBJECT, QObject (+11 more)
 
-### Community 244 - "Asset Approval Checklist"
+### Community 248 - "Asset Approval Checklist"
 Cohesion: 0.08
 Nodes (25): Accessibility, Archival, Asset Approval Checklist, Automation Support, Color Compliance, Common Issues & Fixes, Content Accessibility, Content Quality (+17 more)
 
-### Community 245 - "Logo AI Prompt Engineering"
+### Community 249 - "Logo AI Prompt Engineering"
 Cohesion: 0.08
 Nodes (25): Common Pitfalls, Core Prompt Structure, Detailed Brief, Eco/Sustainable, Effective Keywords by Style, Fashion Brand, Healthcare, Industry-Specific Prompts (+17 more)
 
-### Community 246 - "Docker Patterns"
+### Community 250 - "Docker Patterns"
 Cohesion: 0.08
 Nodes (25): Anti-Patterns, Common Commands, Common Patterns, Compose Security, Container Security, Custom Networks, Debugging, Debugging Network Issues (+17 more)
 
-### Community 247 - "ExampleManager.cpp"
+### Community 251 - "ExampleManager.cpp"
 Cohesion: 0.14
 Nodes (24): QObject, QSet, QString, QStringList, QVariant, QVariantList, QVariantMap, ExampleManager (+16 more)
 
-### Community 248 - "DubbingTranscriptionJob.cpp"
-Cohesion: 0.13
-Nodes (25): ExecutionProvider, ColabAlignmentResult, ColabSession, ModelManager, QObject, QString, QVariantList, QVariantMap (+17 more)
-
-### Community 249 - "ColabVoiceCloneController.cpp"
-Cohesion: 0.12
-Nodes (25): cancelProcessing, clearProfile, cloneVoice, colabConnected, colabNotebookFile, connectColab, deleteColabProfile, lastSamplePreview (+17 more)
-
-### Community 250 - "ModelManager.cpp"
+### Community 252 - "ModelManager.cpp"
 Cohesion: 0.20
 Nodes (25): QDir, QObject, QString, QStringList, QVariantList, QVariantMap, concreteModelDir, ModelManager::fileMetadata() (+17 more)
 
-### Community 251 - "VoxCpm2Backend.cpp"
+### Community 253 - "VoxCpm2Backend.cpp"
 Cohesion: 0.18
 Nodes (24): QString, QVariantList, QVariantMap, QVector, atomic, QString, TtsBackend, isGpuRuntime() (+16 more)
 
-### Community 252 - "TimedSpeechPipeline.cpp"
+### Community 254 - "TimedSpeechPipeline.cpp"
 Cohesion: 0.16
 Nodes (25): buildWaveformPreview(), atomic_bool, QByteArray, qint64, QString, QVariantList, QVariantMap, QVector (+17 more)
 
-### Community 253 - "mocks/SttEngine.cpp"
+### Community 255 - "mocks/SttEngine.cpp"
 Cohesion: 0.09
 Nodes (19): QList, QObject, QString, QStringList, QVariantMap, QVector, SessionConfiguration, State (+11 more)
 
-### Community 254 - "OcrRuntimeEnvironment"
+### Community 256 - "OcrRuntimeEnvironment"
 Cohesion: 0.08
 Nodes (25): OcrRuntimeEnvironment, data, expectedTessdata, ffmpeg, ffprobe, frameTimeout, hadData, hadExpectedTessdata (+17 more)
 
-### Community 255 - "Color Palette Management"
+### Community 257 - "Color Palette Management"
 Cohesion: 0.08
 Nodes (24): Accessibility Requirements, Brand Compliance Validation, Checking Contrast, Color Documentation Format, Color Extraction, Color Palette Examples, Color Palette Management, Color System Structure (+16 more)
 
-### Community 256 - "CIP Deliverable Guide"
+### Community 258 - "CIP Deliverable Guide"
 Cohesion: 0.08
 Nodes (24): Apparel, Business Card, Car/Sedan, CIP Deliverable Guide, Core Identity, Digital Assets, Email Signature, Envelope (+16 more)
 
-### Community 257 - "What You Must Do When Invoked"
+### Community 259 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
-### Community 258 - "Liquid Glass Design System (iOS 26)"
+### Community 260 - "Liquid Glass Design System (iOS 26)"
 Cohesion: 0.08
 Nodes (24): Accent Groups for Visual Hierarchy, Anti-Patterns to Avoid, Basic Glass Effect, Basic UIGlassEffect, Best Practices, Container Background, Core Pattern — SwiftUI, Core Pattern — UIKit (+16 more)
 
-### Community 259 - "PyTorch Development Patterns"
+### Community 261 - "PyTorch Development Patterns"
 Cohesion: 0.08
 Nodes (24): 1. Device-Agnostic Code, 2. Reproducibility First, 3. Explicit Shape Management, Anti-Patterns to Avoid, Checkpointing Patterns, Clean nn.Module Structure, Core Principles, Custom Collate for Variable-Length Data (+16 more)
 
-### Community 260 - "UI Styling Skill"
+### Community 262 - "UI Styling Skill"
 Cohesion: 0.08
 Nodes (24): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+16 more)
 
-### Community 261 - "Use Cases"
+### Community 263 - "Use Cases"
 Cohesion: 0.08
 Nodes (25): Add Professional Polish, AI-Enhanced Content, Automated Content Review, Build Searchable Video Libraries, Connect External Streams, Content Moderation & Safety, Create Highlight Reels, Extract Specific Clips (+17 more)
 
-### Community 262 - "readme"
+### Community 264 - "readme"
 Cohesion: 0.08
 Nodes (25): type, type, hubFiles, type, additionalProperties, properties, type, additionalProperties (+17 more)
 
-### Community 263 - "HttpResponse"
-Cohesion: 0.17
-Nodes (24): binaryResponse, errorResponse, extraSettingsFromJson, guessContentType, parseJsonObject, parseMultipart, randomObjectId, runTtsGeneration (+16 more)
-
-### Community 264 - "QTcpServer"
+### Community 265 - "QTcpServer"
 Cohesion: 0.10
 Nodes (18): QTcpServer, QByteArray, QObject, QPointer, QString, QTcpServer, QTcpSocket, GatewayTtsMock (+10 more)
 
-### Community 265 - "DubbingTranslationFixService.cpp"
+### Community 266 - "DubbingTranscriptionJob.cpp"
+Cohesion: 0.14
+Nodes (24): ExecutionProvider, ColabAlignmentResult, ColabSession, ModelManager, QObject, QString, QVariantList, QVariantMap (+16 more)
+
+### Community 267 - "DubbingTranslationFixService.cpp"
 Cohesion: 0.16
 Nodes (24): actualPhonemeCount(), appendCliModel(), classifiedCliFailure(), cliConnectionError(), configuredCliModel(), containsCliAuthFailure(), containsCliAuthSuccess(), QByteArray (+16 more)
 
-### Community 266 - "DubbingTranslationFix_Candidate.cpp"
+### Community 268 - "DubbingTranslationFix_Candidate.cpp"
 Cohesion: 0.12
 Nodes (22): beginSegment, buildReconciliationPrompt, cleanAssistantText, finishReconciliationSegment, protectedTokens, setBusy, setStatus, QString (+14 more)
 
-### Community 267 - "create"
+### Community 269 - "create"
 Cohesion: 0.09
 Nodes (23): DubbingController::workflowGraphValid(), QString, DubbingWorkflowDefinition, create, Id, Version, link(), node() (+15 more)
 
-### Community 268 - "TranslationRequest"
+### Community 270 - "TranslationRequest"
 Cohesion: 0.13
 Nodes (24): backendForFamily(), ModelManager, QString, QVariantMap, RuntimeManager, SessionConfiguration, fillRequest(), findModelPath() (+16 more)
 
-### Community 269 - "WorkflowPlan"
+### Community 271 - "WorkflowPlan"
 Cohesion: 0.10
 Nodes (24): QString, QVariantList, QVariantMap, WorkflowNodeKind, WorkflowNodeState, QList, QString, WorkflowEdge (+16 more)
 
-### Community 270 - "Codebase Design"
+### Community 272 - "Codebase Design"
 Cohesion: 0.09
 Nodes (21): 1. In-process, 2. Local-substitutable, 3. Remote but owned (Ports & Adapters), 4. True external (Mock), Deepening, Dependency categories, Seam discipline, Testing strategy: replace, don't layer (+13 more)
 
-### Community 271 - "Workflow"
+### Community 273 - "Workflow"
 Cohesion: 0.08
 Nodes (23): Art Direction Styles (Reuse from Banner), Color & Contrast, Design Best Practices, HTML Design Rules, HTML Template Structure, Option A: Chrome Headless CLI (Recommended — zero dependencies), Option B: chrome-devtools skill, Option C: Playwright script (+15 more)
 
-### Community 272 - "Frontend Development Patterns"
+### Community 274 - "Frontend Development Patterns"
 Cohesion: 0.08
 Nodes (24): Accessibility Patterns, Animation Patterns, Async Data Fetching Hook, Code Splitting & Lazy Loading, Component Patterns, Composition Over Inheritance, Compound Components, Context + Reducer Pattern (+16 more)
 
-### Community 273 - "React Testing"
+### Community 275 - "React Testing"
 Cohesion: 0.08
 Nodes (24): Accessibility Assertions, Anti-Patterns, Async Patterns, Core Principle, Coverage Targets, Custom Hook Testing, Examples, Form submission with MSW and userEvent (+16 more)
 
-### Community 274 - "CrispVibeVoiceInterface"
-Cohesion: 0.11
-Nodes (19): crispasr_session_set_tts_steps_fn, CrispVibeVoiceInterface, crispasr_pcm_free, crispasr_session_close, crispasr_session_open_with_params, crispasr_session_set_tts_seed, crispasr_session_set_tts_steps, crispasr_session_set_voice (+11 more)
-
-### Community 275 - "Báo Cáo Kiểm Toán Chuyên Sâu Trải Nghiệm Người Dùng (GUI UX, Usability & Ergonomics Audit)"
+### Community 276 - "Báo Cáo Kiểm Toán Chuyên Sâu Trải Nghiệm Người Dùng (GUI UX, Usability & Ergonomics Audit)"
 Cohesion: 0.08
 Nodes (23): 🧩 1. MÔ HÌNH TƯ DUY & KIẾN TRÚC THÔNG TIN (MENTAL MODEL & INFO ARCHITECTURE), 📡 2. PHẢN HỒI TRẠNG THÁI & THANH TIẾN TRÌNH (FEEDBACK & SYSTEM VISIBILITY), 🧠 3. GIẢM TẢI NHẬN THỨC & CÔNG THÁI HỌC BIỂU MẪU (COGNITIVE LOAD & FORM ERGONOMICS), 🛡️ 4. PHÒNG NGỪA VÀ PHỤC HỒI SAU LỖI (ERROR PREVENTION & RECOVERY), ⚡ 5. TỐI ƯU HÓA THAO TÁC & HIỆU SUẤT LÀM VIỆC (WORKFLOW EFFICIENCY), Báo Cáo Kiểm Toán Chuyên Sâu Trải Nghiệm Người Dùng (GUI UX, Usability & Ergonomics Audit), 🧭 MA TRẬN 5 TRỤ CỘT TRẢI NGHIỆM NGƯỜI DÙNG (UX PILLARS), 🚀 TỔNG HỢP DANH MỤC 19 ĐIỂM GÃY UX CẦN SỬA CHỮA (+15 more)
 
-### Community 276 - "package.ps1"
+### Community 277 - "package.ps1"
 Cohesion: 0.11
 Nodes (11): Add-PathIfExists(), Ensure-ArchiveExtractor(), Ensure-Command(), Ensure-MsvcEnvironment(), Ensure-WebpImageFormatPlugin(), Find-Iscc(), Get-SourceAppVersion(), Normalize-AppVersion() (+3 more)
 
-### Community 277 - "DubbingSynthesisJob.cpp"
+### Community 278 - "DubbingSynthesisJob.cpp"
 Cohesion: 0.19
 Nodes (23): QByteArray, QString, quint64, QVariantList, QVariantMap, QVector, cancel, commitSynthesizedAudio (+15 more)
 
-### Community 278 - "HostedLlamaTranslationBackend"
+### Community 279 - "ColabVoiceCloneController.cpp"
+Cohesion: 0.13
+Nodes (23): cancelProcessing, clearProfile, cloneVoice, colabConnected, colabNotebookFile, connectColab, deleteColabProfile, lastSamplePreview (+15 more)
+
+### Community 280 - "HostedLlamaTranslationBackend"
 Cohesion: 0.12
 Nodes (20): QString, QVariantList, TranslationProgressCallback, QString, HostedLlamaTranslationBackend, cancelProcessing, ensureHost, loadModel (+12 more)
 
-### Community 279 - "ColabSeparationRunner"
+### Community 281 - "ColabSeparationRunner"
 Cohesion: 0.11
 Nodes (23): ColabSeparationRunner, artifactTransferProgress, cancel, ColabSeparationRunner::ColabSeparationRunner(), d, failed, finished, phaseChanged (+15 more)
 
-### Community 280 - "SttEngineInstance"
+### Community 282 - "SttEngineInstance"
 Cohesion: 0.08
 Nodes (24): EventCancelProcessing, EventUnload, EngineState, Q_ENUM, Q_OBJECT, QML_UNCREATABLE, QObject, StateReady (+16 more)
 
-### Community 281 - "mocks/DownloadManager.cpp"
+### Community 283 - "mocks/DownloadManager.cpp"
 Cohesion: 0.12
 Nodes (19): HFHubClient, qint64, QObject, QString, QVariantList, QVariantMap, DownloadManager::activeDownloads(), DownloadManager::allDownloads() (+11 more)
 
-### Community 282 - "Frontend Accessibility Patterns"
+### Community 284 - "Frontend Accessibility Patterns"
 Cohesion: 0.09
 Nodes (22): Anti-Patterns, ARIA Attributes, aria-describedby, aria-expanded and aria-controls, aria-label vs aria-labelledby, aria-live for Dynamic Content, Checklist, Complete Accessible Form (+14 more)
 
-### Community 283 - "Machine Learning Engineering Workflow"
+### Community 285 - "Machine Learning Engineering Workflow"
 Cohesion: 0.09
 Nodes (22): 1. Define the Prediction Contract, 2. Lock the Data Contract, 3. Build a Reproducible Pipeline, 4. Evaluate Before Promotion, 5. Package for Serving, 6. Operate the Model, Anti-Patterns, Core Workflow (+14 more)
 
-### Community 284 - "Tailwind CSS Customization"
+### Community 286 - "Tailwind CSS Customization"
 Cohesion: 0.09
 Nodes (22): @apply Directive, Best Practices, Color Customization, Complete Tailwind Config, Configuration Examples, Content Configuration, Custom Color Palette, Custom Font Sizes (+14 more)
 
-### Community 285 - "Generative Media Guide"
+### Community 287 - "Generative Media Guide"
 Cohesion: 0.09
 Nodes (23): Add Generated Music to Video, Analyze Scenes with LLM, Audio Generation, Complete Workflow Examples, Dub a Video, dub_video Parameters, Dubbing and Translation, generate_image Parameters (+15 more)
 
-### Community 286 - "SherpaOnnxRuntime"
+### Community 288 - "SherpaOnnxRuntime"
 Cohesion: 0.13
 Nodes (21): CreateFn, DestroyFn, DestroyOutputFn, Engine, ProcessFn, QLibrary, QString, SherpaOnnxRuntime (+13 more)
 
-### Community 287 - "properties"
+### Community 289 - "Báo cáo recheck tổng thể — Dubbing Studio Workspace"
 Cohesion: 0.09
-Nodes (23): $ref, additionalProperties, properties, type, component, requiredFile, type, candidates (+15 more)
+Nodes (22): 10. Tiêu chí chấp nhận trước khi gọi là production-ready, 11. Recheck release 0.0.8.6, 1. Kết luận điều hành, 2. Bằng chứng và giới hạn kiểm tra, 3. Bảng đánh giá 16 file, 4.1 Workflow rail và panel phải, 4.2 Error vẫn ở log, UI có hướng dẫn, 4.3 Media preview và subtitle/OCR (+14 more)
 
-### Community 288 - "Báo cáo recheck tổng thể — Dubbing Studio Workspace"
-Cohesion: 0.09
-Nodes (22): 10. Tiêu chí chấp nhận trước khi gọi là production-ready, 11. Recheck release 0.0.8.6, 1. Kết luận điều hành, 2. Bằng chứng và giới hạn kiểm tra, 3. Bảng đánh giá 16 file, 4.1 Workflow rail, shelf và drawer, 4.2 Error vẫn ở log, UI có hướng dẫn, 4.3 Media preview và subtitle/OCR (+14 more)
-
-### Community 289 - "3. Kế hoạch triển khai theo task"
+### Community 290 - "3. Kế hoạch triển khai theo task"
 Cohesion: 0.09
 Nodes (22): 1. Các sự thật đã được kiểm chứng, 2.1. Trạng thái worker, 2.2. Contract API mục tiêu, 2.3. Phạm vi remote/local, 2. Định nghĩa trạng thái và contract mục tiêu, 3. Kế hoạch triển khai theo task, 4. Tiêu chí đạt 10/10, 5. Các tuyên bố bị cấm trong tài liệu/release note (+14 more)
 
-### Community 290 - "match"
+### Community 291 - "ApiServer_Endpoints.cpp"
+Cohesion: 0.16
+Nodes (22): currentVoiceSettings, trimPart(), ApiServerService::availableModelEntries(), ApiServerService::availableVoiceEntries(), ApiServerService::buildModelsDocument(), ApiServerService::buildSourceDocument(), ApiServerService::buildVoicesDocument(), ApiServerService::currentVoiceSettings() (+14 more)
+
+### Community 292 - "match"
 Cohesion: 0.16
 Nodes (22): AlignmentExecutionService::installedAnchorModels(), karaokeLines, QVariantList, AlignmentMatchResult, canonicalTokensByChunk, coverage, score, AlignmentTranscriptMatcher (+14 more)
 
-### Community 291 - "CapabilityStudioAction"
+### Community 293 - "CapabilityStudioAction"
 Cohesion: 0.13
 Nodes (19): CapabilityStudioAction, activeConfigurationSignature, errorDetail, load, m_capabilityId, m_errorDetail, m_session, public (+11 more)
 
-### Community 292 - "IModelSession"
+### Community 294 - "IModelSession"
 Cohesion: 0.09
 Nodes (23): Q_OBJECT, QObject, IModelSession, activateConfiguration, activeConfiguration, activeConfigurationChanged, activeSignature, activeSignatureChanged (+15 more)
 
-### Community 293 - "SubtitleVoiceController.cpp"
+### Community 295 - "SubtitleVoiceController.cpp"
 Cohesion: 0.15
 Nodes (22): qint64, QString, QVariantMap, cancel, clear, generate, importSrt, onPipelineCueUpdated (+14 more)
 
-### Community 294 - "analyzeSpeechOverlaps"
+### Community 296 - "analyzeSpeechOverlaps"
 Cohesion: 0.17
 Nodes (22): QAtomicInteger, qint64, QString, QVariantList, QVariantMap, QVector, DubbingTimingService, analyzeSpeechOverlaps (+14 more)
 
-### Community 295 - "SubtitleParseResult"
+### Community 297 - "SubtitleParseResult"
 Cohesion: 0.12
 Nodes (20): qint64, QString, QString, QVector, parseTimestamp(), SrtTimelineParser, parseFile, parseSrt (+12 more)
 
-### Community 296 - "ColabTranslationRunner"
+### Community 298 - "ColabTranslationRunner"
 Cohesion: 0.11
 Nodes (21): appendValidatedPatches(), ColabTranslationRunner, cancel, ColabTranslationRunner::ColabTranslationRunner(), d, failed, finished, ColabTranslationRunner::Private (+13 more)
 
-### Community 297 - "QString"
-Cohesion: 0.09
-Nodes (20): familyConfig, generationProgressLabel, lastGenerationMode, EventCloneVoice, referencePath, settings, text, EventLoadVoice (+12 more)
-
-### Community 298 - "C++ Testing (Agent Skill)"
+### Community 299 - "C++ Testing (Agent Skill)"
 Cohesion: 0.09
 Nodes (21): Alternatives to GoogleTest, Basic Unit Test (gtest), Best Practices, C++ Testing (Agent Skill), CMake/CTest Quickstart, Code Examples, Common Pitfalls, Core Concepts (+13 more)
 
-### Community 299 - "During the session"
+### Community 300 - "During the session"
 Cohesion: 0.09
 Nodes (19): ADR Format, Numbering, Optional sections, Template, What qualifies, When to offer an ADR, CONTEXT.md Format, Rules (+11 more)
 
-### Community 300 - "TailwindConfigGenerator"
+### Community 301 - "TailwindConfigGenerator"
 Cohesion: 0.10
 Nodes (12): main(), Add custom font families. Args: fonts: Dict of font_type: [font_names] e.g.,…, Add custom spacing values. Args: spacing: Dict of name: value e.g., {'18':…, Add custom breakpoints. Args: breakpoints: Dict of name: width e.g., {'3xl':…, Add plugin requirements. Args: plugins: List of plugin names e.g.,…, Get plugin recommendations based on configuration. Returns: List of recommended…, Generate Tailwind CSS configuration files., Validate configuration. Returns: Tuple of (valid, message) (+4 more)
 
-### Community 301 - "QJsonDocument"
+### Community 302 - "QJsonDocument"
 Cohesion: 0.18
 Nodes (18): ChatOptions, QJsonDocument, contentFromResponse(), atomic_bool, function, QByteArray, QHttpPart, QJsonObject (+10 more)
 
-### Community 302 - "FileAccessService"
+### Community 303 - "properties"
+Cohesion: 0.09
+Nodes (22): type, type, type, type, type, type, pattern, type (+14 more)
+
+### Community 304 - "HttpResponse"
+Cohesion: 0.13
+Nodes (21): QJsonObject, HttpResponse, body, contentType, headers, status, statusText(), toJsonBytes() (+13 more)
+
+### Community 305 - "FileAccessService"
 Cohesion: 0.15
 Nodes (16): QObject, QString, FileAccessService, localFileExists, QML_ELEMENT, readTextFile, urlToLocalPath, writeTextFile (+8 more)
 
-### Community 303 - "ColabVoiceDesignController.cpp"
+### Community 306 - "ColabVoiceDesignController.cpp"
 Cohesion: 0.13
 Nodes (21): cancelProcessing, colabConnected, colabNotebookFile, connectColab, generate, notebookForColabModel, onRemoteFirstModeChanged, onRunnerFailed (+13 more)
 
-### Community 304 - "recommendedThreadCount"
+### Community 307 - "recommendedThreadCount"
 Cohesion: 0.15
 Nodes (20): boundsFor(), InferenceBackendProfile, QString, fallbackEffectiveCoreCount(), InferenceBackendProfile, InferenceThreadPolicy, describeProfile, effectiveCoreCount (+12 more)
 
-### Community 305 - "ModelManager"
-Cohesion: 0.09
-Nodes (20): Q_ENUM, Q_INVOKABLE, Q_OBJECT, QAbstractListModel, QML_UNCREATABLE, QVector, ModelManager, countChanged (+12 more)
-
-### Community 306 - "AlignmentRefinementConfiguration"
+### Community 308 - "AlignmentRefinementConfiguration"
 Cohesion: 0.10
 Nodes (20): AlignmentRefinementConfiguration, modelId, modelPath, runtimeExecutable, runtimeId, runtimeKind, runtimePath, runtimeVersion (+12 more)
 
-### Community 307 - "RuntimeHostWorker"
+### Community 309 - "RuntimeHostWorker"
 Cohesion: 0.12
 Nodes (21): QCborMap, QObject, QString, QVector, atomic, Q_OBJECT, QObject, unique_ptr (+13 more)
 
-### Community 308 - "engine/SttEngineInstance.cpp"
+### Community 310 - "engine/SttEngineInstance.cpp"
 Cohesion: 0.15
 Nodes (21): EngineEvent, EngineState, QObject, QString, QVariantList, QVariantMap, QVector, Ts (+13 more)
 
-### Community 309 - "ColabTtsRunner"
+### Community 311 - "ColabTtsRunner"
 Cohesion: 0.10
 Nodes (21): ColabTtsRunner, cancel, ColabTtsRunner::ColabTtsRunner(), d, failed, finished, ColabTtsRunner::Private, client (+13 more)
 
-### Community 310 - "ColabVoiceDesignRunner"
+### Community 312 - "ColabVoiceDesignRunner"
 Cohesion: 0.10
 Nodes (21): ColabVoiceDesignRunner, cancel, ColabVoiceDesignRunner::ColabVoiceDesignRunner(), d, failed, finished, generate, ColabVoiceDesignRunner::Private (+13 more)
 
-### Community 311 - "GatewayTtsRunner"
+### Community 313 - "GatewayTtsRunner"
 Cohesion: 0.10
 Nodes (21): GatewayClient, QByteArray, QObject, QString, QVector, decodeWav(), GatewayTtsRunner, cancel (+13 more)
 
-### Community 312 - "BM25"
+### Community 314 - "BM25"
 Cohesion: 0.12
 Nodes (8): BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords, Build BM25 index from documents, Score all documents against query, All indexed terms, for suggestion/typo-recovery purposes., TestBm25CoreBehavior, TestTokenizer
 
-### Community 313 - "ws_listener.py"
+### Community 315 - "ws_listener.py"
 Cohesion: 0.14
 Nodes (20): append_event(), cleanup_pid(), default_output_dir(), ensure_private_dir(), is_fatal_error(), listen_with_retry(), main(), main_async() (+12 more)
 
-### Community 314 - "Quy tac duy tri"
+### Community 316 - "Quy tac duy tri"
 Cohesion: 0.10
 Nodes (21): 2026-08-09 - 0.0.2.30 Voice Clone / Isolator completion, 2026-08-09 - 0.0.2.36 explicit Douyin cookie retry, 2026-08-10 - 0.0.6.2 preview-first Dubbing workspace, 2026-08-10 - Douyin browser-session route, 2026-08-10 - Download page is download-only, 2026-08-10 - Playwright interpreter selection, 2026-08-11 - 0.0.6.4 Dubbing header and Subtitle OCR bootstrap, 2026-08-12 - 0.0.6.5 compact Dubbing chrome / OCR duplicate-install fix (+13 more)
 
-### Community 315 - "VoiceDesignPresetService"
+### Community 317 - "SeparationResult"
+Cohesion: 0.10
+Nodes (21): SeparationErrorCode, QList, QString, SeparationRequest, configuration, numThreads, outputRoot, sourcePath (+13 more)
+
+### Community 318 - "VoiceDesignPresetService"
 Cohesion: 0.15
 Nodes (18): QObject, QString, QVariantList, Q_INVOKABLE, Q_OBJECT, QObject, VoiceDesignPresetService, addPreset (+10 more)
 
-### Community 316 - "WorkflowActivityManager::WorkflowActivityManager"
+### Community 319 - "QTimer"
+Cohesion: 0.15
+Nodes (13): QElapsedTimer, QProcess, configureHardenedDllSearch(), main(), QTimer, testSharedAudioDecoderNormalizesReferenceAudio, QString, QStringList (+5 more)
+
+### Community 320 - "WorkflowActivityManager::WorkflowActivityManager"
 Cohesion: 0.10
 Nodes (20): AlignmentExecutionService, ColabAlignmentController, ColabTtsController, ColabVoiceCloneController, ColabVoiceDesignController, ColabVoiceIsolatorController, DubbingController, GatewayTtsController (+12 more)
 
-### Community 317 - "QSet"
+### Community 321 - "QSet"
 Cohesion: 0.11
 Nodes (19): QSet, GatewayClient, QObject, QString, GatewayTranslationRunner, cancel, d, failed (+11 more)
 
-### Community 318 - "resolve"
+### Community 322 - "resolve"
 Cohesion: 0.20
 Nodes (19): bundledTool(), configuredTool(), MediaRuntimePaths, QString, executableName(), existingFile(), QString, MediaRuntimeLocator (+11 more)
 
-### Community 319 - "SttWorker"
+### Community 323 - "SttWorker"
 Cohesion: 0.11
 Nodes (20): QObject, QString, QVariantMap, QVector, Q_OBJECT, QObject, unique_ptr, SttBackend (+12 more)
 
-### Community 320 - "GatewaySttRunner"
+### Community 324 - "GatewaySttRunner"
 Cohesion: 0.11
 Nodes (20): GatewayClient, QByteArray, QObject, QVector, GatewaySttRunner, cancel, d, failed (+12 more)
 
-### Community 321 - "CatalogMock"
+### Community 325 - "QString"
+Cohesion: 0.10
+Nodes (21): EventCloneVoice, referencePath, settings, text, EventLoadVoice, config, EventSynthesize, settings (+13 more)
+
+### Community 326 - "CatalogMock"
 Cohesion: 0.14
 Nodes (16): CatalogMock, m_pending, m_request, m_requests, m_responses, m_server, m_socket, QByteArray (+8 more)
 
-### Community 322 - "Visual Companion Guide"
+### Community 327 - "Visual Companion Guide"
 Cohesion: 0.10
 Nodes (19): Browser Events Format, Cards (visual designs), Cleaning Up, CSS Classes Available, Design Tips, File Naming, How It Works, Mock elements (wireframe building blocks) (+11 more)
 
-### Community 323 - "Routing by Task Type"
+### Community 328 - "Routing by Task Type"
 Cohesion: 0.10
 Nodes (19): Banner Design Tasks, Brand Identity Tasks, Component Creation, Corporate Identity Program Tasks, Design Routing Guide, Design System Migration, Icon Design Tasks, Implementation Tasks (+11 more)
 
-### Community 324 - "HTML Report Format"
+### Community 329 - "HTML Report Format"
 Cohesion: 0.10
 Nodes (18): Call-graph collapse, Candidate card, Cross-section (good for layered shallowness), Diagram patterns, Hand-built boxes-and-arrows (when Mermaid's layout fights you), Header, HTML Report Format, Mass diagram (good for "interface as wide as implementation") (+10 more)
 
-### Community 325 - "Motion Foundations"
+### Community 330 - "Motion Foundations"
 Cohesion: 0.10
 Nodes (19): Accessibility, Anti-Patterns, Choosing a duration, Choosing a spring, Code Examples, Constraints / Non-Goals, Core Concepts, Decision Guidance (+11 more)
 
-### Community 326 - "Creation Log: Systematic Debugging Skill"
+### Community 331 - "Creation Log: Systematic Debugging Skill"
 Cohesion: 0.10
 Nodes (19): Bulletproofing Elements, Creation Log: Systematic Debugging Skill, Enhancement 1: TDD Reference, Extraction Decisions, Final Outcome, Initial Version, Iterations, Key Insight (+11 more)
 
-### Community 327 - "shadcn/ui Theming & Customization"
+### Community 332 - "shadcn/ui Theming & Customization"
 Cohesion: 0.10
 Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
 
-### Community 328 - "AcceptanceFixture"
+### Community 333 - "AcceptanceFixture"
 Cohesion: 0.23
 Nodes (8): BaseHTTPRequestHandler, AcceptanceFixture, json_bytes(), main(), Any, Path, worker_config(), write_sample_wav()
 
-### Community 329 - "catalog.schema.json"
+### Community 334 - "catalog.schema.json"
 Cohesion: 0.10
 Nodes (19): additionalProperties, runtime, $id, required, additionalProperties, required, type, $schema (+11 more)
 
-### Community 330 - "properties"
-Cohesion: 0.10
-Nodes (20): type, type, type, type, type, type, pattern, type (+12 more)
-
-### Community 331 - "LA Studio release-candidate test matrix"
+### Community 335 - "LA Studio release-candidate test matrix"
 Cohesion: 0.10
 Nodes (18): Core workflows, Environments, Final sign-off, Installation and lifecycle, LA Studio release-candidate test matrix, Localization and performance, Release identity, Security and compliance (+10 more)
 
-### Community 332 - "CrispVoxCpm2Interface"
+### Community 336 - "CrispVoxCpm2Interface"
 Cohesion: 0.11
 Nodes (18): CrispVoxCpm2Interface, crispasr_pcm_free, crispasr_session_close, crispasr_session_open_with_params, crispasr_session_set_tts_seed, crispasr_session_set_voice, crispasr_session_synthesize, crispasr_session_synthesize_raw (+10 more)
 
-### Community 333 - "VibevoiceInterface.h"
+### Community 337 - "VibevoiceInterface.h"
 Cohesion: 0.11
 Nodes (19): vv_audio, channels, n_samples, sample_rate, samples, vv_context, vv_context_params, gpu_layers (+11 more)
 
-### Community 334 - "AlignmentExecutionService.cpp"
+### Community 338 - "ApiServerService::handleTranscriptionRequest"
+Cohesion: 0.23
+Nodes (19): binaryResponse, errorResponse, extraSettingsFromJson, guessContentType, jsonResponse, parseJsonObject, parseMultipart, randomObjectId (+11 more)
+
+### Community 339 - "AlignmentExecutionService.cpp"
 Cohesion: 0.20
 Nodes (19): align, averageConfidence, cancel, clearResult, karaokeLineIndexAt, localPath, prepareWorkflow, runStudioAlignment (+11 more)
 
-### Community 335 - "activeWorkflows"
+### Community 340 - "activeWorkflows"
 Cohesion: 0.39
 Nodes (20): addExecutionDetails(), QVariantMap, activeWorkflows, alignmentWorkflow, colabAlignmentWorkflow, colabTtsWorkflow, colabVoiceIsolationWorkflow, dubbingWorkflow (+12 more)
 
-### Community 336 - "DownloadInstall_ArchiveSafety.cpp"
-Cohesion: 0.13
-Nodes (18): localDownloadsAllowed, runtimeVersionGreater(), DownloadManager, ModelManager, qint64, QObject, QString, QVariantMap (+10 more)
-
-### Community 337 - "RuntimeInfo"
+### Community 341 - "RuntimeInfo"
 Cohesion: 0.10
 Nodes (20): QString, QStringList, QVariantMap, RuntimeInfo, capabilities, directory, engineFamily, executablePath (+12 more)
 
-### Community 338 - "StudioConfiguration"
+### Community 342 - "StudioConfiguration"
 Cohesion: 0.11
 Nodes (19): QString, QVariantMap, StudioConfiguration, capabilityId, familyId, runtimeId, runtimeVersion, selectedFiles (+11 more)
 
-### Community 339 - "ColabSubtitleOcrRunner"
+### Community 343 - "ColabSubtitleOcrRunner"
 Cohesion: 0.11
 Nodes (18): ColabSubtitleOcrRunner, cancel, ColabSubtitleOcrRunner::ColabSubtitleOcrRunner(), d, failed, finished, ColabSubtitleOcrRunner::Private, client (+10 more)
 
-### Community 340 - "WorkflowSession"
+### Community 344 - "WorkflowSession"
 Cohesion: 0.15
 Nodes (16): plan, QObject, QString, QVariantMap, Q_OBJECT, QObject, QVariantList, WorkflowSession (+8 more)
 
-### Community 341 - "Accessibility (WCAG 2.2)"
+### Community 345 - "Accessibility (WCAG 2.2)"
 Cohesion: 0.11
 Nodes (19): Accessibility Architecture Diagram, Accessibility (WCAG 2.2), Android: Accessible Toggle, Anti-Patterns to Avoid, Best Practices Checklist, Core Concepts, Cross-Platform Mapping, Examples (+11 more)
 
-### Community 342 - "Asset Organization Guide"
+### Community 346 - "Asset Organization Guide"
 Cohesion: 0.11
 Nodes (18): Asset Entry (manifest.json), Asset Organization Guide, By Campaign, By Status, By Type, Cleanup Workflow, Components, Directory Structure (+10 more)
 
-### Community 343 - "Primary Color Meanings"
+### Community 347 - "Primary Color Meanings"
 Cohesion: 0.11
 Nodes (18): Accessibility Considerations, Analogous, Black, Blue, Color Combinations by Industry, Color Harmony Types, Complementary, Green (+10 more)
 
-### Community 344 - "Core Logo Types"
+### Community 348 - "Core Logo Types"
 Cohesion: 0.11
 Nodes (18): 1. Wordmark (Logotype), 2. Lettermark (Monogram), 3. Pictorial Mark (Brand Mark), 4. Abstract Mark, 5. Mascot, 6. Emblem, 7. Combination Mark, Aesthetic Styles (+10 more)
 
-### Community 345 - "FoundationModels: On-Device LLM (iOS 26)"
+### Community 349 - "FoundationModels: On-Device LLM (iOS 26)"
 Cohesion: 0.11
 Nodes (18): 1. Define a Generable Type, 1. Define a Tool, 2. Create Session with Tools, 2. Request Structured Output, 3. Handle Tool Errors, Anti-Patterns to Avoid, Best Practices, Core Pattern — Availability Check (+10 more)
 
-### Community 346 - "Plan Orchestrate"
+### Community 350 - "Plan Orchestrate"
 Cohesion: 0.11
 Nodes (18): Authoritative `/orchestrate` shape (do not deviate), Available agent catalogue (must pick from these), ECC install form and namespacing, Edge cases, Example 1 — Plugin mode, Python plan, Example 2 — Legacy mode, same step, Examples, How It Works (+10 more)
 
-### Community 347 - "Security Scan Skill"
+### Community 351 - "Security Scan Skill"
 Cohesion: 0.11
 Nodes (18): Auto-Fix, Basic Scan, Critical Findings (fix immediately), GitHub Action, High Findings (fix before production), Info Findings (awareness), Initialize Secure Config, Interpreting Results (+10 more)
 
-### Community 348 - "properties"
+### Community 352 - "name"
 Cohesion: 0.11
-Nodes (19): type, studioConfig, type, $ref, type, items, type, $ref (+11 more)
+Nodes (19): required, fileVariant, parameterDefinition, requiredFile, additionalProperties, required, type, additionalProperties (+11 more)
 
-### Community 349 - "LA Studio — hồ sơ bàn giao cho AI agent"
+### Community 353 - "LA Studio — hồ sơ bàn giao cho AI agent"
 Cohesion: 0.11
 Nodes (18): 10. Handoff conclusion, 1. Yêu cầu sản phẩm không được phá vỡ, 2. Quy tắc repo và version, 31/31 controller/UI/notebook mapping verified, 31/31 exact-model notebook contract verified, 35/35 passed, 0 failed, 3. Cấu trúc thư mục hiện tại, 4. Feature và notebook status (+10 more)
 
-### Community 350 - "RuntimeHostManager"
+### Community 354 - "RuntimeHostManager"
 Cohesion: 0.16
 Nodes (15): QWaitCondition, releaseHostPermit, QString, QHash, QMutex, QString, RuntimeHostManager, acquire (+7 more)
 
-### Community 351 - "ColabAlignmentController.cpp"
+### Community 355 - "ColabAlignmentController.cpp"
 Cohesion: 0.14
 Nodes (18): averageConfidence, cancel, clearResult, ColabAlignmentController::ColabAlignmentController(), colabConnected, karaokeLineIndexAt, onRemoteFirstModeChanged, onRunnerFinished (+10 more)
 
-### Community 352 - "WorkflowActivityManager.cpp"
+### Community 356 - "WorkflowActivityManager.cpp"
 Cohesion: 0.21
 Nodes (18): IModelSession, QString, QVariantList, activeSessions, fallbackTitleForCapability, iconForCapability, openStudioRoute, openVoiceCloningStudio (+10 more)
 
-### Community 353 - "DubbingController::importWorkflowArtifactFiles"
+### Community 357 - "DubbingController::importWorkflowArtifactFiles"
 Cohesion: 0.18
 Nodes (18): advanceManualStep, canOverrideRunningWorkflowArtifact, importSubtitles, QString, QVariantList, QVariantMap, DubbingController::canOverrideRunningWorkflowArtifact(), DubbingController::exportCapCutDraft() (+10 more)
 
-### Community 354 - "ColabVoiceIsolatorController.cpp"
+### Community 358 - "ColabVoiceIsolatorController.cpp"
 Cohesion: 0.20
 Nodes (18): cancel, clearResult, colabNotebookFile, connectColab, exportStem, isolate, loadSamples, notebookForColabModel (+10 more)
 
-### Community 355 - "StudioSelectionRepository.cpp"
+### Community 359 - "StudioSelectionRepository.cpp"
 Cohesion: 0.22
 Nodes (17): QObject, QSqlDatabase, QString, QVariantMap, Settings, Q_OBJECT, QObject, StudioSelectionRepository (+9 more)
 
-### Community 356 - "DubbingTimingProfile"
+### Community 360 - "DubbingTimingProfile"
 Cohesion: 0.18
 Nodes (18): QString, QVariantMap, DubbingTimingProfile, confidence, fromVariantMap, id, language, normalizerVersion (+10 more)
 
-### Community 357 - "fetch"
+### Community 361 - "fetch"
 Cohesion: 0.14
 Nodes (18): appendModel(), ColabCapabilityCatalog, fetch, colabError(), QByteArray, QJsonObject, QSet, QString (+10 more)
 
-### Community 358 - "test_normalizer.cpp"
+### Community 362 - "test_normalizer.cpp"
 Cohesion: 0.20
 Nodes (15): create, Q_OBJECT, QObject, TestNormalizer, normalizesCurrency, TestNormalizer::normalizesDate(), normalizesMeasurement, normalizesPercentage (+7 more)
 
-### Community 359 - "Brand Consistency Checklist"
+### Community 363 - "Brand Consistency Checklist"
 Cohesion: 0.11
 Nodes (17): Audit Frequency, Brand Consistency Checklist, Channel Audit, Collateral, Colors, Common Issues, Email, Imagery (+9 more)
 
-### Community 360 - "CIP Mockup Prompt Engineering"
+### Community 364 - "CIP Mockup Prompt Engineering"
 Cohesion: 0.11
 Nodes (17): Apparel (Polo/T-Shirt), Base Prompt Structure, Business Card, CIP Mockup Prompt Engineering, Context Modifiers, Corporate Minimal, Deliverable-Specific Modifiers, Letterhead (+9 more)
 
-### Community 361 - "E2E Testing Patterns"
+### Community 365 - "E2E Testing Patterns"
 Cohesion: 0.11
 Nodes (17): Artifact Management, CI/CD Integration, Common Causes & Fixes, E2E Testing Patterns, Financial / Critical Flow Testing, Flaky Test Patterns, Identify Flakiness, Page Object Model (POM) (+9 more)
 
-### Community 362 - "React Performance"
+### Community 366 - "React Performance"
 Cohesion: 0.11
 Nodes (18): 4. Client-Side Data Fetching (MEDIUM-HIGH), 7. JavaScript Performance (LOW-MEDIUM), 8. Advanced Patterns (LOW), Attribution, Automated Tools, Deduplicate global event listeners, Event handler refs, Init once per app load (+10 more)
 
-### Community 363 - "Streaming & Playback"
+### Community 367 - "Streaming & Playback"
 Cohesion: 0.11
 Nodes (18): Audio Playback, Basic Playback, Complete Workflow Examples, Conditional Stream Assembly, Core Concepts, Live Event Recap, Multi-Video Stream, Prerequisites (+10 more)
 
-### Community 364 - "language"
-Cohesion: 0.13
-Nodes (18): language, nonVerbalTag, properties, additionalProperties, properties, required, type, additionalProperties (+10 more)
-
-### Community 365 - "3. Proposed Technical Decisions and Rationale"
+### Community 368 - "3. Proposed Technical Decisions and Rationale"
 Cohesion: 0.11
 Nodes (18): 3. Proposed Technical Decisions and Rationale, D-01 Keep the toolchain exactly as-is: MSVC 2022 + Qt 6.9.3 + CMake/Ninja + vcpkg, D-02 Demote the MinGW preset to unsupported, D-03 Provision llama.cpp headers automatically; delete the phantom include paths, D-04 Single source of truth for version, enforced at three points, D-05 Ship an LGPL FFmpeg as a managed catalog runtime **⚠ needs confirmation (D2 / Q-03)**, D-06 Integrity verification becomes mandatory and fails closed, D-07 One DLL-loading strategy, hardened (+10 more)
 
-### Community 366 - "LlamaTranslationInterface"
+### Community 369 - "LlamaTranslationInterface"
 Cohesion: 0.12
 Nodes (18): atomic_bool, QString, unique_ptr, LlamaTranslationInterface, cancel, generateChat, isLoaded, load (+10 more)
 
-### Community 367 - "VieneuTtsInterface.h"
+### Community 370 - "VieneuTtsInterface.h"
 Cohesion: 0.22
 Nodes (10): dllLoadPriority(), DWORD, HMODULE, QString, loadedModulePath(), preloadRuntimeDlls(), releasePreloadedDlls(), setRuntimeDependencyConflict() (+2 more)
 
-### Community 368 - "WhisperInterface.h"
+### Community 371 - "WhisperInterface.h"
 Cohesion: 0.12
 Nodes (17): whisper_ahead, n_head, n_text_layer, whisper_aheads, heads, n_heads, whisper_context, whisper_context_params (+9 more)
 
-### Community 369 - "paddle_ocr_worker.py"
+### Community 372 - "paddle_ocr_worker.py"
 Cohesion: 0.29
 Nodes (17): configure_environment(), cpu_seconds(), emit(), ensure_models(), health(), main(), make_engine(), model_tree_sha256() (+9 more)
 
-### Community 370 - "smoke_remote_preflight.ps1"
+### Community 373 - "smoke_remote_preflight.ps1"
 Cohesion: 0.17
 Nodes (9): Add-Check(), Assert-ReadyCudaHealth(), Assert-WorkerCapability(), Get-CapabilityIds(), Get-CapabilityModelIds(), Get-ErrorSummary(), Get-GatewayModelIds(), Get-OptionalProperty() (+1 more)
 
-### Community 371 - "ApiServer_HttpParser.cpp"
-Cohesion: 0.16
-Nodes (17): jsonErrorObject, jsonResponse, onSocketReadyRead, processRequestAsync, pathFromTarget(), toJsonBytes(), ApiServerService::binaryResponse(), ApiServerService::errorResponse() (+9 more)
-
-### Community 372 - "DubbingTranslationFix_Config.cpp"
+### Community 374 - "DubbingTranslationFix_Config.cpp"
 Cohesion: 0.19
 Nodes (17): distanceToBudget(), normalizedServerBase(), CliInvocation, QString, QVariantList, QVariantMap, DubbingTranslationFixService::chatUrl(), DubbingTranslationFixService::cleanAssistantText() (+9 more)
 
-### Community 373 - "instance"
+### Community 375 - "instance"
 Cohesion: 0.13
 Nodes (15): QJSEngine, create, instance, ModelManager, QObject, RegistryManager, RuntimeManager, Settings (+7 more)
 
-### Community 374 - "discoverLocalModels"
-Cohesion: 0.15
-Nodes (18): function, QDateTime, QModelIndex, QVariant, QVector, extractQuantFromFilename(), formatRelativeTime(), guessArch() (+10 more)
-
-### Community 375 - "ModelInfo"
+### Community 376 - "ModelInfo"
 Cohesion: 0.11
 Nodes (17): qint64, QString, QStringList, ModelInfo, arch, author, files, format (+9 more)
 
-### Community 376 - "VoiceCloningUtils"
+### Community 377 - "VoiceCloningUtils"
 Cohesion: 0.16
 Nodes (17): QObject, QString, QVariantMap, Q_INVOKABLE, Q_OBJECT, QML_SINGLETON, QObject, VoiceCloningUtils (+9 more)
 
-### Community 377 - "DubbingSpeechBudget"
+### Community 378 - "DubbingSpeechBudget"
 Cohesion: 0.11
 Nodes (18): DubbingPause, durationMs, kind, offsetMs, toVariantMap, DubbingSpeechBudget, confidence, maxUnits (+10 more)
 
-### Community 378 - "WorkflowTranscriptArtifact"
+### Community 379 - "WorkflowTranscriptArtifact"
 Cohesion: 0.18
 Nodes (16): QString, QVariantList, QString, QVariantList, setError(), WorkflowTranscriptArtifact, artifactId, CurrentSchemaVersion (+8 more)
 
-### Community 379 - "mocks/SttEngineInstance.cpp"
+### Community 380 - "mocks/SttEngineInstance.cpp"
 Cohesion: 0.14
 Nodes (13): QObject, QString, QVariantList, QVariantMap, QVector, State, SttEngineInstance::loadModel(), SttEngineInstance::onWorkerError() (+5 more)
 
-### Community 380 - "Code Review Reception"
+### Community 381 - "Code Review Reception"
 Cohesion: 0.12
 Nodes (16): Acknowledging Correct Feedback, Code Review Reception, Common Mistakes, Forbidden Responses, From External Reviewers, From your human partner, GitHub Thread Replies, Gracefully Correcting Your Pushback (+8 more)
 
-### Community 381 - "TestThresholdGate"
+### Community 382 - "TestThresholdGate"
 Cohesion: 0.13
 Nodes (3): TestFixtureValidation, TestMetricMath, TestThresholdGate
 
-### Community 382 - "Search & Indexing Guide"
+### Community 383 - "Search & Indexing Guide"
 Cohesion: 0.12
 Nodes (17): Cross-Collection Search, Extract Clips, Get Shots, Indexing, Keyword Search, Play Compiled Results, Prerequisites, Scene Index (+9 more)
 
-### Community 383 - "Testing CLAUDE.md Skills Documentation"
+### Community 384 - "Testing CLAUDE.md Skills Documentation"
 Cohesion: 0.12
 Nodes (16): Documentation Variants to Test, Expected Results, Next Steps, NULL (Baseline - no skills doc), Scenario 1: Time Pressure + Confidence, Scenario 2: Sunk Cost + Works Already, Scenario 3: Authority + Speed Bias, Scenario 4: Familiarity + Efficiency (+8 more)
 
-### Community 384 - "setError"
+### Community 385 - "setError"
 Cohesion: 0.14
 Nodes (17): LlmChatModelSession, ColabSession, LlmChatEngine, Provider, QObject, Settings, colabStateChanged, connectColab (+9 more)
-
-### Community 385 - "fuse"
-Cohesion: 0.27
-Nodes (15): SubtitleOcrController, setSubtitleOcrController, DubbingController::reconcileTranscriptSources(), confidenceOf(), QString, QVariantList, QVariantMap, DubbingTranscriptFusionService (+7 more)
 
 ### Community 386 - "DubbingTranslationJob.cpp"
 Cohesion: 0.20
 Nodes (16): ColabSession, QString, quint64, QVariantList, QVariantMap, Settings, cancel, fail (+8 more)
 
-### Community 387 - "DownloadInstallService.cpp"
-Cohesion: 0.23
-Nodes (14): appendYamlList(), appendYamlMap(), appendYamlValue(), ModelManager, QByteArray, QStringList, QVariant, QVariantList (+6 more)
+### Community 387 - "DownloadInstallService::onDownloadFinished"
+Cohesion: 0.18
+Nodes (16): archiveExtractor(), QString, archiveContainsOnlySafeMembers, extractedTreeIsContained, hasSpaceForExtraction, scheduleModelFileUpdateCheck, fileMatchesSha256(), hasExpectedArchiveSignature() (+8 more)
 
 ### Community 388 - "RemoteModelCatalogController.cpp"
 Cohesion: 0.17
@@ -2535,135 +2536,135 @@ Nodes (15): Common Rationalizations, Overview, Phase 1: Root Cause Investigation
 
 ### Community 400 - "TestShadcnInstaller"
 Cohesion: 0.12
-Nodes (9): Test adding components in dry run mode., Test ShadcnInstaller class., Test adding all components without config., Test adding all components in dry run mode., Test listing installed components without config., Test listing installed components when none exist., Test initialization with custom project root., Test checking for non-existent shadcn config. (+1 more)
+Nodes (9): Test adding components in dry run mode., Test ShadcnInstaller class., Test adding all components without config., Test adding all components in dry run mode., Test listing installed components without config., Test listing installed components when none exist., Test listing installed components when they exist., Test initialization with custom project root. (+1 more)
 
 ### Community 402 - "Persuasion Principles for Skill Design"
 Cohesion: 0.12
 Nodes (15): 1. Authority, 2. Commitment, 3. Scarcity, 4. Social Proof, 5. Unity, 6. Reciprocity, 7. Liking, Ethical Use (+7 more)
 
-### Community 403 - "name"
-Cohesion: 0.13
-Nodes (16): required, fileVariant, parameterDefinition, additionalProperties, required, type, additionalProperties, required (+8 more)
-
-### Community 404 - "policy"
-Cohesion: 0.12
-Nodes (16): type, type, additionalProperties, properties, type, type, downloads, likes (+8 more)
-
-### Community 405 - "Tri nho du an LA Studio"
+### Community 403 - "Tri nho du an LA Studio"
 Cohesion: 0.12
 Nodes (15): 2026-08-12 - Subtitle OCR Colab bootstrap `.12` constraints, 2026-08-12 - Subtitle OCR Colab bootstrap `.13` constraints, 2026-08-13 - Dubbing picker and Direct-Colab TTS contract, 2026-08-14 - Media acquisition: Colab hoac file local, 2026-08-14 - Media acquisition local CPU va project persistence, 2026-08-15 - Internal package hien hanh 0.0.7.2, 2026-08-16 - Isolator artifact format and observable Colab completion, 2026-08-16 - STT FLAC decoder and transcript-source separation (+7 more)
 
-### Community 406 - "3. Nhật Ký Chi Tiết Các Tác Vụ Đã Thực Hiện"
+### Community 404 - "3. Nhật Ký Chi Tiết Các Tác Vụ Đã Thực Hiện"
 Cohesion: 0.12
 Nodes (15): 1. Tóm Tắt Trung Thực Về Cách Thức Thực Hiện (Executive Disclosure), 2. So Sánh: Luồng App Gốc vs Luồng Đã Thực Hiện Thực Tế, 3. Nhật Ký Chi Tiết Các Tác Vụ Đã Thực Hiện, 4. Đánh Giá Khách Quan: Ưu Điểm & Tồn Tại, Báo Cáo Kiểm Toán Thực Tế (Execution Audit Report) — Quy Trình Live Test LA-Studio / KOVA-DUB, Bước 1: Khởi tạo và Đẩy Source Code lên GitHub, Bước 2: Tách Giọng Nói & Nhạc Nền (Colab UVR5 GPU), Bước 3: Nhận Dạng Giọng Nói STT (Colab Whisper Large-v3 GPU) (+7 more)
 
-### Community 407 - "Global Constraints"
+### Community 405 - "Global Constraints"
 Cohesion: 0.12
 Nodes (15): Dubbing Studio Workspace Overhaul Implementation Plan, Global Constraints, Plan self-review, Task 10: Build the 8.5 portable package, commit and push (baseline), Task 11: Close the media subprocess watchdog boundary, Task 12: Recheck the final 0.0.8.6 artifact after the OCR ROI visual fix, Task 1: Establish a reproducible UI/workflow contract baseline, Task 2: Make the top workflow rail compact and bilingual-on-hover (+7 more)
 
-### Community 408 - "Dubbing Studio Workspace Overhaul Design"
+### Community 406 - "Dubbing Studio Workspace Overhaul Design"
 Cohesion: 0.12
 Nodes (15): Acceptance criteria, Action gating and recovery, Dubbing Studio Workspace Overhaul Design, Goal, Implementation units, Left task shelf and right drawer, Media preview and subtitle/OCR behavior, Product and interaction design (+7 more)
 
-### Community 409 - "Normalizer"
+### Community 407 - "Normalizer"
 Cohesion: 0.20
 Nodes (15): Impl, unique_ptr, Normalizer, fromDataDirectory, m_impl, normalize, function, QRegularExpression (+7 more)
 
-### Community 410 - "douyin_browser_session.py"
+### Community 408 - "douyin_browser_session.py"
 Cohesion: 0.37
 Nodes (15): candidate_urls(), cookie_header(), emit(), fail(), has_authenticated_session(), import_playwright(), is_safe_media_url(), main() (+7 more)
 
-### Community 411 - "QTimer"
-Cohesion: 0.20
-Nodes (11): QElapsedTimer, configureHardenedDllSearch(), main(), QTimer, QString, QStringList, optionVal(), runLiveDubbingStudio() (+3 more)
-
-### Community 412 - "SubtitleOcrController_Media.cpp"
+### Community 409 - "SubtitleOcrController_Media.cpp"
 Cohesion: 0.17
 Nodes (14): QString, SubtitleOcrController::beginCacheLookup(), SubtitleOcrController::cacheFilePath(), SubtitleOcrController::cancelSourceImport(), SubtitleOcrController::importSourceLink(), SubtitleOcrController::onSourceFingerprintReady(), SubtitleOcrController::retrySourceImport(), SubtitleOcrController::setSourceImportState() (+6 more)
 
-### Community 413 - "ColabSeparationRequest"
+### Community 410 - "ColabSeparationRequest"
 Cohesion: 0.12
 Nodes (16): ColabSeparationRequest, allowInsecureLocalhost, artifactFormat, audioPath, bearerToken, cancellation, finalizeTimeoutMs, model (+8 more)
 
-### Community 414 - "managedTesseractPath"
+### Community 411 - "managedTesseractPath"
 Cohesion: 0.29
 Nodes (14): QString, executableName(), existingFile(), QString, SubtitleOcrRuntimeLocator, managedRuntimeRoot, managedTesseractPath, resolve (+6 more)
 
-### Community 415 - "Qwen3Backend.cpp"
+### Community 412 - "Qwen3Backend.cpp"
 Cohesion: 0.31
 Nodes (14): QByteArray, QString, QVariantList, QVariantMap, QVector, applySavedVoiceProfile, cloneVoice, load (+6 more)
 
-### Community 416 - "SubtitleFit"
+### Community 413 - "SubtitleFit"
 Cohesion: 0.12
 Nodes (15): qint64, QVector, qint64, QString, SubtitleFit, audioRate, droppedOverlap, effectiveEndMs (+7 more)
 
-### Community 417 - "prepare"
+### Community 414 - "prepare"
 Cohesion: 0.18
 Nodes (13): QString, QVariantMap, normalizer(), TtsTextPreprocessor, prepare, Q_OBJECT, QObject, TestTtsTextPreprocessor (+5 more)
 
-### Community 418 - "ColabVoiceCloneRequest"
+### Community 415 - "ColabVoiceCloneRequest"
 Cohesion: 0.12
 Nodes (16): ColabVoiceCloneRequest, allowInsecureLocalhost, bearerToken, cancellation, consentConfirmed, existingProfileId, language, model (+8 more)
 
-### Community 419 - "CIP Design Reference"
+### Community 416 - "CIP Design Reference"
 Cohesion: 0.13
 Nodes (14): CIP Brief (Start Here), CIP Design Reference, Commands, Deliverable Categories, Design Styles, Detailed References, Generate Mockups, HTML Presentation Features (+6 more)
 
-### Community 420 - "Icon Design Reference"
+### Community 417 - "Icon Design Reference"
 Cohesion: 0.13
 Nodes (14): Available Styles, CLI Options, Commands, Generate Batch Variations, Generate Multiple Sizes, Generate Single Icon, Icon Categories, Icon Design Reference (+6 more)
+
+### Community 418 - "Copywriting Formulas"
+Cohesion: 0.13
+Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
+
+### Community 419 - "Finishing a Development Branch"
+Cohesion: 0.13
+Nodes (14): Common Rationalizations, Finishing a Development Branch, If your human partner asks to discard the work, Option 1: Merge Locally, Option 2: Push and Create PR, Option 3: Keep As-Is, Overview, Quick Reference (+6 more)
+
+### Community 420 - "Core Principles"
+Cohesion: 0.13
+Nodes (14): Checklist, Concentric Radius, Core Principles, Font Smoothing, Hit Areas, Image Outlines, Make Interfaces Feel Better, Motion (+6 more)
 
 ### Community 421 - "Copywriting Formulas"
 Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
-### Community 422 - "Finishing a Development Branch"
-Cohesion: 0.13
-Nodes (14): Common Rationalizations, Finishing a Development Branch, If your human partner asks to discard the work, Option 1: Merge Locally, Option 2: Push and Create PR, Option 3: Keep As-Is, Overview, Quick Reference (+6 more)
-
-### Community 423 - "Core Principles"
-Cohesion: 0.13
-Nodes (14): Checklist, Concentric Radius, Core Principles, Font Smoothing, Hit Areas, Image Outlines, Make Interfaces Feel Better, Motion (+6 more)
-
-### Community 424 - "Copywriting Formulas"
-Cohesion: 0.13
-Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
-
-### Community 425 - "detect_domain"
+### Community 422 - "detect_domain"
 Cohesion: 0.23
 Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
-### Community 426 - "Using Git Worktrees"
+### Community 423 - "Using Git Worktrees"
 Cohesion: 0.13
 Nodes (14): 1a. Native Worktree Tools (preferred), 1b. Git Worktree Fallback, Common Rationalizations, Create the Worktree, Directory Selection, Overview, Quick Reference, Report (+6 more)
 
-### Community 427 - "Writing Skills"
+### Community 424 - "Writing Skills"
 Cohesion: 0.13
 Nodes (15): Code Examples, Common Rationalizations for Skipping Testing, Directory Structure, Discovery Workflow, Flowchart Usage, Match the Form to the Failure, Overview, Skill Creation Checklist (TDD Adapted) (+7 more)
 
-### Community 428 - "2. Bằng Chứng Thực Thi Chi Tiết Từng Bước (Full Pipeline Evidence)"
+### Community 425 - "2. Bằng Chứng Thực Thi Chi Tiết Từng Bước (Full Pipeline Evidence)"
 Cohesion: 0.13
 Nodes (14): 1. Bảng Tổng Hợp Nghiệm Thu Toàn Diện (Summary Acceptance Matrix), 2. Bằng Chứng Thực Thi Chi Tiết Từng Bước (Full Pipeline Evidence), 3. Danh Sách Đường Dẫn Artifacts Thực Tế, 4. Kết Luận Nghiệm Thu (Final Verdict), LA Studio — Dubbing Studio Live Feature Acceptance Report, 🔹 Task 10: Hòa Trộn & Xuất Bản Video (Final Export), 🔹 Task 1 & 2: Ingest & Normalize Media, 🔹 Task 3: Tách Giọng & Nhạc Nền (UVR5 Separation GPU) (+6 more)
 
-### Community 429 - "vieneu_tts_params_v3"
+### Community 426 - "vieneu_tts_params_v3"
 Cohesion: 0.13
 Nodes (15): vieneu_tts_params_v3, abi_version, apply_watermark, denoise_ref, max_chars, max_new_frames, ref_audio_path, repetition_penalty (+7 more)
 
-### Community 430 - "InstanceRegistry"
+### Community 427 - "InstanceRegistry"
 Cohesion: 0.21
 Nodes (7): Instance, QHash, QList, QString, QStringList, InstanceRegistry, m_instances
 
-### Community 431 - "QMutex"
+### Community 428 - "QMutex"
 Cohesion: 0.17
 Nodes (12): QQuickImageProvider, QSize, QImage, QString, QVector, QMutex, QVector, WaveformProvider (+4 more)
 
-### Community 432 - "build.ps1"
+### Community 429 - "build.ps1"
 Cohesion: 0.19
 Nodes (9): Add-PathIfExists(), Ensure-ArchiveExtractor(), Ensure-Command(), Ensure-MsvcEnvironment(), Ensure-WebpImageFormatPlugin(), Get-SourceAppVersion(), Normalize-AppVersion(), Test-CatalogRequiresWebp() (+1 more)
 
-### Community 433 - "renderClip"
+### Community 430 - "HttpRequest"
+Cohesion: 0.13
+Nodes (15): handleRequest, writeResponse, constantTimeEquals(), HttpRequest, body, headers, jsonBody, method (+7 more)
+
+### Community 431 - "renderClip"
 Cohesion: 0.20
 Nodes (13): AudioRenderResult, usedFallback, AudioTimelinePlacement, enabled, endMs, startMs, AudioTimelineRenderer, assemble (+5 more)
+
+### Community 432 - "fuse"
+Cohesion: 0.33
+Nodes (13): DubbingController::reconcileTranscriptSources(), confidenceOf(), QString, QVariantList, QVariantMap, DubbingTranscriptFusionService, fuse, normalizeOcrSegments (+5 more)
+
+### Community 433 - "SubtitleOcrExportService"
+Cohesion: 0.26
+Nodes (12): qint64, QObject, QString, QVariantList, Q_OBJECT, QObject, SubtitleOcrExportService, exportToSrtFile (+4 more)
 
 ### Community 434 - "managedTessdataPath"
 Cohesion: 0.20
@@ -2719,7 +2720,7 @@ Nodes (14): 2026-08-10 - 0.0.6.2 Dubbing preview workspace, 2026-08-10 - dedicat
 
 ### Community 447 - "8. Lộ trình triển khai"
 Cohesion: 0.14
-Nodes (14): 8. Lộ trình triển khai, LA Studio, Model, Phase 0 — Baseline và abstraction, Phase 1 — LLM Chat qua API Gateway, Phase 3 — Speech-to-Text qua Colab GPU, Phase 5 — Text-to-Speech qua API Gateway, Test (+6 more)
+Nodes (14): 8. Lộ trình triển khai, Model, Phase 12 — Video Dubbing end-to-end, Phase 1 — LLM Chat qua API Gateway, Phase 3 — Speech-to-Text qua Colab GPU, Phase 5 — Text-to-Speech qua API Gateway, Test, Test (+6 more)
 
 ### Community 448 - "resolve"
 Cohesion: 0.34
@@ -2733,273 +2734,273 @@ Nodes (9): stop, atomic, Q_OBJECT, QVector, WasapiLoopbackThread, levelUpdated, 
 Cohesion: 0.14
 Nodes (14): Q_OBJECT, QObject, IStudioAction, activeConfigurationChanged, activeConfigurationSignature, capabilityId, errorDetail, errorOccurred (+6 more)
 
-### Community 451 - "DownloadInstallService::onDownloadFinished"
-Cohesion: 0.21
-Nodes (14): archiveExtractor(), cleanFingerprint(), QString, archiveContainsOnlySafeMembers, extractedTreeIsContained, hasSpaceForExtraction, fileMatchesSha256(), hasExpectedArchiveSignature() (+6 more)
-
-### Community 452 - "DownloadInstallService::enqueueModelFile"
+### Community 451 - "DownloadInstallService::enqueueModelFile"
 Cohesion: 0.21
 Nodes (13): enqueueModelFile, enqueueRuntime, latestSupportedRuntime, rejectLocalDownloadInRemoteFirstMode, writeVirtualModelFiles, virtualModelMetadata(), QString, QVariantMap (+5 more)
 
-### Community 453 - "SubtitleOcrExportService"
-Cohesion: 0.27
-Nodes (12): qint64, QObject, QString, QVariantList, Q_OBJECT, QObject, SubtitleOcrExportService, exportToSrtFile (+4 more)
+### Community 452 - "DownloadInstall_ArchiveSafety.cpp"
+Cohesion: 0.20
+Nodes (12): localDownloadsAllowed, runtimeVersionGreater(), qint64, QString, QVariantMap, DownloadInstallService::archiveContainsOnlySafeMembers(), DownloadInstallService::extractedTreeIsContained(), DownloadInstallService::hasSpaceForExtraction() (+4 more)
 
-### Community 454 - "WorkerThreadHost"
+### Community 453 - "WorkerThreadHost"
 Cohesion: 0.20
 Nodes (10): QObject, Q_OBJECT, QObject, WorkerThreadHost, m_thread, m_worker, public, start (+2 more)
 
-### Community 455 - "transcribe"
+### Community 454 - "transcribe"
 Cohesion: 0.23
 Nodes (12): cleanNemotronText(), QString, QVariantList, QVariantMap, QVector, SttBackend, NemotronSttBackend, loadModel (+4 more)
 
-### Community 456 - "QwenSttBackend"
+### Community 455 - "QwenSttBackend"
 Cohesion: 0.21
 Nodes (12): QString, QVariantList, QVariantMap, QVector, QString, SttBackend, QwenSttBackend, loadModel (+4 more)
 
-### Community 457 - "ColabVoiceDesignRequest"
+### Community 456 - "ColabVoiceDesignRequest"
 Cohesion: 0.14
 Nodes (14): ColabVoiceDesignRequest, allowInsecureLocalhost, bearerToken, cancellation, language, model, seed, style (+6 more)
 
-### Community 458 - "mocks/HFHubClient.cpp"
+### Community 457 - "mocks/HFHubClient.cpp"
 Cohesion: 0.20
 Nodes (11): curl_off_t, QObject, QString, HFHubClient::cancelDownload(), HFHubClient::downloadFile(), HFHubClient::downloadKey(), HFHubClient::downloadUrl(), HFHubClient::HFHubClient() (+3 more)
 
-### Community 459 - "brand/references/update.md"
+### Community 458 - "brand/references/update.md"
 Cohesion: 0.15
 Nodes (12): Color Presets, Examples, Files Modified, Important, Overview, Skills Used, Step 1: Gather Brand Input, Step 2: Update Brand Guidelines (+4 more)
 
-### Community 460 - "Logo Design Reference"
+### Community 459 - "Logo Design Reference"
 Cohesion: 0.15
 Nodes (12): Available Styles, Color Psychology, Commands, Design Brief (Start Here), Detailed References, Generate Logo, Industry Defaults, Logo Design Reference (+4 more)
 
-### Community 461 - "Process"
+### Community 460 - "Process"
 Cohesion: 0.15
 Nodes (12): 1. Gather context, 2. Explore the codebase (optional), 3. Draft vertical slices, 4. Quiz the user, 5. Publish the tickets to the configured tracker, Acceptance criteria, Blocked by, <NN>: <Ticket title> (+4 more)
 
-### Community 462 - "Testing Skills With Subagents"
+### Community 461 - "Testing Skills With Subagents"
 Cohesion: 0.15
 Nodes (13): Common Mistakes (Same as TDD), GREEN Phase: Write Minimal Skill (Make It Pass), Meta-Testing (When GREEN Isn't Working), Overview, Quick Reference (TDD Cycle), Real-World Impact, RED Phase: Baseline Testing (Watch It Fail), TDD Mapping for Skill Testing (+5 more)
 
-### Community 463 - "wav2vec2-aligner-zh/manifest.json"
+### Community 462 - "wav2vec2-aligner-zh/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, ggml-org/whisper-vad, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 464 - "Kokoro-82M/manifest.json"
+### Community 463 - "Kokoro-82M/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+4 more)
 
-### Community 465 - "canary-ctc-aligner/manifest.json"
+### Community 464 - "canary-ctc-aligner/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, ggml-org/whisper-vad, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 466 - "VieNeu-TTS-v2-Turbo/manifest.json"
+### Community 465 - "VieNeu-TTS-v2-Turbo/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+4 more)
 
-### Community 467 - "Qwen3-ForcedAligner-0.6B/manifest.json"
+### Community 466 - "Qwen3-ForcedAligner-0.6B/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, ggml-org/whisper-vad, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 468 - "Qwen3-TTS-12Hz-0.6B-Base/manifest.json"
+### Community 467 - "Qwen3-TTS-12Hz-0.6B-Base/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, cstr/qwen3-tts-tokenizer-12hz-GGUF, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 469 - "Qwen3-TTS-12Hz-1.7B-Base/manifest.json"
+### Community 468 - "Qwen3-TTS-12Hz-1.7B-Base/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, cstr/qwen3-tts-tokenizer-12hz-GGUF, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 470 - "Qwen3-TTS-12Hz-1.7B-CustomVoice/manifest.json"
+### Community 469 - "Qwen3-TTS-12Hz-1.7B-CustomVoice/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, cstr/qwen3-tts-tokenizer-12hz-GGUF, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 471 - "Qwen3-TTS-12Hz-1.7B-VoiceDesign/manifest.json"
+### Community 470 - "Qwen3-TTS-12Hz-1.7B-VoiceDesign/manifest.json"
 Cohesion: 0.15
 Nodes (12): downloadSources, id, cstr/qwen3-tts-tokenizer-12hz-GGUF, license, name, publisher, runtimeFormat, schemaVersion (+4 more)
 
-### Community 472 - "properties"
-Cohesion: 0.19
-Nodes (13): $ref, type, pattern, type, items, properties, properties, capabilities (+5 more)
-
-### Community 473 - "LA Studio — Kế hoạch chuyển inference sang API Gateway và Colab GPU độc lập"
+### Community 471 - "LA Studio — Kế hoạch chuyển inference sang API Gateway và Colab GPU độc lập"
 Cohesion: 0.15
 Nodes (12): 11. Bảo mật và dữ liệu, 12. Rủi ro Colab, 13. Thứ tự commit, 14. Definition of Done, 15. Cần xác nhận trước khi code, 1. Mục tiêu, 6. Phần giữ lại ở desktop, 7. Quy tắc triển khai tuần tự (+4 more)
 
-### Community 474 - "Remote feature acceptance audit"
+### Community 472 - "Remote feature acceptance audit"
 Cohesion: 0.15
 Nodes (12): Evidence collected, Feature route matrix, Fixed in source and compiled; UI regression is in progress, Fixed source-level connection gate, Gate to authorize the next package, Latest notebook-contract correction, Must be live-verified before acceptance, Notebook contract findings (+4 more)
 
-### Community 475 - "Api"
+### Community 473 - "Api"
 Cohesion: 0.15
 Nodes (13): InitializeFn, SetVoiceFn, Api, error, initialize, initialized, library, setVoice (+5 more)
 
-### Community 476 - "RecognitionItem"
+### Community 474 - "RecognitionItem"
 Cohesion: 0.15
 Nodes (13): QSharedPointer, QByteArray, QVector, RecognitionItem, completed, frameHash, framePath, recognizedConfidence (+5 more)
 
-### Community 477 - "HttpRequest"
-Cohesion: 0.15
-Nodes (13): handleRequest, writeResponse, HttpRequest, body, headers, jsonBody, method, path (+5 more)
-
-### Community 478 - "CustomVoice"
+### Community 475 - "CustomVoice"
 Cohesion: 0.15
 Nodes (13): CustomVoice, consentId, createdAt, fileName, id, mimeType, name, samplePath (+5 more)
 
-### Community 479 - "canTranscribeForProvider"
+### Community 476 - "DownloadInstallService.cpp"
+Cohesion: 0.32
+Nodes (10): appendYamlList(), appendYamlMap(), appendYamlValue(), QStringList, QVariant, QVariantList, QVersionNumber, modelYamlText() (+2 more)
+
+### Community 477 - "canTranscribeForProvider"
 Cohesion: 0.21
 Nodes (12): ExecutionProvider, QByteArray, QVector, canTranscribe, canTranscribeForProvider, gatewayModel, onDecoderFinished, onRecorderFinished (+4 more)
 
-### Community 480 - "SubtitleOcrController_Project.cpp"
+### Community 478 - "SubtitleOcrController_Project.cpp"
 Cohesion: 0.26
 Nodes (11): QString, SubtitleOcrController::exportSrt(), SubtitleOcrController::exportText(), SubtitleOcrController::openProject(), SubtitleOcrController::saveProject(), SubtitleOcrController::sendToDubbing(), SubtitleOcrController::sendToSubtitleVoice(), SubtitleOcrController::writeTextFile() (+3 more)
 
-### Community 481 - "GatewayTtsController.cpp"
+### Community 479 - "GatewayTtsController.cpp"
 Cohesion: 0.28
 Nodes (12): QString, cancelProcessing, disconnectGateway, gatewayModel, gatewayVoice, onRunnerFailed, onRunnerProgress, saveWav (+4 more)
 
-### Community 482 - "QmlLogger"
+### Community 480 - "discoverLocalModels"
+Cohesion: 0.19
+Nodes (13): function, QDateTime, QModelIndex, QVariant, extractQuantFromFilename(), formatRelativeTime(), guessArch(), guessParams() (+5 more)
+
+### Community 481 - "QmlLogger"
 Cohesion: 0.23
 Nodes (12): QObject, QString, QML_SINGLETON, QObject, QmlLogger, debug, error, info (+4 more)
 
-### Community 483 - "TranslationService"
+### Community 482 - "TranslationService"
 Cohesion: 0.22
 Nodes (10): DubbingTranslationService, m_service, ModelManager, RuntimeManager, ModelManager, RuntimeManager, SessionConfiguration, TranslationService (+2 more)
 
-### Community 484 - "EspeakNgPhonemizer.cpp"
+### Community 483 - "EspeakNgPhonemizer.cpp"
 Cohesion: 0.36
 Nodes (11): QDir, QString, QStringList, EspeakNgPhonemizer, count, phonemize, findDataRoot(), findDataRootInTree() (+3 more)
 
-### Community 485 - "ModelConfig"
+### Community 484 - "ModelConfig"
 Cohesion: 0.15
 Nodes (13): Config, model, ModelConfig, debug, numThreads, provider, spleeter, uvr (+5 more)
 
-### Community 486 - "Qwen3Backend"
+### Community 485 - "Qwen3Backend"
 Cohesion: 0.15
 Nodes (13): atomic, QByteArray, QString, TtsBackend, Qwen3Backend, cancelProcessing, m_cancelRequested, m_codePredictorBackendEnvOverridden (+5 more)
 
-### Community 487 - "ColabTtsRequest"
+### Community 486 - "ColabTtsRequest"
 Cohesion: 0.15
 Nodes (13): ColabTtsRequest, allowInsecureLocalhost, bearerToken, cancellation, language, model, settings, speed (+5 more)
 
-### Community 488 - "WorkflowResource"
+### Community 487 - "WorkflowResource"
 Cohesion: 0.15
 Nodes (12): WorkflowNodeKind, WorkflowNodeState, WorkflowResource, errorCode, id, kind, required, resolvedPath (+4 more)
 
-### Community 489 - "mocks/AudioPlayer.cpp"
+### Community 488 - "mocks/AudioPlayer.cpp"
 Cohesion: 0.17
 Nodes (9): AudioPlayer::AudioPlayer(), AudioPlayer::playbackPositionMs(), AudioPlayer::playFile(), AudioPlayer::playPcm(), AudioPlayer::seek(), QByteArray, qint64, QObject (+1 more)
 
-### Community 490 - "C++ Coding Standards (C++ Core Guidelines)"
+### Community 489 - "C++ Coding Standards (C++ Core Guidelines)"
 Cohesion: 0.17
 Nodes (11): All Rules, C++ Coding Standards (C++ Core Guidelines), Constants & Immutability (Con.*), Cross-Cutting Principles, Enumerations (Enum.*), Key Rules, Key Rules, Quick Reference Checklist (+3 more)
 
-### Community 491 - "FastAPI Patterns"
+### Community 490 - "FastAPI Patterns"
 Cohesion: 0.17
 Nodes (11): Anti-Patterns, App Factory and Lifespan, Best Practices, Configuration with pydantic-settings, Dependency Injection, FastAPI Patterns, Project Structure, Pydantic Schemas (v2) (+3 more)
 
-### Community 492 - "6. Rendering Performance (MEDIUM)"
+### Community 491 - "6. Rendering Performance (MEDIUM)"
 Cohesion: 0.17
 Nodes (12): 6. Rendering Performance (MEDIUM), `<Activity>` for show/hide instead of mount/unmount, Animate the wrapper, not the SVG, `content-visibility: auto` for long lists, `defer` / `async` on `<script>` tags, Hoist static JSX, Hydration no-flicker via inline script, React DOM resource hints (+4 more)
 
-### Community 493 - "Defense-in-Depth Validation"
+### Community 492 - "Defense-in-Depth Validation"
 Cohesion: 0.17
 Nodes (11): Applying the Pattern, Defense-in-Depth Validation, Example from Session, Key Insight, Layer 1: Entry Point Validation, Layer 2: Business Logic Validation, Layer 3: Environment Guards, Layer 4: Debug Instrumentation (+3 more)
 
-### Community 494 - "ShadcnInstaller"
+### Community 493 - "ShadcnInstaller"
 Cohesion: 0.20
-Nodes (7): main(), Handle shadcn/ui component installation., ShadcnInstaller, Tests for shadcn_add.py, Test adding components that are already installed., Test listing installed components when they exist., Test getting installed components without config.
+Nodes (7): main(), Handle shadcn/ui component installation., ShadcnInstaller, Tests for shadcn_add.py, Test initialization with default project root., Test checking for non-existent shadcn config., Test getting installed components without config.
 
-### Community 495 - ".check_shadcn_config"
+### Community 494 - ".check_shadcn_config"
 Cohesion: 0.21
 Nodes (6): Add all available shadcn/ui components. Args: overwrite: If True, overwrite…, List installed components. Returns: Tuple of (success, message with component…, Check if shadcn is initialized in project. Returns: True if components.json…, Get list of already installed components. Returns: List of installed component…, Read shadcn version from project package.json; fall back to a pinned default., Add shadcn/ui components. Args: components: List of component names to add…
 
-### Community 496 - ".generate_config_string"
+### Community 495 - ".generate_config_string"
 Cohesion: 0.20
 Nodes (6): Generate configuration file content. Returns: Configuration file as string, Generate TypeScript configuration., Generate JavaScript configuration., Format plugins array for config. Validates each plugin name against a strict…, Add indentation to JSON string., Write configuration to file. Returns: Tuple of (success, message)
 
-### Community 497 - "wayfinder/SKILL.md"
+### Community 496 - "wayfinder/SKILL.md"
 Cohesion: 0.17
 Nodes (11): Chart the map, Fog of war, Invocation, Out of scope, Plan, don't do, Refer by name, The Map, The map body (+3 more)
 
-### Community 498 - "Writing Plans"
+### Community 497 - "Writing Plans"
 Cohesion: 0.17
 Nodes (11): Bite-Sized Task Granularity, Execution Handoff, File Structure, No Placeholders, Overview, Plan Document Header, Scope Check, Self-Review (+3 more)
 
-### Community 499 - "[Analysis Title]"
+### Community 498 - "[Analysis Title]"
 Cohesion: 0.17
 Nodes (12): Advanced: Skills with executable code, [Analysis Title], Anti-patterns to avoid, Avoid offering too many options, Avoid Windows-style paths, Conditional workflow pattern, Examples pattern, Executive summary (+4 more)
 
-### Community 500 - "OmniVoice/manifest.json"
+### Community 499 - "OmniVoice/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 501 - "sherpa-onnx-spleeter-2stems-fp16/manifest.json"
+### Community 500 - "sherpa-onnx-spleeter-2stems-fp16/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 502 - "sherpa-onnx-uvr-vocals-ft/manifest.json"
+### Community 501 - "sherpa-onnx-uvr-vocals-ft/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 503 - "VibeVoice-Realtime-0.5B/manifest.json"
+### Community 502 - "VibeVoice-Realtime-0.5B/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 504 - "nemotron-3.5-asr-streaming-0.6b/manifest.json"
+### Community 503 - "nemotron-3.5-asr-streaming-0.6b/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 505 - "mms-300m-1130-forced-aligner-ONNX/manifest.json"
+### Community 504 - "mms-300m-1130-forced-aligner-ONNX/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 506 - "whisper/manifest.json"
+### Community 505 - "whisper/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 507 - "VoxCPM2/manifest.json"
+### Community 506 - "VoxCPM2/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 508 - "VieNeu-TTS-v3-Turbo/manifest.json"
+### Community 507 - "VieNeu-TTS-v3-Turbo/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 509 - "Qwen3-ASR-0.6B/manifest.json"
+### Community 508 - "Qwen3-ASR-0.6B/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 510 - "Qwen3-ASR-1.7B/manifest.json"
+### Community 509 - "Qwen3-ASR-1.7B/manifest.json"
 Cohesion: 0.17
 Nodes (11): downloadSources, id, license, name, publisher, runtimeFormat, schemaVersion, source (+3 more)
 
-### Community 511 - "SecureCredentialStore.cpp"
+### Community 510 - "SecureCredentialStore.cpp"
 Cohesion: 0.45
 Nodes (11): DATA_BLOB, blobFor(), QByteArray, QSettings, QString, encryptedSettingKey(), entropyFor(), migrateLegacy() (+3 more)
 
-### Community 512 - "modelPickItem"
+### Community 511 - "modelPickItem"
 Cohesion: 0.17
 Nodes (12): modelPickItem, type, type, additionalProperties, properties, required, type, familyId (+4 more)
 
-### Community 513 - "Source Separation Architecture"
+### Community 512 - "Source Separation Architecture"
 Cohesion: 0.17
 Nodes (11): 1. Component Diagram, 2. Ownership & Threading Model, 3. Typed Configuration Contract, 4. Backend Registration & Extension, 5. Cancellation Mechanism & Limitations, 6. Cache Invalidation Contract, Adding a New Model Profile (UVR/Spleeter on sherpa-onnx), Adding a New Runtime/Inference Engine (e.g., Demucs, ONNX Runtime) (+3 more)
 
-### Community 514 - "vieneu_tts_params"
+### Community 513 - "vieneu_tts_params"
 Cohesion: 0.17
 Nodes (12): vieneu_tts_params, abi_version, apply_watermark, max_chars, max_tokens, skip_normalize, skip_phonemize, temperature (+4 more)
 
-### Community 515 - "vieneu_tts_params_v2"
+### Community 514 - "vieneu_tts_params_v2"
 Cohesion: 0.17
 Nodes (12): vieneu_tts_params_v2, abi_version, apply_watermark, max_chars, max_new_frames, ref_audio_path, repetition_penalty, temperature (+4 more)
 
-### Community 516 - "whisper_token_data"
+### Community 515 - "whisper_token_data"
 Cohesion: 0.17
 Nodes (12): whisper_token_data, id, p, plog, pt, ptsum, t0, t1 (+4 more)
 
-### Community 517 - "VietnameseTextProcessor.cpp"
+### Community 516 - "VietnameseTextProcessor.cpp"
 Cohesion: 0.42
 Nodes (10): Replacer, QRegularExpression, QString, digitsToWords(), readUnderThousand(), replaceMatches(), VietnameseTextProcessor, numberToWords (+2 more)
+
+### Community 517 - "QVariantMap"
+Cohesion: 0.21
+Nodes (12): cleanFingerprint(), ModelManager, QByteArray, qint64, QVariantMap, fetchRemoteFileMetadata(), fileFingerprint(), normalizedSha256() (+4 more)
 
 ### Community 518 - "SttJobSnapshot"
 Cohesion: 0.17
@@ -3069,13 +3070,13 @@ Nodes (11): vieneu_init_params, abi_version, decoder_path, encoder_path, flash_a
 Cohesion: 0.20
 Nodes (9): cloudflared_ready(), ensure_cloudflared(), Path, Popen, Launch the exact Spleeter Direct Colab worker and a temporary tunnel., Attempt a Colab-side check of the public hostname. This is useful diagnostic…, stop(), tail() (+1 more)
 
-### Community 536 - "TtsEngine"
+### Community 536 - "onSocketReadyRead"
+Cohesion: 0.20
+Nodes (11): jsonErrorObject, onNewConnection, onSocketReadyRead, processRequestAsync, buildWavBytes(), QByteArray, QHash, parseContentDisposition() (+3 more)
+
+### Community 537 - "TtsEngine"
 Cohesion: 0.22
 Nodes (8): TtsEngine, Q_OBJECT, QObject, TestAudioPreviewService, cleanupTestCase, m_tempDir, private, testAudioPreviewService
-
-### Community 537 - "QVariantMap"
-Cohesion: 0.27
-Nodes (10): qint64, QVariantMap, scheduleModelFileUpdateCheck, fetchRemoteFileMetadata(), fileFingerprint(), remoteSize(), QString, DownloadInstallService::modelFileState() (+2 more)
 
 ### Community 538 - "TranslationController::TranslationController"
 Cohesion: 0.18
@@ -3085,497 +3086,497 @@ Nodes (11): ColabSession, QObject, Settings, TranslationEngine, colabStateChange
 Cohesion: 0.20
 Nodes (11): BackendResult, error, sampleRate, stems, success, BackendStem, channels, id (+3 more)
 
-### Community 540 - "EventWorkerLoaded"
-Cohesion: 0.20
-Nodes (9): QVariantList, currentSchema, lastSamplePreview, TtsEngine::schemaForCapability(), EventWorkerLoaded, error, schema, success (+1 more)
-
-### Community 541 - "Brainstorming Ideas Into Designs"
+### Community 540 - "Brainstorming Ideas Into Designs"
 Cohesion: 0.20
 Nodes (9): After the Design (architectural path), Anti-Pattern: "Too Simple To Need Approval", Brainstorming Ideas Into Designs, Checklist, Process Flow, Red Flags, The Process, Three Paths (+1 more)
 
-### Community 542 - "Brand"
+### Community 541 - "Brand"
 Cohesion: 0.20
 Nodes (9): Brand, Brand Sync Workflow, Quick Start, References, Routing, Scripts, Subcommands, Templates (+1 more)
 
-### Community 543 - "Slide Strategies"
+### Community 542 - "Slide Strategies"
 Cohesion: 0.20
 Nodes (9): Common Structures, Duarte Sparkline Pattern, Matching Strategy to Context, Product Demo (6 slides), Sales Pitch (9 slides), Search Commands, Slide Strategies, Strategy Selection (+1 more)
 
-### Community 544 - "BM25"
+### Community 543 - "BM25"
 Cohesion: 0.24
 Nodes (6): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query, log()
 
-### Community 545 - "logo/generate.py"
+### Community 544 - "logo/generate.py"
 Cohesion: 0.29
 Nodes (9): enhance_prompt(), generate_batch(), generate_logo(), load_env(), main(), Enhance the logo prompt with style and industry modifiers, Generate a logo using Gemini models with image generation Args: aspect_ratio:…, Generate multiple logo variants with different styles (+1 more)
 
-### Community 546 - "Executing Plans"
+### Community 545 - "Executing Plans"
 Cohesion: 0.20
 Nodes (9): Executing Plans, Overview, Remember, Step 1: Load and Review Plan, Step 2: Execute Tasks, Step 3: Complete Development, The Process, When to Revisit Earlier Steps (+1 more)
 
-### Community 547 - "Quick Reference"
+### Community 546 - "Quick Reference"
 Cohesion: 0.20
 Nodes (9): Anti-Pattern Detection, Common Patterns, Configuration Template, Data Type Quick Reference, Index Cheat Sheet, PostgreSQL Patterns, Quick Reference, Related (+1 more)
 
-### Community 548 - "1. Core Principles"
+### Community 547 - "1. Core Principles"
 Cohesion: 0.20
 Nodes (9): 1.1 Responsive Desktop Layout & Zero Clipping, 1.2 Contrast & Typography (WCAG 2.2 Level AA/AAA), 1.3 State Management & C++ Integration, 1. Core Principles, 2.1 Singleton Theme Architecture, 2.2 Micro-Interactions & Hover Polish, 2. Component Design System, 3. Performance & Memory Optimization (+1 more)
 
-### Community 549 - "3. Server-Side Performance (HIGH)"
+### Community 548 - "3. Server-Side Performance (HIGH)"
 Cohesion: 0.20
 Nodes (10): 3. Server-Side Performance (HIGH), Authenticate Server Actions like API routes, Avoid duplicate serialization in RSC props, Hoist static I/O to module scope, LRU cache for cross-request data, Minimize data passed to Client Components, No mutable module-level state in RSC/SSR, Parallelize nested fetches with Promise.all per item (+2 more)
 
-### Community 550 - "Slide Strategies"
+### Community 549 - "Slide Strategies"
 Cohesion: 0.20
 Nodes (9): Common Structures, Duarte Sparkline Pattern, Matching Strategy to Context, Product Demo (6 slides), Sales Pitch (9 slides), Search Commands, Slide Strategies, Strategy Selection (+1 more)
 
-### Community 551 - "Condition-Based Waiting"
+### Community 550 - "Condition-Based Waiting"
 Cohesion: 0.20
 Nodes (9): Common Mistakes, Condition-Based Waiting, Core Pattern, Implementation, Overview, Quick Patterns, Real-World Impact, When Arbitrary Timeout IS Correct (+1 more)
 
-### Community 552 - "._base_config"
+### Community 551 - "._base_config"
 Cohesion: 0.22
 Nodes (6): Any, Path, Initialize generator. Args: typescript: If True, generate .ts config, else .js…, Determine default output path., Create base configuration structure., Get default content paths for framework.
 
-### Community 553 - "test_text_layout_resilience.py"
+### Community 552 - "test_text_layout_resilience.py"
 Cohesion: 0.22
 Nodes (3): read_rows(), TestTextLayoutDataContracts, TestTextLayoutRetrieval
 
-### Community 554 - "Verification Before Completion"
+### Community 553 - "Verification Before Completion"
 Cohesion: 0.20
 Nodes (9): Common Failures, Key Patterns, Overview, Rationalization Prevention, Red Flags - STOP, The Gate Function, The Iron Law, Verification Before Completion (+1 more)
 
-### Community 555 - "Skill structure"
+### Community 554 - "Skill structure"
 Cohesion: 0.20
 Nodes (10): Avoid deeply nested references, Naming conventions, Pattern 1: High-level guide with references, Pattern 2: Domain-specific organization, Pattern 3: Conditional details, Progressive disclosure patterns, Skill structure, Structure longer reference files with table of contents (+2 more)
 
-### Community 556 - "4. Phased Plan"
+### Community 555 - "4. Phased Plan"
 Cohesion: 0.20
 Nodes (10): 4.10 Effort summary, 4. Phased Plan, Phase 0 — Foundation: reproducible build from a clean clone, Phase 1 — CI and a trustworthy test harness, Phase 2 — Packaging correctness, Phase 3 — Supply chain and security hardening, Phase 4 — Legal and compliance, Phase 5 — Product readiness (parallel; scope-negotiable) (+2 more)
 
-### Community 557 - "CrashHandler.cpp"
+### Community 556 - "CrashHandler.cpp"
 Cohesion: 0.29
 Nodes (8): EXCEPTION_POINTERS, LONG, dumpPath(), initialize(), terminateHandler(), unhandledExceptionFilter(), writeMiniDump(), wstring
 
-### Community 558 - "vieneu_init_params_v2"
+### Community 557 - "vieneu_init_params_v2"
 Cohesion: 0.20
 Nodes (10): vieneu_init_params_v2, abi_version, codec_dir, config_path, model_dir, n_threads, onnx_dir, profile (+2 more)
 
-### Community 559 - "I. CÁC BƯỚC KIỂM THỬ THỰC TẾ BẮT BUỘC (BEYOND 39 CTESTS)"
+### Community 558 - "I. CÁC BƯỚC KIỂM THỬ THỰC TẾ BẮT BUỘC (BEYOND 39 CTESTS)"
 Cohesion: 0.20
 Nodes (9): 1. Kiểm tra đăng ký QML Module & Type Binding trong Build System, 2. Kiểm thử thực thi file nhị phân `.exe` thực tế (Live Binary Smoke Test), 3. Kiểm thử Giao diện & Tương tác thực tế trên tất cả các Tab, 4. Kiểm tra Đóng gói & Tài nguyên Phụ trợ (Packaging & Assets Audit), 5. Kiểm thử Colab Training Notebooks (GPU Pipeline Verification), 📋 BẢNG KIỂM TRA CHẤT LƯỢNG TRƯỚC KHI BÀN GIAO (PRE-DELIVERY QA CHECKLIST), I. CÁC BƯỚC KIỂM THỬ THỰC TẾ BẮT BUỘC (BEYOND 39 CTESTS), II. NHẬT KÝ SỰ CỐ THỰC TẾ & BÀI HỌC PHÒNG NGỪA (LIVING INCIDENT LOG) (+1 more)
 
-### Community 560 - "LA Studio — README trung thực (bản nội bộ)"
+### Community 559 - "LA Studio — README trung thực (bản nội bộ)"
 Cohesion: 0.20
 Nodes (10): Build từ source, Các khu vực chức năng có trong mã nguồn, Cách thực thi AI, Dubbing theo hàng đợi nhiều media, Giấy phép và nguồn gốc, LA Studio — README trung thực (bản nội bộ), Những gì đã được kiểm tra, Quyền riêng tư và dữ liệu (+2 more)
 
-### Community 561 - "Project Updates"
+### Community 560 - "Project Updates"
 Cohesion: 0.20
 Nodes (10): 2026-06-23 - Nemotron-3.5 Streaming ASR, 2026-07-01 - VieNeu-TTS-v3-Turbo Support, 2026-07-03 - Version 0.1.7: Kokoro Vietnamese Support, 2026-07-10 - Version 0.1.8: VieNeu-TTS v3 Upstream Update, 2026-07-14 - Version 0.1.9: Voice Isolator Support, 2026-07-16 - Version 0.1.10: Translation Studio, 2026-07-23 - Version 0.2.0: Video Dubbing, 2026-07-28 - Internal build numbering (+2 more)
 
-### Community 562 - "runtime_helpers.ps1"
+### Community 561 - "runtime_helpers.ps1"
 Cohesion: 0.29
 Nodes (5): Ensure-EspeakNgRuntime(), Ensure-FfmpegRuntime(), Ensure-YtDlpRuntime(), Get-EspeakMsiRelativeDirectory(), Get-LaStudioFileSha256()
 
-### Community 563 - "SeparationBackend"
+### Community 562 - "SeparationBackend"
 Cohesion: 0.22
 Nodes (5): SeparationBackend, id, separate, QString, SherpaOnnxSeparationBackend
 
-### Community 564 - "create"
+### Community 563 - "create"
 Cohesion: 0.31
 Nodes (8): QVariantMap, SttBackend, unique_ptr, createWhisperBackend(), SttBackend, SttBackendFactory, create, useHostedWhisper()
 
-### Community 565 - "TimedTextCue"
+### Community 564 - "TimedTextCue"
 Cohesion: 0.20
 Nodes (9): qint64, QString, QVariantMap, TimedTextCue, cueNumber, endMs, id, startMs (+1 more)
 
-### Community 566 - "test_History.cpp"
+### Community 565 - "test_History.cpp"
 Cohesion: 0.24
 Nodes (7): Q_OBJECT, QObject, TestHistory, cleanupTestCase, m_tempDir, private, testHistoryService
 
-### Community 567 - "test_AlignmentWorkflow.cpp"
+### Community 566 - "test_AlignmentWorkflow.cpp"
 Cohesion: 0.27
 Nodes (7): Q_OBJECT, QObject, TestAlignmentWorkflow, installedAnchorModelsResolveConcreteArtifactFiles, private, resolverNormalizesNemotronLanguageForSttStage, resolverProducesTypedGraphAndStableSignature
 
-### Community 568 - "Agentic Engineering"
+### Community 567 - "Agentic Engineering"
 Cohesion: 0.22
 Nodes (8): Agentic Engineering, Cost Discipline, Eval-First Loop, Model Routing, Operating Principles, Review Focus for AI-Generated Code, Session Strategy, Task Decomposition
 
-### Community 569 - "helper.js"
+### Community 568 - "helper.js"
 Cohesion: 0.42
 Nodes (7): connect(), nextReconnectDelay(), reloadAfterRecovery(), sessionKey(), setStatus(), showTombstone(), websocketUrl()
 
-### Community 570 - "sync-brand-to-tokens.cjs"
+### Community 569 - "sync-brand-to-tokens.cjs"
 Cohesion: 0.33
 Nodes (8): adjustBrightness(), { execFileSync }, extractColorsFromMarkdown(), fs, generateColorScale(), main(), path, updateDesignTokens()
 
-### Community 571 - "BM25"
+### Community 570 - "BM25"
 Cohesion: 0.28
 Nodes (5): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query
 
-### Community 572 - "graphify reference: extra exports and benchmark"
+### Community 571 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
-### Community 573 - "to-spec/SKILL.md"
+### Community 572 - "to-spec/SKILL.md"
 Cohesion: 0.22
 Nodes (8): Further Notes, Implementation Decisions, Out of Scope, Problem Statement, Process, Solution, Testing Decisions, User Stories
 
-### Community 574 - "codex-tools.md"
+### Community 573 - "codex-tools.md"
 Cohesion: 0.22
 Nodes (5): Codex App Finishing, Environment Detection, Model routing on spawns, Subagent dispatch requires multi-agent support, Waiting on children
 
-### Community 575 - "Skill authoring best practices"
+### Community 574 - "Skill authoring best practices"
 Cohesion: 0.22
 Nodes (9): Avoid time-sensitive information, Common patterns, Content guidelines, Implement feedback loops, Skill authoring best practices, Template pattern, Use consistent terminology, Use workflows for complex tasks (+1 more)
 
-### Community 576 - "proxy"
+### Community 575 - "proxy"
 Cohesion: 0.36
 Nodes (9): api_route, JSONResponse, capabilities(), coordinator_health(), proxy(), get, require_authorization(), Request (+1 more)
 
-### Community 577 - "8. Pre-Release Acceptance Checklist"
+### Community 576 - "8. Pre-Release Acceptance Checklist"
 Cohesion: 0.22
 Nodes (9): 8.1 Build and reproducibility, 8.2 Tests and static checks, 8.3 Packaging, 8.4 Clean-machine validation (Windows Sandbox or a fresh VM), 8.5 Security and supply chain, 8.6 Legal and compliance, 8.7 Release mechanics, 8.8 Documentation and product truth (+1 more)
 
-### Community 578 - "STT Colab model-selection audit — LA Studio 0.0.0.9"
+### Community 577 - "STT Colab model-selection audit — LA Studio 0.0.0.9"
 Cohesion: 0.22
 Nodes (8): GitHub visibility and public access, Live validation still required, Model-to-notebook mapping, Notebook worker contract, Result, STT Colab model-selection audit — LA Studio 0.0.0.9, UI and execution behavior, Verification completed
 
-### Community 579 - "Global Constraints"
+### Community 578 - "Global Constraints"
 Cohesion: 0.22
 Nodes (8): Execution verification, Global Constraints, Task 1: Pure error presentation catalog, Task 2: AppController structured error queue, Task 3: Reusable Error Guidance dialog and route CTA, Task 4: Dubbing inline guidance and error action coverage, Task 5: Documentation and final verification, User-Facing Error Guidance Implementation Plan
 
-### Community 580 - "🔍 CHI TIẾT CÁC ĐIỂM CẦN SỬA CHỮA THEO TỪNG TẦNG"
+### Community 579 - "🔍 CHI TIẾT CÁC ĐIỂM CẦN SỬA CHỮA THEO TỪNG TẦNG"
 Cohesion: 0.22
 Nodes (8): 1. TẦNG FRONTEND & GIAO DIỆN (GUI / QML), 2. TẦNG XỬ LÝ MEDIA, ÂM THANH & FFmpeg (AUDIO DSP / MUXING), 3. TẦNG C++ CONTROLLERS & ĐIỀU PHỐI (BACKEND ENGINE), 4. TẦNG CLOUD AI WORKERS & COLAB NOTEBOOKS, Báo Cáo Kiểm Toán Toàn Diện Hệ Thống (System-Wide Health & Architecture Audit), 🔍 CHI TIẾT CÁC ĐIỂM CẦN SỬA CHỮA THEO TỪNG TẦNG, 🎯 LỘ TRÌNH THỰC THI SỬA CHỮA KHUYẾN NGHỊ, 🏛️ TỔNG QUAN 4 TẦNG KIẾN TRÚC HỆ THỐNG
 
-### Community 581 - "Báo cáo Kiểm thử & Khắc phục Lỗi Hệ thống: Voice Training & Voice Gallery"
+### Community 580 - "Báo cáo Kiểm thử & Khắc phục Lỗi Hệ thống: Voice Training & Voice Gallery"
 Cohesion: 0.22
 Nodes (8): 1. Tổng quan các lỗi đã phát hiện & Khắc phục (Incident Log), 2.1. Tự động Mount Google Drive & Quét Dữ liệu Đóng gói (ERR-01 & ERR-04), 2.2. Khắc phục Cài đặt OmniVoice & Huấn luyện Accelerate GPU (ERR-02 & ERR-03), 2.3. Nâng cấp Giao diện Bảng Giọng Nói Lớn (ERR-05 & ERR-06), 2. Chi tiết Kỹ thuật Khắc phục Lỗi, 3. Danh sách File Cập nhật & Kiểm tra, 4. Kết luận & Khuyến nghị Vận hành, Báo cáo Kiểm thử & Khắc phục Lỗi Hệ thống: Voice Training & Voice Gallery
 
-### Community 582 - "bootstrap.ps1"
+### Community 581 - "bootstrap.ps1"
 Cohesion: 0.28
 Nodes (3): Add-PathIfExists(), Ensure-Command(), Test-Command()
 
-### Community 583 - "run_tests.ps1"
+### Community 582 - "run_tests.ps1"
 Cohesion: 0.31
 Nodes (4): Add-PathIfExists(), Ensure-Command(), Ensure-MsvcEnvironment(), Test-Command()
 
-### Community 584 - "AlignmentWorkflowResolver"
+### Community 583 - "AlignmentWorkflowResolver"
 Cohesion: 0.31
 Nodes (7): AlignmentWorkflowResolver, m_models, m_runtimes, ModelManager, RuntimeManager, IWorkflowResolver, resolve
 
-### Community 585 - "FmtChunk"
+### Community 584 - "FmtChunk"
 Cohesion: 0.22
 Nodes (9): FmtChunk, audioFormat, bitsPerSample, blockAlign, byteRate, fmt, numChannels, sampleRate (+1 more)
 
-### Community 586 - "DubbingTranslationFixService::processCandidate"
+### Community 585 - "DubbingTranslationFixService::processCandidate"
 Cohesion: 0.22
 Nodes (9): applyCandidate, finishRun, finishSegment, isCloserToBudget, preservesProtectedTokens, processReconciliationCandidate, requestAttempt, DubbingTranslationFixService::processCandidate() (+1 more)
 
-### Community 587 - "ModelSessionRegistry.h"
+### Community 586 - "ModelSessionRegistry.h"
 Cohesion: 0.22
 Nodes (8): AlignmentExecutionService, LlmChatEngine, LlmChatModelSession, SttEngine, TranslationEngine, TranslationModelSession, TtsEngine, VoiceIsolatorController
 
-### Community 588 - "ResolvedConfiguration"
+### Community 587 - "ResolvedConfiguration"
 Cohesion: 0.22
 Nodes (9): QString, QVariantMap, ResolvedConfiguration, family, isValid, resolvedPaths, runtimePath, selectedFiles (+1 more)
 
-### Community 589 - "colabConnected"
+### Community 588 - "colabConnected"
 Cohesion: 0.25
 Nodes (8): colabConnected, ColabVoiceIsolatorController::ColabVoiceIsolatorController(), onRemoteFirstModeChanged, onSessionChanged, useColab, ColabSession, QObject, Settings
 
-### Community 590 - "SttSessionController.h"
+### Community 589 - "SttSessionController.h"
 Cohesion: 0.22
 Nodes (8): AudioPlayer, AudioRecorder, ColabSession, ColabSttRunner, GatewaySttRunner, HistoryService, Settings, SttEngine
 
-### Community 591 - "mixSegments"
+### Community 590 - "mixSegments"
 Cohesion: 0.31
 Nodes (8): AudioTimelineMixer, mixSegments, resampleToCount, QAtomicInteger, QVariantList, QVector, decibelsToLinear(), sidechainBackgroundGain()
 
-### Community 592 - "TtsBackend"
+### Community 591 - "TtsBackend"
 Cohesion: 0.22
 Nodes (6): function, TtsBackend, cloneVoice, load, synthesize, unload
 
-### Community 593 - "TextNormalizationPolicy"
+### Community 592 - "TextNormalizationPolicy"
 Cohesion: 0.22
 Nodes (7): QVariantMap, QString, TextNormalizationPolicy, fromStudioConfig, policy, profile, transliteration
 
-### Community 594 - "TestAlignmentTranscriptMatcher"
+### Community 593 - "TestAlignmentTranscriptMatcher"
 Cohesion: 0.28
 Nodes (7): Q_OBJECT, QObject, TestAlignmentTranscriptMatcher, matchesMissingWordsMonotonically, TestAlignmentTranscriptMatcher::normalizesUnicodeAndPunctuation(), private, tokenizesCjkByCharacter
 
-### Community 595 - "ImmediateExecutor"
+### Community 594 - "ImmediateExecutor"
 Cohesion: 0.22
 Nodes (3): QVariantMap, ImmediateExecutor, MeasuredExecutor
 
-### Community 596 - "User delivery contract (highest priority)"
+### Community 595 - "User delivery contract (highest priority)"
 Cohesion: 0.25
 Nodes (7): Act on missing or broken work, Desktop UX and visual truth, graphify, LA Studio delivery, Respect scope, choices, and independent routes, Testing, packaging, communication, and machine control, User delivery contract (highest priority)
 
-### Community 597 - "Design System — Generate & Audit Visual Systems"
+### Community 596 - "Design System — Generate & Audit Visual Systems"
 Cohesion: 0.25
 Nodes (7): Design System — Generate & Audit Visual Systems, Examples, How It Works, Mode 1: Generate Design System, Mode 2: Visual Audit, Mode 3: AI Slop Detection, When to Use
 
-### Community 598 - "Python Testing Patterns"
+### Community 597 - "Python Testing Patterns"
 Cohesion: 0.25
 Nodes (7): pyproject.toml, pytest Configuration, pytest.ini, Python Testing Patterns, Quick Reference, Running Tests, When to Activate
 
-### Community 599 - "Fixtures"
+### Community 598 - "Fixtures"
 Cohesion: 0.25
 Nodes (8): Autouse Fixtures, Basic Fixture Usage, Conftest.py for Shared Fixtures, Fixture Scopes, Fixture with Parameters, Fixture with Setup/Teardown, Fixtures, Using Multiple Fixtures
 
-### Community 600 - "Mocking and Patching"
+### Community 599 - "Mocking and Patching"
 Cohesion: 0.25
 Nodes (8): Mock Class Instances, Mock Property, Mocking and Patching, Mocking Context Managers, Mocking Exceptions, Mocking Functions, Mocking Return Values, Using Autospec
 
-### Community 601 - "Asset Types"
+### Community 600 - "Asset Types"
 Cohesion: 0.25
 Nodes (8): Asset Types, AudioAsset, CaptionAsset (Editor API), ImageAsset, TextAsset, Timeline, Timeline & Editor, VideoAsset
 
-### Community 602 - "RTStream Guide"
+### Community 601 - "RTStream Guide"
 Cohesion: 0.25
 Nodes (8): From Capture Sessions, From RTSP/RTMP Streams, Overview, Quick Start, RTStream Guide, RTStream Sources, Scripts, Use Cases
 
-### Community 603 - "Báo cáo nghiệm thu kỹ thuật — LA Studio 0.0.2.8"
+### Community 602 - "Báo cáo nghiệm thu kỹ thuật — LA Studio 0.0.2.8"
 Cohesion: 0.25
 Nodes (7): Báo cáo nghiệm thu kỹ thuật — LA Studio 0.0.2.8, Bổ sung bằng chứng baseline A–G 0.0.2.7, Checklist manual còn bắt buộc, Commit và package, Kết luận ngắn, Lệnh và kết quả kiểm thử, Ma trận yêu cầu → source → kiểm chứng
 
-### Community 604 - "Build from Source (Windows)"
+### Community 603 - "Build from Source (Windows)"
 Cohesion: 0.25
 Nodes (8): Bootstrap Behavior, Build from Source (Windows), CMake Presets, Common Commands, Incremental Build and Build Speed, Notes, Prerequisites, Quick Start
 
-### Community 605 - "Dubbing remote-execution audit"
+### Community 604 - "Dubbing remote-execution audit"
 Cohesion: 0.25
 Nodes (7): Automated evidence, Current behavior, Defects corrected, Dubbing remote-execution audit, Live acceptance still required, Per-node route matrix, Result
 
-### Community 606 - "LA Studio — Implementation, Testing, Build and Packaging Plan"
+### Community 605 - "LA Studio — Implementation, Testing, Build and Packaging Plan"
 Cohesion: 0.25
 Nodes (8): 1. Executive Summary, 7.1 Assumptions this plan makes, 7.2 Questions requiring a decision or external information, 7. Open Questions and Assumptions, Appendix A — Evidence index for the primary findings, Appendix B — Zero-cost delivery strategy (D-17), LA Studio — Implementation, Testing, Build and Packaging Plan, Table of Contents
 
-### Community 607 - "Model Selection Freeze — Live Root Cause and Fix (0.0.0.8)"
+### Community 606 - "Model Selection Freeze — Live Root Cause and Fix (0.0.0.8)"
 Cohesion: 0.25
 Nodes (7): Artifact, Fix in 0.0.0.8, Live evidence from 0.0.0.7, Model Selection Freeze — Live Root Cause and Fix (0.0.0.8), Regression coverage, Root cause, Scope
 
-### Community 608 - "Remote Inference Workers"
+### Community 607 - "Remote Inference Workers"
 Cohesion: 0.25
 Nodes (8): API Gateway, Direct Colab GPU, Live preflight, one route at a time, Local CPU and direct Colab GPU, Public media download, Remote Inference Workers, Security and troubleshooting, Selecting a route
 
-### Community 609 - "User-Facing Error Guidance Design"
+### Community 608 - "User-Facing Error Guidance Design"
 Cohesion: 0.25
 Nodes (7): Architecture, Error classification policy, Goal, Scope, User-Facing Error Guidance Design, UX behavior, Verification
 
-### Community 610 - "Translation and LLM Chat exact-model remote audit"
+### Community 609 - "Translation and LLM Chat exact-model remote audit"
 Cohesion: 0.25
 Nodes (7): Desktop behavior, Exact direct-Colab routes, Remaining live acceptance, Research decisions, Translation and LLM Chat exact-model remote audit, Verification performed, Worker behavior
 
-### Community 611 - "Text-to-Speech exact-model Colab audit"
+### Community 610 - "Text-to-Speech exact-model Colab audit"
 Cohesion: 0.25
 Nodes (7): Automated evidence, Evidence still requiring a real Colab runtime, Model matrix, Primary upstream references, Scope, Text-to-Speech exact-model Colab audit, UI and controller behavior
 
-### Community 612 - "Voice Cloning and Voice Design exact-model Colab audit"
+### Community 611 - "Voice Cloning and Voice Design exact-model Colab audit"
 Cohesion: 0.25
 Nodes (7): Not yet claimed, Result, Upstream implementation basis, Verification completed, Voice Cloning and Voice Design exact-model Colab audit, Voice Cloning matrix, Voice Design matrix
 
-### Community 613 - "crispasr_open_params_v1"
-Cohesion: 0.25
-Nodes (8): crispasr_open_params_v1, abi_version, flash_attn, n_gpu_layers, n_threads, reserved, use_gpu, verbosity
-
-### Community 614 - "kokoro_vi_init_params"
+### Community 612 - "kokoro_vi_init_params"
 Cohesion: 0.25
 Nodes (8): kokoro_vi_init_params, abi_version, config_path, g2p_exe_path, model_dir, n_threads, onnx_path, voicepack_dir
 
-### Community 615 - ".missingSymbols"
+### Community 613 - ".missingSymbols"
 Cohesion: 0.29
 Nodes (4): appendIfMissing(), Fn, QStringList, resolve()
 
-### Community 616 - "NormalizationOptions"
+### Community 614 - "NormalizationOptions"
 Cohesion: 0.25
 Nodes (6): Profile, QStringView, NormalizationOptions, enablePreprocessing, enableTransliteration, profile
 
-### Community 617 - "dependencies"
+### Community 615 - "dependencies"
 Cohesion: 0.25
 Nodes (7): bzip2, curl, tesseract, zlib, builtin-baseline, dependencies, name
 
-### Community 618 - "generate_live_colab_acceptance_template.py"
+### Community 616 - "generate_live_colab_acceptance_template.py"
 Cohesion: 0.43
 Nodes (7): defaults_for(), environment_name(), main(), normalized_environment_part(), Any, Return a safe, small request accepted by the live runner., workers_from_notebooks()
 
-### Community 619 - "verify_colab_model_bindings.py"
+### Community 617 - "verify_colab_model_bindings.py"
 Cohesion: 0.39
 Nodes (7): Binding, controller_pairs(), fail(), function_body(), main(), Path, read()
 
-### Community 620 - "WorkflowResolution"
+### Community 618 - "WorkflowResolution"
 Cohesion: 0.25
 Nodes (7): AlignmentWorkflowPayload, directProcessExecution, executionRequest, shared_ptr, IWorkflowPayload, WorkflowResolution, payload
 
-### Community 621 - "QString"
+### Community 619 - "QString"
 Cohesion: 0.39
 Nodes (8): colabNotebookFile, connectColab, notebookForColabModel, onRunnerFailed, selectColabModel, setError, setModel, QString
 
-### Community 622 - "ColabCatalogBatchResult"
+### Community 620 - "ColabCatalogBatchResult"
 Cohesion: 0.25
 Nodes (6): ColabCatalogBatchResult, errors, models, successfulSessions, QStringList, QVariantList
 
-### Community 623 - "Settings::Settings"
+### Community 621 - "Settings::Settings"
 Cohesion: 0.36
 Nodes (8): configuredModelsPath(), QObject, discoverExistingModelsPath(), hasModelFiles(), readStableModelsPath(), setModelsPath, Settings::Settings(), writeStableModelsPath()
 
-### Community 624 - "Output"
+### Community 622 - "Output"
 Cohesion: 0.25
 Nodes (8): Output, numStems, sampleRate, stems, Stem, n, numChannels, samples
 
-### Community 625 - "SttBackend"
+### Community 623 - "SttBackend"
 Cohesion: 0.25
 Nodes (5): function, SttBackend, loadModel, transcribe, unloadModel
+
+### Community 624 - "state"
+Cohesion: 0.25
+Nodes (6): State, isModelLoaded, isProcessing, state, State, state
+
+### Community 625 - "NormalizationResult"
+Cohesion: 0.25
+Nodes (8): QString, QStringList, NormalizationResult, changed, dataVersion, profileId, text, warnings
 
 ### Community 626 - "state"
 Cohesion: 0.25
 Nodes (6): State, isModelLoaded, isProcessing, state, State, state
 
-### Community 627 - "NormalizationResult"
-Cohesion: 0.25
-Nodes (8): QString, QStringList, NormalizationResult, changed, dataVersion, profileId, text, warnings
-
-### Community 628 - "FakeTestBackend"
+### Community 627 - "FakeTestBackend"
 Cohesion: 0.39
 Nodes (6): atomic, QString, shared_ptr, FakeTestBackend, m_callCounter, m_id
 
-### Community 629 - "LA Studio third-party notices"
+### Community 628 - "LA Studio third-party notices"
 Cohesion: 0.25
 Nodes (7): Bundled with the Windows installer, Downloaded at the user's request, External, user-supplied runtime, Installer-staged runtime, LA Studio third-party notices, License texts and source, Public media download
 
-### Community 630 - "stop-server.sh"
+### Community 629 - "stop-server.sh"
 Cohesion: 0.52
 Nodes (6): command_has_server_id(), command_line_for_pid(), is_brainstorm_server(), mark_stopped(), read_expected_server_id(), stop-server.sh script
 
-### Community 631 - "Slides Reference"
+### Community 630 - "Slides Reference"
 Cohesion: 0.29
 Nodes (6): Key Features, Knowledge Base, Slides Reference, Usage, When to Use, Workflow
 
-### Community 632 - "HTML Slide Template"
+### Community 631 - "HTML Slide Template"
 Cohesion: 0.29
 Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integration, CSS Variables Reference, HTML Slide Template
 
-### Community 633 - "Frontend Design Direction"
+### Community 632 - "Frontend Design Direction"
 Cohesion: 0.29
 Nodes (6): Anti-Patterns, Design Direction, Frontend Design Direction, Implementation Guidance, Review Checklist, When to Use
 
-### Community 634 - "Latency Critical Systems"
+### Community 633 - "Latency Critical Systems"
 Cohesion: 0.29
 Nodes (6): Guardrails, Latency Critical Systems, Map The Hot Path, Optimization Order, Split The Metrics, Verification
 
-### Community 635 - "1. Eliminating Waterfalls (CRITICAL)"
+### Community 634 - "1. Eliminating Waterfalls (CRITICAL)"
 Cohesion: 0.29
 Nodes (7): 1. Eliminating Waterfalls (CRITICAL), Cheap conditions before await, Defer awaits until used, Partial dependencies — start early, await late, Promise.all for independent work, Server Components: parallel through composition, Suspense for streaming
 
-### Community 636 - "2. Bundle Size Optimization (CRITICAL)"
+### Community 635 - "2. Bundle Size Optimization (CRITICAL)"
 Cohesion: 0.29
 Nodes (7): 2. Bundle Size Optimization (CRITICAL), Conditional module loading, Defer third-party scripts, Direct imports, not barrels, Dynamic imports for heavy components, Preload on hover/focus, Statically analyzable paths
 
-### Community 637 - "HTML Slide Template"
+### Community 636 - "HTML Slide Template"
 Cohesion: 0.29
 Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integration, CSS Variables Reference, HTML Slide Template
 
-### Community 638 - "Gemini CLI Tool Mapping"
+### Community 637 - "Gemini CLI Tool Mapping"
 Cohesion: 0.29
 Nodes (7): Additional Gemini CLI tools, Gemini CLI Tool Mapping, Instructions file, Parallel dispatch, Personal skills directory, Prompt filling, Subagent support
 
-### Community 639 - "Hermes Agent Tool Mapping"
+### Community 638 - "Hermes Agent Tool Mapping"
 Cohesion: 0.29
 Nodes (6): Hermes Agent Tool Mapping, Instructions file, Invoking a skill, Subagent dispatch, Task tracking, Tools
 
-### Community 640 - "Capture Guide"
+### Community 639 - "Capture Guide"
 Cohesion: 0.29
 Nodes (7): Capture Guide, Complete Capture Workflow, Overview, Quick Start, Scripts, Shutdown Sequence, ws_listener.py Usage
 
-### Community 641 - "REFACTOR Phase: Close Loopholes (Stay Green)"
+### Community 640 - "REFACTOR Phase: Close Loopholes (Stay Green)"
 Cohesion: 0.29
 Nodes (7): 1. Explicit Negation in Rules, 2. Entry in Rationalization Table, 3. Red Flag Entry, 4. Update description, Plugging Each Hole, Re-verify After Refactoring, REFACTOR Phase: Close Loopholes (Stay Green)
 
-### Community 642 - "Báo cáo đối chiếu A–M và package — LA Studio 0.0.2.9"
+### Community 641 - "Báo cáo đối chiếu A–M và package — LA Studio 0.0.2.9"
 Cohesion: 0.29
 Nodes (6): A–M: yêu cầu → bằng chứng → trạng thái, Baseline A–G 0.0.2.7 đã được truy vết lại, Báo cáo đối chiếu A–M và package — LA Studio 0.0.2.9, Kết quả có thể chứng minh bằng CLI, Manual gates còn lại (không thể giả PASS), Package mới, không ghi đè 0.0.2.8
 
-### Community 643 - "Forced Alignment and Voice Isolation exact-model Colab audit"
+### Community 642 - "Forced Alignment and Voice Isolation exact-model Colab audit"
 Cohesion: 0.29
 Nodes (6): Desktop behavior, Exact route matrix, Forced Alignment and Voice Isolation exact-model Colab audit, Remaining live acceptance, Verification performed, Worker contract
 
-### Community 644 - "Colab exact-model status — 0.0.1.1"
+### Community 643 - "Colab exact-model status — 0.0.1.1"
 Cohesion: 0.29
 Nodes (6): Colab exact-model status — 0.0.1.1, Cross-cutting gates, Feature-by-feature source verification, Live acceptance still required, STT long-media correction, What this report proves
 
-### Community 645 - "LA Studio — Live Real Acceptance Test Report"
+### Community 644 - "LA Studio — Live Real Acceptance Test Report"
 Cohesion: 0.29
 Nodes (6): 1. Luồng 1 — Khởi tạo dự án và nhập media, 2. Luồng 2 — Isolator độc lập, 3. Luồng 3 — STT và Subtitle OCR độc lập, 4. Luồng 4 — Dịch, TTS và xuất video, LA Studio — Live Real Acceptance Test Report, Summary Matrix
 
-### Community 646 - "📦 TAB 3: MODEL HUB & MY MODELS - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
+### Community 645 - "📦 TAB 3: MODEL HUB & MY MODELS - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
 Cohesion: 0.29
 Nodes (6): 📌 1. Hiện Trạng & Vấn Đề, 🏗️ 2. Cấu Trúc Đã Phân Rã & Module Hóa, 🧪 3. Kết Quả Kiểm Thử, Backend (`src/controllers/models/services/`):, Frontend (`qml/components/models/`):, 📦 TAB 3: MODEL HUB & MY MODELS - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ
 
-### Community 647 - "🌐 TAB 10: TRANSLATION STUDIO - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
+### Community 646 - "🌐 TAB 10: TRANSLATION STUDIO - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
 Cohesion: 0.29
 Nodes (6): 📌 1. Hiện Trạng & Vấn Đề, 🏗️ 2. Cấu Trúc Đã Phân Rã & Module Hóa, 🧪 3. Kết Quả Kiểm Thử, Backend (`src/controllers/translation/`):, Frontend (`qml/components/translation/`):, 🌐 TAB 10: TRANSLATION STUDIO - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ
 
-### Community 648 - "⚙️ TAB 13: SETTINGS & HARDWARE - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
+### Community 647 - "⚙️ TAB 13: SETTINGS & HARDWARE - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ"
 Cohesion: 0.29
 Nodes (6): 📌 1. Hiện Trạng & Vấn Đề, 🏗️ 2. Cấu Trúc Đã Phân Rã & Module Hóa, 🧪 3. Kết Quả Kiểm Thử, Backend (`src/core/`):, Frontend (`qml/pages/settings/`):, ⚙️ TAB 13: SETTINGS & HARDWARE - CHI TIẾT KẾ HOẠCH & BÁO CÁO PHÂN RÃ
 
-### Community 649 - "TTS and Voice Clone recheck — 2026-08-24"
+### Community 648 - "TTS and Voice Clone recheck — 2026-08-24"
 Cohesion: 0.29
 Nodes (6): Behaviour after the change, Boundaries not claimed, Defect found and fixed, Scope, TTS and Voice Clone recheck — 2026-08-24, Verification performed
 
-### Community 650 - "kokoro_vi_tts_params"
+### Community 649 - "kokoro_vi_tts_params"
 Cohesion: 0.29
 Nodes (7): kokoro_vi_tts_params, abi_version, crossfade_ms, max_phonemes, speed, text, voice_id
 
-### Community 651 - "vieneu_progress"
+### Community 650 - "vieneu_progress"
 Cohesion: 0.29
 Nodes (7): vieneu_progress, abi_version, current, message, progress, stage, total
 
-### Community 652 - "whisper_vad_params"
+### Community 651 - "whisper_vad_params"
 Cohesion: 0.29
 Nodes (7): whisper_vad_params, max_speech_duration_s, min_silence_duration_ms, min_speech_duration_ms, samples_overlap, speech_pad_ms, threshold
 
-### Community 654 - "SourceSeparationConfigurationResolver.h"
+### Community 653 - "SourceSeparationConfigurationResolver.h"
 Cohesion: 0.48
 Nodes (5): ModelManager, RuntimeManager, SourceSeparationConfigurationResolver, m_models, m_runtimes
 
-### Community 656 - "ColabTtsController::ColabTtsController"
+### Community 655 - "ColabTtsController::ColabTtsController"
 Cohesion: 0.29
 Nodes (7): ColabTtsController::ColabTtsController(), AudioPlayer, ColabSession, HistoryService, QObject, Settings, WaveformProvider
 
-### Community 657 - "ColabVoiceCloneController.h"
+### Community 656 - "ColabVoiceCloneController.h"
 Cohesion: 0.29
 Nodes (6): AudioPlayer, ColabSession, ColabVoiceCloneRunner, HistoryService, Settings, WaveformProvider
 
-### Community 658 - "ColabVoiceCloneController::ColabVoiceCloneController"
+### Community 657 - "ColabVoiceCloneController::ColabVoiceCloneController"
 Cohesion: 0.29
 Nodes (7): ColabVoiceCloneController::ColabVoiceCloneController(), AudioPlayer, ColabSession, HistoryService, QObject, Settings, WaveformProvider
 
-### Community 659 - "ColabVoiceDesignController.h"
+### Community 658 - "ColabVoiceDesignController.h"
 Cohesion: 0.29
 Nodes (6): AudioPlayer, ColabSession, ColabVoiceDesignRunner, HistoryService, Settings, WaveformProvider
 
-### Community 660 - "ColabVoiceDesignController::ColabVoiceDesignController"
+### Community 659 - "ColabVoiceDesignController::ColabVoiceDesignController"
 Cohesion: 0.29
 Nodes (7): ColabVoiceDesignController::ColabVoiceDesignController(), AudioPlayer, ColabSession, HistoryService, QObject, Settings, WaveformProvider
 
-### Community 661 - "HashResult"
+### Community 660 - "HashResult"
 Cohesion: 0.29
 Nodes (7): QString, quint64, HashResult, error, hash, requestId, success
 
-### Community 662 - ".isValid"
+### Community 661 - ".isValid"
 Cohesion: 0.29
 Nodes (6): QString, RemoteEndpointValidation, error, normalizedUrl, apiGatewayEndpointNormalizesV1Url, remoteEndpointsRequireHttpsByDefault
 
-### Community 663 - "StateProcessing"
+### Community 662 - "StateProcessing"
 Cohesion: 0.29
 Nodes (7): StateProcessing, cancelRequested, hasPendingLoad, pendingModelPath, pendingRuntimePath, pendingUseGpu, stopRequested
 
-### Community 664 - "Asset"
+### Community 663 - "Asset"
 Cohesion: 0.29
 Nodes (7): Asset, bytes, code, fileName, label, sha256, url
+
+### Community 664 - "currentSchema"
+Cohesion: 0.33
+Nodes (5): QVariantList, currentSchema, lastSamplePreview, TtsEngine::schemaForCapability(), QVariantList
 
 ### Community 665 - "1. Core Principles"
 Cohesion: 0.33
@@ -3657,21 +3658,21 @@ Nodes (4): ISttRuntime, errorString, isLoaded, load
 Cohesion: 0.33
 Nodes (4): ITtsRuntime, errorString, isLoaded, load
 
-### Community 685 - "ov_init_params"
-Cohesion: 0.33
-Nodes (6): ov_init_params, abi_version, clamp_fp16, codec_path, model_path, use_fa
-
-### Community 686 - "DubbingTranslationJob::DubbingTranslationJob"
+### Community 685 - "DubbingTranslationJob::DubbingTranslationJob"
 Cohesion: 0.33
 Nodes (6): ModelManager, QObject, RuntimeManager, TranslationEngine, TtsEngine, DubbingTranslationJob::DubbingTranslationJob()
 
-### Community 687 - "LlmChatController.h"
+### Community 686 - "LlmChatController.h"
 Cohesion: 0.33
 Nodes (5): ColabChatRunner, ColabSession, LlmChatEngine, LlmChatModelSession, Settings
 
-### Community 688 - "setColabModel"
+### Community 687 - "setColabModel"
 Cohesion: 0.40
 Nodes (6): colabActive, colabNotebookFile, notebookForColabModel, selectColabModel, setColabModel, stopGeneration
+
+### Community 688 - "DownloadInstallService::DownloadInstallService"
+Cohesion: 0.33
+Nodes (6): DownloadManager, ModelManager, QObject, RuntimeManager, Settings, DownloadInstallService::DownloadInstallService()
 
 ### Community 689 - "notebookForColabModel"
 Cohesion: 0.40
@@ -3697,285 +3698,285 @@ Nodes (6): QCborMap, QVector, Result, payload, sampleRate, samples
 Cohesion: 0.40
 Nodes (4): qint64, estimatedRamBytes, estimatedVramBytes, qint64
 
-### Community 695 - "state"
-Cohesion: 0.33
-Nodes (4): isModelLoaded, isProcessing, State, state
-
-### Community 697 - "Brand Guidelines Template"
+### Community 696 - "Brand Guidelines Template"
 Cohesion: 0.40
 Nodes (4): Brand Guidelines Template, Document Structure, Extractable Fields, Usage
 
-### Community 698 - "Functions (F.*)"
+### Community 697 - "Functions (F.*)"
 Cohesion: 0.40
 Nodes (5): Anti-Patterns, Functions (F.*), Key Rules, Parameter Passing, Pure Functions and constexpr
 
-### Community 699 - "Resource Management (R.*)"
+### Community 698 - "Resource Management (R.*)"
 Cohesion: 0.40
 Nodes (5): Anti-Patterns, Key Rules, RAII Pattern, Resource Management (R.*), Smart Pointer Usage
 
-### Community 700 - "Concurrency & Parallelism (CP.*)"
+### Community 699 - "Concurrency & Parallelism (CP.*)"
 Cohesion: 0.40
 Nodes (5): Anti-Patterns, Concurrency & Parallelism (CP.*), Key Rules, Multiple Mutexes, Safe Locking
 
-### Community 701 - "Source Files & Naming (SF.*, NL.*)"
+### Community 700 - "Source Files & Naming (SF.*, NL.*)"
 Cohesion: 0.40
 Nodes (5): Anti-Patterns, Header Guard, Key Rules, Naming Conventions, Source Files & Naming (SF.*, NL.*)
 
-### Community 702 - "Parametrization"
+### Community 701 - "Parametrization"
 Cohesion: 0.40
 Nodes (5): Basic Parametrization, Multiple Parameters, Parametrization, Parametrize with IDs, Parametrized Fixtures
 
-### Community 703 - "Pressure Test 1: Emergency Production Fix"
+### Community 702 - "Pressure Test 1: Emergency Production Fix"
 Cohesion: 0.40
 Nodes (4): Choose A, B, or C, Pressure Test 1: Emergency Production Fix, Scenario, Your Options
 
-### Community 704 - "Pressure Test 2: Sunk Cost + Exhaustion"
+### Community 703 - "Pressure Test 2: Sunk Cost + Exhaustion"
 Cohesion: 0.40
 Nodes (4): Choose A, B, or C, Pressure Test 2: Sunk Cost + Exhaustion, Scenario, Your Options
 
-### Community 705 - "Pressure Test 3: Authority + Social Pressure"
+### Community 704 - "Pressure Test 3: Authority + Social Pressure"
 Cohesion: 0.40
 Nodes (4): Choose A, B, or C, Pressure Test 3: Authority + Social Pressure, Scenario, Your Options
 
-### Community 706 - "anthropic-best-practices.md"
+### Community 705 - "anthropic-best-practices.md"
 Cohesion: 0.40
 Nodes (4): [Analysis Title], Executive summary, Key findings, Recommendations
 
-### Community 707 - "Anti-Patterns"
+### Community 706 - "Anti-Patterns"
 Cohesion: 0.40
 Nodes (5): Anti-Patterns, ❌ Code in Flowcharts, ❌ Generic Labels, ❌ Multi-Language Dilution, ❌ Narrative Example
 
-### Community 708 - "Testing All Skill Types"
+### Community 707 - "Testing All Skill Types"
 Cohesion: 0.40
 Nodes (5): Discipline-Enforcing Skills (rules/requirements), Pattern Skills (mental models), Reference Skills (documentation/APIs), Technique Skills (how-to guides), Testing All Skill Types
 
-### Community 709 - "RED-GREEN-REFACTOR for Skills"
+### Community 708 - "RED-GREEN-REFACTOR for Skills"
 Cohesion: 0.40
 Nodes (5): GREEN: Write Minimal Skill, Micro-Test Wording Before Full Scenarios, RED-GREEN-REFACTOR for Skills, RED: Write Failing Test (Baseline), REFACTOR: Close Loopholes
 
-### Community 710 - "VERIFY GREEN: Pressure Testing"
+### Community 709 - "VERIFY GREEN: Pressure Testing"
 Cohesion: 0.40
 Nodes (5): Key Elements of Good Scenarios, Pressure Types, Testing Setup, VERIFY GREEN: Pressure Testing, Writing Pressure Scenarios
 
-### Community 711 - "Tổng Hợp Tái Cấu Trúc & Phân Rã Module Backend (13 Tabs)"
+### Community 710 - "Tổng Hợp Tái Cấu Trúc & Phân Rã Module Backend (13 Tabs)"
 Cohesion: 0.40
 Nodes (4): 1. Tổng Quan Kiến Trúc Backend Modularization, 2. Kết Quả Kiểm Thử Toàn Bộ Test Suite (Backend CTest), Cây Thư Mục Module Backend (`src/`):, Tổng Hợp Tái Cấu Trúc & Phân Rã Module Backend (13 Tabs)
 
-### Community 712 - "OmniVoice"
+### Community 711 - "OmniVoice"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, OmniVoice
 
-### Community 713 - "VibeVoice"
+### Community 712 - "VibeVoice"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, VibeVoice
 
-### Community 714 - "Nemotron-3.5 ASR Streaming 0.6B"
+### Community 713 - "Nemotron-3.5 ASR Streaming 0.6B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Nemotron-3.5 ASR Streaming 0.6B
 
-### Community 715 - "Whisper"
+### Community 714 - "Whisper"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Whisper
 
-### Community 716 - "VieNeu-TTS v2 Turbo"
+### Community 715 - "VieNeu-TTS v2 Turbo"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, VieNeu-TTS v2 Turbo
 
-### Community 717 - "Qwen3-ASR 0.6B"
+### Community 716 - "Qwen3-ASR 0.6B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-ASR 0.6B
 
-### Community 718 - "Qwen3-ASR 1.7B"
+### Community 717 - "Qwen3-ASR 1.7B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-ASR 1.7B
 
-### Community 719 - "Qwen3-TTS Base 0.6B"
+### Community 718 - "Qwen3-TTS Base 0.6B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-TTS Base 0.6B
 
-### Community 720 - "Qwen3-TTS Base 1.7B"
+### Community 719 - "Qwen3-TTS Base 1.7B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-TTS Base 1.7B
 
-### Community 721 - "Qwen3-TTS CustomVoice 1.7B"
+### Community 720 - "Qwen3-TTS CustomVoice 1.7B"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-TTS CustomVoice 1.7B
 
-### Community 722 - "Qwen3-TTS 1.7B VoiceDesign"
+### Community 721 - "Qwen3-TTS 1.7B VoiceDesign"
 Cohesion: 0.40
 Nodes (4): LA Studio Notes, Links, Model Facts, Qwen3-TTS 1.7B VoiceDesign
 
-### Community 723 - "Contributing to LA Studio"
+### Community 722 - "Contributing to LA Studio"
 Cohesion: 0.40
 Nodes (4): Before opening a pull request, Contributing to LA Studio, Developer Certificate of Origin (DCO), Pull-request checklist
 
-### Community 724 - "Runtime Host Architecture"
+### Community 723 - "Runtime Host Architecture"
 Cohesion: 0.40
 Nodes (4): Data path, Isolation boundary, Runtime Host Architecture, Scheduling and lifecycle
 
-### Community 725 - "10. Test strategy"
+### Community 724 - "10. Test strategy"
 Cohesion: 0.40
 Nodes (5): 10.1 Gateway path, 10.2 Colab path, 10.3 Dubbing integration, 10.4 Fixture tối thiểu, 10. Test strategy
 
-### Community 726 - "5. Quy tắc model và lựa chọn đường chạy"
+### Community 725 - "5. Quy tắc model và lựa chọn đường chạy"
 Cohesion: 0.40
 Nodes (5): 5.1 Model từ 9Router, 5.2 Model từ Colab, 5.3 Cùng một tính năng có thể có hai lựa chọn, 5.4 Local backend, 5. Quy tắc model và lựa chọn đường chạy
 
-### Community 727 - "2. Current State Assessment"
+### Community 726 - "2. Current State Assessment"
 Cohesion: 0.40
 Nodes (5): 2.1 What the product is, 2.2 What is genuinely strong, 2.4 Significant non-blocking gaps, 2.5 Test coverage map, 2. Current State Assessment
 
-### Community 728 - "Repository governance and GitHub settings"
+### Community 727 - "Repository governance and GitHub settings"
 Cohesion: 0.40
 Nodes (4): Ownership and dependency updates, Release tags, Repository governance and GitHub settings, Required protection for `main`
 
-### Community 729 - "BÁO CÁO NGHIÊN CỨU KIẾN TRÚC & BENCHMARK THAM CHIẾU (DEEP RESEARCH & OPEN-SOURCE ARCHITECTURE REPORT)"
+### Community 728 - "BÁO CÁO NGHIÊN CỨU KIẾN TRÚC & BENCHMARK THAM CHIẾU (DEEP RESEARCH & OPEN-SOURCE ARCHITECTURE REPORT)"
 Cohesion: 0.40
 Nodes (4): 🔬 1. Danh Sách Các Repository Mã Nguồn Mở Đã Clone & Phân Tích, 📊 2. Đối Chiếu Kiến Trúc: Tham Chiếu vs. LA-Studio, 💡 3. Các Bài Học & Kinh Nghiệm Đã Áp Dụng Cho LA-Studio, BÁO CÁO NGHIÊN CỨU KIẾN TRÚC & BENCHMARK THAM CHIẾU (DEEP RESEARCH & OPEN-SOURCE ARCHITECTURE REPORT)
 
-### Community 730 - "Unified Dubbing Colab coordinator"
+### Community 729 - "Unified Dubbing Colab coordinator"
 Cohesion: 0.40
 Nodes (4): Choosing workers, Unified Dubbing Colab coordinator, Validation completed locally, What was added
 
-### Community 731 - "Tổng Hợp Tái Cấu Trúc & Phân Rã Module Frontend (13 Tabs)"
+### Community 730 - "Tổng Hợp Tái Cấu Trúc & Phân Rã Module Frontend (13 Tabs)"
 Cohesion: 0.40
 Nodes (4): 1. Tổng Quan Kiến Trúc Frontend Modularization, 2. Kết Quả Kiểm Thử Frontend (Smoke Test & UI Contracts), Cây Thư Mục Module Frontend (`qml/`):, Tổng Hợp Tái Cấu Trúc & Phân Rã Module Frontend (13 Tabs)
 
-### Community 732 - "bug_report.md"
+### Community 731 - "bug_report.md"
 Cohesion: 0.40
 Nodes (4): Environment, Evidence, Reproduction steps, Summary
 
-### Community 733 - "feature_request.md"
+### Community 732 - "feature_request.md"
 Cohesion: 0.40
 Nodes (4): Alternatives considered, Constraints, Problem, Proposed outcome
 
-### Community 734 - "kokoro_vi_audio"
+### Community 733 - "kokoro_vi_audio"
 Cohesion: 0.40
 Nodes (5): kokoro_vi_audio, channels, n_samples, sample_rate, samples
 
-### Community 735 - "vieneu_audio"
+### Community 734 - "vieneu_audio"
 Cohesion: 0.40
 Nodes (5): vieneu_audio, channels, n_samples, sample_rate, samples
 
-### Community 737 - "load_generator"
+### Community 736 - "load_generator"
 Cohesion: 0.60
 Nodes (4): ModuleType, load_generator(), main(), Path
 
-### Community 738 - "generate_stt_colab_notebooks.py"
+### Community 737 - "generate_stt_colab_notebooks.py"
 Cohesion: 0.60
 Nodes (4): lines(), main(), notebook(), Generate the four model-specific LA Studio STT Colab workers. The notebooks…
 
-### Community 740 - "ColabAlignmentController.h"
+### Community 739 - "ColabAlignmentController.h"
 Cohesion: 0.40
 Nodes (4): ColabAlignmentResult, ColabAlignmentRunner, ColabSession, Settings
 
-### Community 741 - "merge"
+### Community 740 - "merge"
 Cohesion: 0.40
 Nodes (4): QString, QVariantList, QVariantMap, merge()
 
-### Community 742 - "SubtitleVoiceController::SubtitleVoiceController"
+### Community 741 - "SubtitleVoiceController::SubtitleVoiceController"
 Cohesion: 0.40
 Nodes (5): AudioPlayer, HistoryService, QObject, TtsEngine, SubtitleVoiceController::SubtitleVoiceController()
 
-### Community 743 - ".separate"
+### Community 742 - ".separate"
 Cohesion: 0.40
 Nodes (4): CancellationToken, isCancelled, function, ProgressCallback
 
-### Community 744 - "transcribe"
+### Community 743 - "transcribe"
 Cohesion: 0.40
 Nodes (5): QString, QVariantList, QVariantMap, QVector, transcribe
 
-### Community 745 - "EnglishTransliterator.cpp"
+### Community 744 - "EnglishTransliterator.cpp"
 Cohesion: 0.60
 Nodes (3): QString, isVietnameseWord(), transliterateWord()
 
-### Community 746 - "Expressions & Statements (ES.*)"
+### Community 745 - "Expressions & Statements (ES.*)"
 Cohesion: 0.50
 Nodes (4): Anti-Patterns, Expressions & Statements (ES.*), Initialization, Key Rules
 
-### Community 747 - "Error Handling (E.*)"
+### Community 746 - "Error Handling (E.*)"
 Cohesion: 0.50
 Nodes (4): Anti-Patterns, Error Handling (E.*), Exception Hierarchy, Key Rules
 
-### Community 748 - "Templates & Generic Programming (T.*)"
+### Community 747 - "Templates & Generic Programming (T.*)"
 Cohesion: 0.50
 Nodes (4): Anti-Patterns, Concepts (C++20), Key Rules, Templates & Generic Programming (T.*)
 
-### Community 749 - "Performance (Per.*)"
+### Community 748 - "Performance (Per.*)"
 Cohesion: 0.50
 Nodes (4): Anti-Patterns, Guidelines, Key Rules, Performance (Per.*)
 
-### Community 750 - "Philosophy & Interfaces (P.*, I.*)"
+### Community 749 - "Philosophy & Interfaces (P.*, I.*)"
 Cohesion: 0.50
 Nodes (4): DO, DON'T, Key Rules, Philosophy & Interfaces (P.*, I.*)
 
-### Community 751 - "graphify reference: add a URL and watch a folder"
+### Community 750 - "graphify reference: add a URL and watch a folder"
 Cohesion: 0.50
 Nodes (3): For /graphify add, For --watch, graphify reference: add a URL and watch a folder
 
-### Community 752 - "graphify reference: commit hook and native CLAUDE.md integration"
+### Community 751 - "graphify reference: commit hook and native CLAUDE.md integration"
 Cohesion: 0.50
 Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
 
-### Community 753 - "graphify reference: incremental update and cluster-only"
+### Community 752 - "graphify reference: incremental update and cluster-only"
 Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
-### Community 754 - "Testing Async Code"
+### Community 753 - "Testing Async Code"
 Cohesion: 0.50
 Nodes (4): Async Fixture, Async Tests with pytest-asyncio, Mocking Async Functions, Testing Async Code
 
-### Community 755 - "Common Patterns"
+### Community 754 - "Common Patterns"
 Cohesion: 0.50
 Nodes (4): Common Patterns, Testing API Endpoints (FastAPI/Flask), Testing Class Methods, Testing Database Operations
 
-### Community 756 - "Markers and Test Selection"
+### Community 755 - "Markers and Test Selection"
 Cohesion: 0.50
 Nodes (4): Configure Markers in pytest.ini, Custom Markers, Markers and Test Selection, Run Specific Tests
 
-### Community 757 - "Testing Side Effects"
+### Community 756 - "Testing Side Effects"
 Cohesion: 0.50
 Nodes (4): Testing File Operations, Testing Side Effects, Testing with pytest's tmp_path Fixture, Testing with tmpdir Fixture
 
-### Community 758 - "Core Principles"
+### Community 757 - "Core Principles"
 Cohesion: 0.50
 Nodes (4): 1. Render is a Pure Function of Props and State, 2. Side Effects Outside Render, 3. Composition Over Inheritance, Core Principles
 
-### Community 760 - "Pi Tool Mapping"
+### Community 759 - "Pi Tool Mapping"
 Cohesion: 0.50
 Nodes (3): Pi Tool Mapping, Subagents, Task lists
 
-### Community 761 - "Evaluation and iteration"
+### Community 760 - "Evaluation and iteration"
 Cohesion: 0.50
 Nodes (4): Build evaluations first, Develop Skills iteratively with the agent, Evaluation and iteration, Observe how agents navigate Skills
 
-### Community 762 - "Checklist for effective Skills"
+### Community 761 - "Checklist for effective Skills"
 Cohesion: 0.50
 Nodes (4): Checklist for effective Skills, Code and scripts, Core quality, Testing
 
-### Community 763 - "Core principles"
+### Community 762 - "Core principles"
 Cohesion: 0.50
 Nodes (4): Concise is key, Core principles, Set appropriate degrees of freedom, Test with all models you plan to use
 
-### Community 764 - "File Organization"
+### Community 763 - "File Organization"
 Cohesion: 0.50
 Nodes (4): File Organization, Self-Contained Skill, Skill with Heavy Reference, Skill with Reusable Tool
 
-### Community 765 - "Skill Types"
+### Community 764 - "Skill Types"
 Cohesion: 0.50
 Nodes (4): Pattern, Reference, Skill Types, Technique
 
-### Community 766 - "Example: TDD Skill Bulletproofing"
+### Community 765 - "Example: TDD Skill Bulletproofing"
 Cohesion: 0.50
 Nodes (4): Example: TDD Skill Bulletproofing, Initial Test (Failed), Iteration 1 - Add Counter, Iteration 2 - Add Foundational Principle
 
-### Community 767 - "VoxCPM2"
+### Community 766 - "VoxCPM2"
 Cohesion: 0.50
 Nodes (3): LA Studio Notes, Supported Languages, VoxCPM2
 
-### Community 768 - "ColabVoiceIsolatorController.h"
+### Community 767 - "ColabVoiceIsolatorController.h"
 Cohesion: 0.50
 Nodes (3): ColabSeparationRunner, ColabSession, Settings
+
+### Community 768 - "2026-08-15 - completed: direct upload for all Dubbing task outputs"
+Cohesion: 0.50
+Nodes (4): 2026-08-15 - completed: direct upload for all Dubbing task outputs, Boundary, Delivered, Evidence
 
 ### Community 769 - "2026-08-15 — completed: generalized Dubbing manual Colab handoff"
 Cohesion: 0.50
@@ -4165,9 +4166,9 @@ Nodes (3): Testing Exception Attributes, Testing Exceptions, Testing Expected Ex
 Cohesion: 0.67
 Nodes (3): Batch 0.0.2.19: Direct Colab / Dubbing preflight / Activity, Evidence 0.0.2.19, Root causes fixed
 
-### Community 828 - "Phase 12 — Video Dubbing end-to-end"
+### Community 828 - "Phase 0 — Baseline và abstraction"
 Cohesion: 0.67
-Nodes (3): Phase 12 — Video Dubbing end-to-end, Test, Thay đổi
+Nodes (3): LA Studio, Phase 0 — Baseline và abstraction, Test
 
 ### Community 829 - "Phase 13 — Remote-first model management"
 Cohesion: 0.67
@@ -4220,16 +4221,16 @@ Nodes (3): QObject, TtsEngine, TimedSpeechPipeline::TimedSpeechPipeline()
 ## Knowledge Gaps
 - **7108 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+7103 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **69 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `QThread` connect `QThread` to `ColabVoiceIsolatorController.h`, `SubtitleOcrController`, `RuntimeManager.cpp`, `QObject`, `DubbingJobRunner`, `TranslationWorkerMock`, `QTcpServer`, `ColabTtsController`, `SourceSeparationService`, `DubbingSynthesisJob`, `dataDir`, `ColabVoiceCloneController.h`, `LlmChatEngine`, `ColabVoiceDesignController.h`, `TtsEngineInstance`, `HistoryService`, `SttSessionController`, `SubtitleOcrController.cpp`, `ColabSeparationRunner`, `test_ColabVoiceCloneRunner.cpp`, `LlamaTranslationInterface::Api`, `TranslationController`, `SubtitleOcrWorkerMock`, `DubbingTranslationJob`, `LlmChatController.h`, `recommendedThreadCount`, `AlignmentMock`, `GatewayTtsController.h`, `LlmChatController`, `WasapiLoopbackThread`, `WorkerThreadHost`, `RuntimeHostClient`, `SttSessionController.h`, `ColabVoiceCloneController`, `HFHubClient`, `RuntimeHostServer`, `DubbingTranscriptionJob`, `ColabVoiceDesignController`, `OcrE2ERunner.cpp`, `ColabChatMock`, `ColabTtsMock`, `engine/TtsEngineInstance.cpp`, `ColabAlignmentController.h`, `.separate`, `test_SttSession.cpp`, `AudioRecorder`, `ColabVoiceCloneRunner`, `test_ColabVoiceDesignRunner.cpp`, `ColabSttRequest`, `TranslationGatewayMock`, `ColabAlignmentController`, `ColabVoiceIsolatorController`, `GatewayTtsController`?**
+- **Why does `QThread` connect `QThread` to `SubtitleOcrController`, `QObject`, `DubbingJobRunner`, `TranslationWorkerMock`, `ColabTtsController`, `QTcpServer`, `DubbingSynthesisJob`, `dataDir`, `ColabVoiceCloneController.h`, `LlmChatEngine`, `ColabVoiceDesignController.h`, `TtsEngineInstance`, `HistoryService`, `SttSessionController`, `SubtitleOcrController.cpp`, `test_ColabVoiceCloneRunner.cpp`, `ColabSeparationRunner`, `LlamaTranslationInterface::Api`, `TranslationController`, `SourceSeparationService`, `SubtitleOcrWorkerMock`, `DubbingTranslationJob`, `LlmChatController.h`, `AlignmentMock`, `GatewayTtsController.h`, `recommendedThreadCount`, `LlmChatController`, `WasapiLoopbackThread`, `WorkerThreadHost`, `RuntimeHostClient`, `SttSessionController.h`, `ColabVoiceCloneController`, `HFHubClient`, `RuntimeHostServer`, `DubbingTranscriptionJob`, `ColabVoiceDesignController`, `TranslationGatewayMock`, `OcrE2ERunner.cpp`, `ColabChatMock`, `ColabTtsMock`, `ColabAlignmentController.h`, `engine/TtsEngineInstance.cpp`, `.separate`, `test_SttSession.cpp`, `AudioRecorder`, `ColabSttRequest`, `ColabVoiceCloneRunner`, `test_ColabVoiceDesignRunner.cpp`, `ColabAlignmentController`, `ColabVoiceIsolatorController`, `RuntimeManager.cpp`, `GatewayTtsController`, `ColabVoiceIsolatorController.h`?**
   _High betweenness centrality (0.063) - this node is a cross-community bridge._
-- **Why does `QTimer` connect `QTimer` to `RuntimeManager.cpp`, `SubtitleOcrController`, `AppController`, `QObject`, `HardwareManager`, `HttpResponse`, `DubbingTranslationFixService.cpp`, `AppUpdateService`, `QProcess`, `Settings.cpp`, `DubbingController::DubbingController`, `TtsEngineInstance`, `RemoteMediaImportService`, `DubbingController.cpp`, `TranslationController`, `test_SubtitleOcrController.cpp`, `DubbingController_Preflight.cpp`, `MediaIngestService`, `AudioPlayer`, `SubtitleOcrController::onProcessFinished`, `AlignmentExecutionService`, `StudioSessionViewModel`, `mocks/TtsEngine.cpp`, `DubbingTranslationFixService::testConnection`, `MediaToolService`, `QUrl`, `test_WorkflowGraph.cpp`, `ImmediateExecutor`, `StudioSessionViewModel.cpp`, `ApiServerService.cpp`, `WorkflowActivityManager.cpp`, `engine/TtsEngineInstance.cpp`, `DirectMediaServer`, `loadAsFloat`, `Settings::Settings`, `ColabSttRequest`, `DubbingExportJob`, `mocks/SttEngine.cpp`?**
+- **Why does `QTimer` connect `QTimer` to `SubtitleOcrController`, `AppController`, `QObject`, `HardwareManager`, `mocks/SttEngine.cpp`, `AppUpdateService`, `DubbingTranslationFixService.cpp`, `Settings.cpp`, `DubbingController::DubbingController`, `ApiServerService.cpp`, `TtsEngineInstance`, `RemoteMediaImportService`, `DubbingController.cpp`, `TranslationController`, `test_SubtitleOcrController.cpp`, `DubbingController_Preflight.cpp`, `MediaIngestService`, `AudioPlayer`, `StudioSessionViewModel`, `SubtitleOcrController::onProcessFinished`, `AlignmentExecutionService`, `mocks/TtsEngine.cpp`, `DubbingTranslationFixService::testConnection`, `MediaToolService`, `ApiServerService::handleTranscriptionRequest`, `QUrl`, `test_WorkflowGraph.cpp`, `ImmediateExecutor`, `StudioSessionViewModel.cpp`, `engine/TtsEngineInstance.cpp`, `WorkflowActivityManager.cpp`, `DirectMediaServer`, `loadAsFloat`, `Settings::Settings`, `ColabSttRequest`, `DubbingExportJob`, `RuntimeManager.cpp`?**
   _High betweenness centrality (0.046) - this node is a cross-community bridge._
-- **Why does `log()` connect `BM25` to `LA_STUDIO_UNIFIED_DUBBING_COORDINATOR.py`, `BM25`, `ws_listener.py`, `BM25`, `.info`?**
+- **Why does `log()` connect `BM25` to `BM25`, `LA_STUDIO_UNIFIED_DUBBING_COORDINATOR.py`, `BM25`, `ws_listener.py`, `.info`?**
   _High betweenness centrality (0.037) - this node is a cross-community bridge._
 - **Are the 157 inferred relationships involving `QTemporaryDir` (e.g. with `decodeWithFfmpeg()` and `supportsCustomDictionaries`) actually correct?**
   _`QTemporaryDir` has 157 INFERRED edges - model-reasoned connections that need verification._

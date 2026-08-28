@@ -41,13 +41,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Kiểm tra lại toàn bộ câu dịch và phụ đề trước khi tiến hành lồng tiếng bằng TTS.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

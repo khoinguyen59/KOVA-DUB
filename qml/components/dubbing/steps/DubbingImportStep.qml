@@ -40,13 +40,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Chọn tệp Video hoặc Audio gốc cần lồng tiếng (hỗ trợ MP4, MKV, MOV, WAV, MP3).")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

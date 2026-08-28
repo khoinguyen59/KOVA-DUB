@@ -1106,11 +1106,12 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(!page.contains(QStringLiteral("openDouyinBrowserSession")));
     QVERIFY(!page.contains(QStringLiteral("Worker URL")));
     QVERIFY(!page.contains(QStringLiteral("Session token")));
-    QVERIFY(acquisition.contains(QStringLiteral("Download public links locally")));
-    QVERIFY(acquisition.contains(QStringLiteral("managed yt-dlp adapter")));
+    QVERIFY(acquisition.contains(QStringLiteral("localMediaDownloadAddLinksButton")));
+    QVERIFY(acquisition.contains(QStringLiteral("manualMediaFilesButton")));
     QVERIFY(acquisition.contains(QStringLiteral("Choose optional Douyin cookies")));
-    QVERIFY(acquisition.contains(QStringLiteral("Files folder in Colab's left sidebar")));
     QVERIFY(acquisition.contains(QStringLiteral("enqueueMediaLinks(publicLinks.text)")));
+    QVERIFY(!acquisition.contains(QStringLiteral("managed yt-dlp adapter")));
+    QVERIFY(!acquisition.contains(QStringLiteral("Files folder in Colab's left sidebar")));
     QVERIFY(!acquisition.contains(QStringLiteral("connectWorkflowColabStage(\"media-download\"")));
     QVERIFY(!acquisition.contains(QStringLiteral("Worker URL")));
     QVERIFY(!acquisition.contains(QStringLiteral("Session token")));
@@ -1141,7 +1142,7 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(!dubbingPage.mid(queueDialog)
                  .contains(QStringLiteral("FileDialog.DontUseNativeDialog")));
     QVERIFY(dubbingSource.contains(QStringLiteral("mediaQueueDialog.open()")));
-    QVERIFY(acquisition.contains(QStringLiteral("Download public links locally")));
+    QVERIFY(!acquisition.contains(QStringLiteral("Download public links locally")));
     QVERIFY(dubbingSource.contains(QStringLiteral("DubbingMediaQueueDialog")));
     QVERIFY(dubbingSource.contains(QStringLiteral("Show source setup by default only until a source exists")));
     QVERIFY(!dubbingSource.contains(QStringLiteral("Change / download source")));
@@ -1161,30 +1162,27 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("Voice WAV")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingHistoryResizeHandle")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceResizeHandle")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingTaskShelfResizeHandle")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingStepReviewPanel")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingNodeInspector")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingTimelineResizeHandle")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingTaskShelf")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("DubbingContextDrawer")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("contextDrawerId")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("DubbingTaskShelf {")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("DubbingContextDrawer {")));
     QVERIFY(!dubbingPage.contains(QStringLiteral("visible: root.compactDubbingControls && node !== null")));
     QVERIFY(dubbingPage.contains(QStringLiteral("isAdvancedNodeInspectorOpen")));
     QVERIFY(!dubbingPage.contains(QStringLiteral("Dubbing workbench shelf or full-width timeline is unavailable")));
-    QVERIFY(!dubbingPage.contains(QStringLiteral("Layout.minimumWidth: root.compactDubbingControls ? 240 : 320")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingContextDrawer.openContext")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("Layout.minimumWidth: root.compactDubbingControls ? 240 : 320")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing History")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing Preview")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize task controls")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing timeline")));
     QVERIFY(dubbingPage.contains(QStringLiteral("DragHandler")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceScroller")));
     // The current workspace keeps the media canvas in the central row and
-    // mounts review/settings content in an on-demand right drawer.  Keep the
-    // contract tied to the actual object graph instead of the old prose
-    // diagnostics that described the removed three-pane layout.
+    // mounts the task review/settings content in a persistent right pane.
     QVERIFY(dubbingPage.contains(QStringLiteral("id: dubbingWorkspaceRow")));
     QVERIFY(dubbingPage.contains(QStringLiteral("id: dubbingPreviewWorkspace")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("right-side review/inspector content is an on-demand drawer")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("Right Pane: persistent task review and controls")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("Layout.preferredWidth: root.dubbingStepPanelWidth")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("on-demand drawer")));
     QVERIFY(dubbingPage.contains(QStringLiteral("property bool previewFocusMode")));
     QVERIFY(dubbingSource.contains(QStringLiteral("dubbingPreviewFocusToggle")));
     QVERIFY(!dubbingSource.contains(QStringLiteral("text: qsTr(\"Focus video\")")));

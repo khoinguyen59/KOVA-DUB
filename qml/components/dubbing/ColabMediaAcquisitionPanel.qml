@@ -46,14 +46,6 @@ Rectangle {
             font.bold: true
             font.pixelSize: Theme.fontLarge
         }
-        Text {
-            Layout.fillWidth: true
-            text: qsTr("Download public links on this computer, or add files you already downloaded. This page does not use Colab, GPU, API Gateway, STT, translation, voice, or isolation.")
-            color: Theme.textSecondary
-            font.pixelSize: Theme.fontSmall
-            wrapMode: Text.WordWrap
-        }
-
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: downloaderLayout.implicitHeight + Theme.paddingMedium * 2
@@ -68,14 +60,6 @@ Rectangle {
                 anchors.margins: Theme.paddingMedium
                 spacing: Theme.paddingSmall
 
-                Text { text: qsTr("1. Download public links locally"); color: Theme.textPrimary; font.bold: true }
-                Text {
-                    Layout.fillWidth: true
-                    text: qsTr("Uses LA Studio's managed yt-dlp adapter and local CPU. Paste a public HTTPS link or a full share message; LA Studio extracts only the URL. No Colab URL or token is needed.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
                 TextArea {
                     id: publicLinks
                     Layout.fillWidth: true
@@ -116,13 +100,6 @@ Rectangle {
                     }
                     Item { Layout.fillWidth: true }
                 }
-                Text {
-                    Layout.fillWidth: true
-                    text: qsTr("Douyin only: if the local downloader asks for fresh cookies, export a Netscape cookies.txt yourself and select it below. LA Studio copies it into a private temporary file for one retry, then removes the copy; it never reads Chrome or Edge cookies.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
                 RowLayout {
                     Layout.fillWidth: true
                     PrimaryButton {
@@ -159,14 +136,6 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: Theme.paddingMedium
                 spacing: Theme.paddingSmall
-                Text { text: qsTr("2. Add files already downloaded"); color: Theme.textPrimary; font.bold: true }
-                Text {
-                    Layout.fillWidth: true
-                    text: qsTr("If you downloaded or created media in Colab yourself, click the Files folder in Colab's left sidebar and download the exact output path printed by that notebook's final cell. Then choose that file here. No worker URL or token from that notebook belongs on this page.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
                 RowLayout {
                     Layout.fillWidth: true
                     PrimaryButton {

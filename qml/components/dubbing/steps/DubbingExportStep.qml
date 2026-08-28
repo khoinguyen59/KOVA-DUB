@@ -40,13 +40,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Ghép hoàn chỉnh Video + Giọng Lồng Tiếng + Nhạc Nền + Phụ Đề (Hardsub/Softsub) hoặc xuất Project CapCut.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

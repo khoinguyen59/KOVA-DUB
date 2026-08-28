@@ -9,7 +9,7 @@ Mục tiêu: đối soát code thật sau đợt đại trùng tu giao diện v�
 Các yêu cầu giao diện và hợp đồng workflow chính đã được sửa trong source:
 
 - Thanh task trên cùng hiển thị nhãn tiếng Anh ngắn; hover mới hiện tên tiếng Anh kèm tiếng Việt.
-- Nội dung Results/Settings/Handoff chuyển sang right context drawer; task shelf bên trái giữ các hành động chính.
+- `DubbingTaskShelf` bên trái đã được bỏ khỏi production page; `DubbingReviewPanel` được giữ cố định ở panel phải và chuyển sang `DubbingNodeInspector` khi mở cấu hình chi tiết.
 - Chỉ còn một luồng cấu hình Colab thống nhất. `Open model`, chọn voice, `Run` khi chưa có model, nút Colab trong bước TTS và lỗi runtime đều dẫn về model picker/setup thay vì mở URL notebook cứng hoặc hộp lỗi cụt.
 - Upload completed output dùng đúng artifact contract của từng node.
 - Video giữ viewport 16:9, dùng `PreserveAspectFit`, có thumbnail/loading poster; OCR ROI chỉ hiện ở task STT/OCR.
@@ -29,7 +29,7 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | Build source bằng Qt 6.9.3/MSVC release preset | PASS; `LA-Studio-0.0.8.6.exe` trong `out/build/windows-msvc-release` |
 | CTest toàn bộ | PASS 41/41, 0 fail |
 | QML route/smoke contract | PASS trong CTest và preview harness |
-| QML preview capture | PASS; production `Main.qml` đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 2560×1440 và 3840×2160 logical |
+| QML preview capture | PASS; production `Main.qml` đã chụp workspace với panel phải cố định, Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 2560×1440 và 3840×2160 logical |
 | Media subprocess watchdog | PASS; `MediaIngestService`, `MediaToolService` và export `ffprobe` validation đều có single-shot deadline, kill/cleanup và regression test process treo |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
 | Graphify | PASS; đã refresh sau thay đổi ROI/QML và report; xem mục 9 |
@@ -64,25 +64,25 @@ Các file 16 mục hiện dùng evidence CTest 41/41, cập nhật ngày kiểm 
 
 ## 4. Đối soát source và các điểm đã fix
 
-### 4.1 Workflow rail, shelf và drawer
+### 4.1 Workflow rail và panel phải
 
-`qml/pages/DubbingPage.qml:316-385` định nghĩa short title/detail title cho 8 task. `qml/components/dubbing/DubbingWorkflowStep.qml` chỉ render short title ở trạng thái bình thường và tooltip có song ngữ. `qml/components/dubbing/panels/DubbingTaskShelf.qml` giữ Run/Back/Continue ở layout hai hàng; Back có kích thước khoảng 100 px, Continue fill phần còn lại.
+`qml/pages/DubbingPage.qml:316-385` định nghĩa short title/detail title cho 8 task. `qml/components/dubbing/DubbingWorkflowStep.qml` chỉ render short title ở trạng thái bình thường và tooltip có song ngữ. Production page không còn instantiate `DubbingTaskShelf`; các thao tác Run/Back/Continue được giữ trong panel review phải và các step tương ứng.
 
-`qml/components/dubbing/panels/DubbingContextDrawer.qml` là Drawer phải, non-modal, có giới hạn 320–520 px và clip nội dung. `DubbingPage.qml:907` gắn review/settings vào drawer thay vì chiếm cố định một cột phải. Các hook `qmlPreviewOpenDubbingContext()` và `qmlPreviewDubbingDrawer()` cho phép smoke/preview mở đúng workspace production.
+`DubbingPage.qml` gắn `DubbingReviewPanel` vào cột phải cố định, giới hạn 240–560 px và `clip: true`; khi chọn Settings, cùng cột chuyển sang `DubbingNodeInspector`. Các hook `qmlPreviewOpenDubbingContext()` và `qmlPreviewDubbingDrawer()` vẫn được giữ để preview harness cũ có thể kiểm tra panel, nhưng không còn overlay drawer trong production.
 
-Kết quả visual preview 1280×720: task rail, shelf, video canvas, timeline và drawer không có tràn ngang, chồng nút hoặc chữ đè. Các resize handle cũ được giữ object contract nhưng tắt hiển thị vì layout mới không cho phép người dùng kéo làm phá tỷ lệ.
+Kết quả visual preview 1280×720: task rail, video canvas, timeline và panel phải không có tràn ngang, chồng nút hoặc chữ đè; không còn cột Task Controls bên trái. Các resize handle cũ được giữ object contract nhưng tắt hiển thị vì layout mới không cho phép người dùng kéo làm phá tỷ lệ.
 
 ### 4.2 Error vẫn ở log, UI có hướng dẫn
 
 `qml/Main.qml:156` mount `ErrorGuidanceDialog`. Các panel task dùng `ErrorGuidanceInline` để hiển thị title/summary/guidance có wrap và CTA. `AppController.currentError` giữ structured fields; raw technical details không bị thay thế và tiếp tục đi vào log/support path.
 
-Đối với các lỗi model/Colab, shelf và node inspector dẫn đến model picker/setup. Đối với upload, UI mở artifact dialog đúng node và chỉ nhận file đã khai báo; không có fallback ngầm sang audio nguồn.
+Đối với các lỗi model/Colab, panel phải và node inspector dẫn đến model picker/setup. Đối với upload, UI mở artifact dialog đúng node và chỉ nhận file đã khai báo; không có fallback ngầm sang audio nguồn.
 
 ### 4.3 Media preview và subtitle/OCR
 
 `qml/components/dubbing/DubbingSourceMediaPanel.qml:35` có `showOcrTools`; `DubbingPage.qml:837-839` chỉ bật nó trong context STT/OCR (`transcribe`, `review-transcript`, `subtitle-ocr`). `DubbingSourceMediaPanel.qml:577` có thumbnail poster `dubbingVideoThumbnail`, `VideoOutput.PreserveAspectFit` và `previewFrameAspectRatio` cố định 16:9. Source 9:16/1:1 vẫn nằm gọn trong viewport, không bị stretch/crop.
 
-Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và được chuyển về shelf. Fallback/preset ROI của workspace đồng bộ với `SubtitleOcrPipeline` (`x=0.10, y=0.72, w=0.80, h=0.22`). Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle vào ROI nhưng vẫn có `lowerControlsClearance` để không chạm seek/playback controls. ROI editor dùng `sourceContent` đã cắt theo mép trên playback controls, subtitle có z-order cao hơn ROI còn handle có z-order cao nhất; regression contract kiểm tra ROI không thể vượt `previewControls`. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
+Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và không chiếm toolbar. Fallback/preset ROI của workspace đồng bộ với `SubtitleOcrPipeline` (`x=0.10, y=0.72, w=0.80, h=0.22`). Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle vào ROI nhưng vẫn có `lowerControlsClearance` để không chạm seek/playback controls. ROI editor dùng `sourceContent` đã cắt theo mép trên playback controls, subtitle có z-order cao hơn ROI còn handle có z-order cao nhất; regression contract kiểm tra ROI không thể vượt `previewControls`. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
 
 ### 4.4 Voice catalog và OmniVoice/VieNeu
 
@@ -102,7 +102,9 @@ Review disposition: nhận xét “STT không được fallback” không đư�
 
 STT chọn theo thứ tự Vocals → Analysis → Master; điều này giữ chất lượng separation nhưng vẫn cho phép project normalized-only chạy đúng mode STT đã được chọn.
 
-Về clipping trong drawer: `DubbingSynthesizeStep` có `ScrollView`, `DubbingNodeInspector` có `ScrollView`, còn bảng transcript dùng `ListView` có `clip: true`; các step tĩnh khai báo `implicitHeight` và được chứa trong layout. Preview full shell ở 1280×720 đã kiểm tra không có nội dung động bị cắt hoặc nút bị chồng. Không thêm một ScrollView lồng ngoài vì sẽ tạo hai vùng cuộn cho cùng danh sách transcript và làm hỏng kích thước `ListView`.
+Về clipping trong panel phải: `DubbingSynthesizeStep` có `ScrollView`, `DubbingNodeInspector` có `ScrollView`, còn bảng transcript dùng `ListView` có `clip: true`; các step tĩnh khai báo `implicitHeight` và được chứa trong layout. Preview full shell ở 1280×720 đã kiểm tra không có nội dung động bị cắt hoặc nút bị chồng. Không thêm một ScrollView lồng ngoài vì sẽ tạo hai vùng cuộn cho cùng danh sách transcript và làm hỏng kích thước `ListView`.
+
+Các đoạn hướng dẫn dài trong media acquisition và header của từng Dubbing step đã được bỏ để ưu tiên nút thao tác. Vẫn giữ title, trạng thái, đường dẫn có elide/tooltip, placeholder nhập liệu và `ErrorGuidanceInline` khi có lỗi cần xử lý.
 
 ### 4.6 Threading và audio lifecycle
 
@@ -156,7 +158,7 @@ Hiện `core.review-gate` ở automatic mode được đặt `never` theo policy
 - `doc/back/01_backend_media_ingest_flow.md` … `doc/back/08_backend_mix_export_flow.md`
 - `doc/README.md`
 
-Nội dung đã đồng bộ: ngày kiểm tra 2026-08-28, CTest 41/41, right context drawer, compact shelf, `vocalsAudioPath` schema 14, STT artifact preference, đồng bộ ROI với OCR preset và tên module C++ thực tế.
+Nội dung đã đồng bộ: ngày kiểm tra 2026-08-28, CTest 41/41, panel phải cố định, không render Task Controls bên trái, compact-copy UI, `vocalsAudioPath` schema 14, STT artifact preference, đồng bộ ROI với OCR preset và tên module C++ thực tế.
 
 ## 8. Visual evidence
 
@@ -164,18 +166,18 @@ Preview harness: `scripts/preview_dubbing_ui.ps1 -Capture`.
 
 Ảnh đã tạo bằng fixture MP4 có thật (`out/dubbing-live-test/dubbing_live_walkthrough.mp4`):
 
-- `out/ui-demo/dubbing-preview-8.6-final-1280x720.png`
-- `out/ui-demo/dubbing-drawer-results-8.6-final-1600x900.png`
-- `out/ui-demo/dubbing-transcribe-ocr-8.6-roi-final.png`
-- `out/ui-demo/dubbing-preview-8.6-final-3840x2160.png`
-- Các bản responsive tương ứng `dubbing-preview-8.6-final-*` cho `1600x900` và `2560x1440`.
+- `out/ui-demo/dubbing-preview-right-panel-final-1280x720.png`
+- `out/ui-demo/dubbing-drawer-results-right-panel-final-1600x900.png`
+- `out/ui-demo/dubbing-transcribe-ocr-right-panel-final-1280x720.png`
+- `out/ui-demo/dubbing-preview-right-panel-final-3840x2160.png`
+- Các bản responsive tương ứng `dubbing-preview-right-panel-final-*` cho `1600x900` và `2560x1440`.
 - `dubbing-qml-interaction-trace.json` ghi lại entry gate, source picker, Colab setup route và review state transition.
 
-Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, compact shelf, preview, timeline và drawer. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance, safe ROI geometry và capture `dubbing-transcribe-ocr-8.6-roi-final.png` được chạy lại, không còn glyph bị che hay ROI chạm playback controls. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
+Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, preview, timeline và panel phải cố định; không còn Task Controls bên trái. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance, safe ROI geometry và capture `dubbing-transcribe-ocr-right-panel-final-1280x720.png` được chạy lại, không còn glyph bị che hay ROI chạm playback controls. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
 
 ## 9. Graphify và release hygiene
 
-Graphify đã được refresh sau thay đổi ROI/QML và report: `18.055` nodes, `31.497` edges sau clustering và `909` communities; `graph.html` aggregated có `909` community nodes và `2.169` cross-community edges. Graph health không có missing/dangling endpoint, self-loop hoặc collapsed edge; producer suppression có 12 site được ghi nhận bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
+Graphify đã được refresh sau thay đổi pane/copy/QML: `18.055` nodes, `31.497` edges sau clustering và `910` communities; `graph.html` aggregated có `910` community nodes và `2.163` cross-community edges. Graph health không có missing/dangling endpoint, self-loop hoặc collapsed edge; producer suppression có 12 site được ghi nhận bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
 
 Trước khi merge/push, chạy lại:
 

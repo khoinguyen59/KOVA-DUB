@@ -43,13 +43,6 @@ Rectangle {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
-                Text {
-                    text: qsTr("Chuyển đổi âm thanh thoại sang văn bản có mốc thời gian bằng STT và/hoặc quét phụ đề cứng Subtitle OCR.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
             }
         }
 

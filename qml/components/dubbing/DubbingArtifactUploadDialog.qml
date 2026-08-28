@@ -4,9 +4,9 @@ import QtQuick.Layouts
 import "../base"
 import LAStudio
 
-// A task-level manual handoff.  It is intentionally opened from Task Controls
-// rather than hidden in a result pane: each workflow task owns its declared
-// Colab output contract and the controller still validates every path.
+// A task-level manual handoff. It is intentionally opened from the persistent
+// right task panel: each workflow task owns its declared Colab output contract
+// and the controller still validates every path.
 Dialog {
     id: root
 

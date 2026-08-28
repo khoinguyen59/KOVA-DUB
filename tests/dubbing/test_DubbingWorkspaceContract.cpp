@@ -133,7 +133,10 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
         QStringLiteral("qml/components/dubbing/DubbingWorkflowStep.qml"));
     const QString voice = readSourceFile(QStringLiteral("qml/components/shared/VoiceGalleryDialog.qml"));
 
-    QVERIFY(page.contains(QStringLiteral("DubbingContextDrawer")));
+    QVERIFY(page.contains(QStringLiteral("DubbingReviewPanel")));
+    QVERIFY(page.contains(QStringLiteral("Right Pane: persistent task review and controls")));
+    QVERIFY(!page.contains(QStringLiteral("DubbingTaskShelf {")));
+    QVERIFY(!page.contains(QStringLiteral("DubbingContextDrawer {")));
     QVERIFY(page.contains(QStringLiteral("qmlPreviewSelectDubbingStep"))
             || readSourceFile(QStringLiteral("qml/Main.qml")).contains(
                 QStringLiteral("qmlPreviewSelectDubbingStep")));
