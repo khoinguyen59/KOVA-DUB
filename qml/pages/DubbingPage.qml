@@ -214,6 +214,30 @@ Item {
         return historyOverlay
     }
 
+    function qmlPreviewOpenDubbingArtifactUpload(nodeId) {
+        dubbingEntryGate.close()
+        // The preview shim starts the page with the real entry gate open. Move
+        // this developer-only capture target into the page subtree so the
+        // gate cannot cover the artifact handoff while the OS-level capture
+        // records the production upload dialog.
+        dubbingEntryGate.visible = false
+        dubbingEntryGate.parent = null
+        dubbingArtifactUploadDialog.parent = root
+        dubbingArtifactUploadDialog.z = 10000
+        dubbingArtifactUploadDialog.openFor(
+                    nodeId || root.actionNodeForStage(root.displayedStepId))
+        return true
+    }
+
+    function qmlPreviewDubbingArtifactUploadDialog() {
+        return dubbingArtifactUploadDialog
+    }
+
+    function qmlPreviewCloseDubbingArtifactUpload() {
+        dubbingArtifactUploadDialog.close()
+        return true
+    }
+
     function qmlPreviewDubbingOverlay() {
         return Overlay.overlay
     }

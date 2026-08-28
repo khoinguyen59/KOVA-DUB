@@ -119,6 +119,28 @@ ApplicationWindow {
                 ? page.qmlPreviewContextDrawer() : null
     }
 
+    // Developer-only preview hook. It opens the same task artifact handoff
+    // dialog used by the production Upload action so the preview harness can
+    // prove that a file-picker action is actually visible, not just that the
+    // dialog's filename summary exists.
+    function qmlPreviewOpenDubbingArtifactUpload(nodeId) {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewOpenDubbingArtifactUpload
+                ? page.qmlPreviewOpenDubbingArtifactUpload(nodeId) : false
+    }
+
+    function qmlPreviewDubbingArtifactUploadDialog() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewDubbingArtifactUploadDialog
+                ? page.qmlPreviewDubbingArtifactUploadDialog() : null
+    }
+
+    function qmlPreviewCloseDubbingArtifactUpload() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewCloseDubbingArtifactUpload
+                ? page.qmlPreviewCloseDubbingArtifactUpload() : false
+    }
+
     function qmlPreviewCloseDubbingContext() {
         var page = dubbingLoader ? dubbingLoader.item : null
         return page && page.qmlPreviewCloseContextDrawer

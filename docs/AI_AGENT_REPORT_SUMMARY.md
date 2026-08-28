@@ -1,5 +1,12 @@
 # 2026-08-29 - Offline Dubbing artifact upload and explicit skip fix
 
+## 2026-08-29 - Corrected missing visible Upload picker
+
+- The production upload dialog could show its contract summary while hiding the actual upload panel. This was caused by a transient visibility check and undeclared Qt 6 `modelData` in Repeater delegates.
+- The panel now remains visible for a validated contract and exposes a real `Choose output` file picker, upload confirmation, and `Skip task & continue`. The handoff remains local and does not require Colab.
+- Production visual evidence: `out\\ui-demo\\dubbing-upload-dialog-production-1280x720.png`; it visibly contains `Choose output`, `Use uploaded output and continue`, and `Skip task & continue`.
+- Focused `TestDubbingProject`: **1/1 PASS**; full CTest **41/41 PASS**; QML lint **PASS**; prebuild gate **9/9 PASS**; packaged QML smoke **19 events PASS**. Portable EXE `0.0.8.7` is `30,986,752` bytes with SHA-256 `47C0A81780E596DB5EBFCCF959D034CF11645A6CBF54C2FD45E9E8857501C14F`.
+
 ## 2026-08-29 - Upload picker, multi-artifact handoff and Skip task
 
 - Upload no longer depends on a Colab session, model setup, URL/token, or a

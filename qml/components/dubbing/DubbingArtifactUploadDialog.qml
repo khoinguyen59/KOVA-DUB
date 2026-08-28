@@ -102,6 +102,7 @@ Dialog {
                 Repeater {
                     model: root.specs
                     delegate: DubbingArtifactUploadPanel {
+                        required property var modelData
                         dubbing: root.dubbing
                         nodeId: String(modelData.nodeId || modelData.id || root.requestedNodeId)
                         contractSpec: modelData

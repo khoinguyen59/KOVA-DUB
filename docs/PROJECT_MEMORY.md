@@ -1,5 +1,12 @@
 # Tri nho du an LA Studio
 
+## 2026-08-29 - Production Upload picker visibility regression
+
+- Neu dialog Upload hien summary nhung khong co nut chon file, kiem tra production component truoc khi build. `DubbingArtifactUploadPanel` khong duoc an boi mot `QVariant/JS map` tam thoi khi Repeater dang settle.
+- Moi Repeater delegate dung contract phai khai bao `required property var modelData` trong Qt 6. Khong dat required `modelData` tren panel root neu component duoc tao truc tiep boi harness; dieu do lam harness fail voi `Required property modelData not initialized`.
+- Bang chung bat buoc la anh cua cua so production co `Choose output`, `Use uploaded output and continue`, `Skip task & continue`; summary filename mot minh khong duoc coi la Upload da hoat dong.
+- Preview contract phai dong bo danh sach suffix voi C++: `.srt`, `.vtt`, `.ass`, `.ssa`, `.txt`, `.md`, `.markdown` cho transcript/translate/OCR.
+
 ## 2026-08-29 - Upload local va Skip task doc lap
 
 - Upload workflow output la local handoff: khong phu thuoc Colab, model,

@@ -1,5 +1,16 @@
 # AI agent response — offline Dubbing artifact upload
 
+## 2026-08-29 — corrected missing Upload picker in the production dialog
+
+- Reproduced the reported state in the production `DubbingArtifactUploadDialog`: the summary showed the required filename, but the body could be empty, so the user had no visible file-picker action.
+- Root cause: `DubbingArtifactUploadPanel.visible` re-queried a transient `QVariant/JS map` and hid itself while the Repeater delegate settled. The delegate also used `modelData` without a Qt 6 `required property var modelData`, producing a runtime `ReferenceError` and preventing the panel from rendering.
+- Fix: the dialog now passes the validated artifact contract into each panel; the panel stays visible for a valid contract; every Repeater delegate declares `required property var modelData`; the real lazy `FileDialog` and `Choose output` action remain controller-validated and independent of Colab.
+- The production dialog now visibly exposes `Choose output`, `Use uploaded output and continue`, and `Skip task & continue`. Subtitle handoff displays `.srt`, `.vtt`, `.ass`, `.ssa`, `.txt`, `.md`, and `.markdown`.
+
+Visual evidence: `out\\ui-demo\\dubbing-upload-dialog-production-1280x720.png` (production QML component captured from a real window; no build is accepted if the picker is absent).
+
+Verification after the fix: focused `TestDubbingProject` **1/1 PASS**; full CTest **41/41 PASS**; QML lint **PASS**; prebuild gate **9/9 PASS**; packaged QML smoke **19 interaction events PASS**. Portable EXE `out\\LA-Studio-0.0.8.7\\LA-Studio-0.0.8.7.exe` is `30,986,752` bytes with SHA-256 `47C0A81780E596DB5EBFCCF959D034CF11645A6CBF54C2FD45E9E8857501C14F`.
+
 ## 2026-08-29 — explicit Upload / Skip handoff correction
 
 - Upload is now a local handoff and is independent from `Run`, model setup,
@@ -27,7 +38,7 @@
   generated notebooks 32/32; remote surface 8/8.
 - Portable EXE refresh: version `0.0.8.7`, packaged QML smoke PASS with 19
   interaction events. Size `30,986,752` bytes; SHA-256
-  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
+  `47C0A81780E596DB5EBFCCF959D034CF11645A6CBF54C2FD45E9E8857501C14F`.
 
 ## 2026-08-29 — setup preflight regression and cross-task recheck rule
 

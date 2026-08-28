@@ -58,6 +58,7 @@ Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tr
 * [x] Mặc định project mới là `zh → vi`; project cũ thiếu cấu hình cũng được bổ sung `fusionPolicy=prefer-stt`, `transcriptSource=stt` và mix `0/100` khi load.
 * [x] Prebuild gate sau cập nhật đã PASS 9/9 nhóm; packaged EXE smoke 0.0.8.7 PASS với 19 interaction events.
 * [x] Portable artifact đã xác minh: `out\LA-Studio-0.0.8.7\LA-Studio-0.0.8.7.exe`, FileVersion/ProductVersion `0.0.8.7`, layout phẳng không có `bin/`, SHA-256 được ghi trong release report.
+* [x] **Upload artifact UI đã được recheck bằng production component và ảnh cửa sổ thật:** dialog phải hiện nút chọn file (`Choose output` hoặc nút tương đương), trạng thái file đã chọn, nút xác nhận upload và `Skip task & continue`; không được sign-off chỉ dựa trên phần mô tả contract.
 
 ---
 
@@ -94,6 +95,10 @@ Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tr
   bước kế tiếp, không gọi worker, không yêu cầu model/Colab, không xóa output
   hợp lệ cũ. `Run` vẫn dành riêng cho xử lý thật và không được vô hiệu hóa
   Upload/Skip chỉ vì thiếu Colab.
+* [x] **Upload picker phải có bằng chứng trực quan:** Sau mỗi thay đổi đối với
+  artifact handoff, phải chạy production QML preview, chụp ảnh cửa sổ thật và
+  kiểm tra bằng mắt thấy được nút mở file. Nếu ảnh chỉ có tên file/định dạng và
+  `Skip` nhưng không có `Choose output`, phải tiếp tục sửa và chưa được build.
 
 ### 2. Kiểm thử thực thi file nhị phân `.exe` thực tế (Live Binary Smoke Test)
 * [x] **Không chỉ nhìn log build/package [SUCCESS]**: Phải chạy trực tiếp file `.exe` đã đóng gói trong thư mục staging (ví dụ: `out\LA-Studio-0.0.8.3\LA-Studio-0.0.8.3.exe`) qua dòng lệnh:
@@ -191,6 +196,7 @@ Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tr
 | **INC-026** | 2026-08-29 | Project mới hoặc catalog ngôn ngữ chưa nạp có thể rơi về English → English thay vì Chinese → Vietnamese. | UI đọc index 0 khi `languageCatalog` rỗng/khác kiểu QVariantList; default C++ chưa được bảo vệ khi migrate project cũ. | C++ tạo project luôn ghi `sourceLanguage=zh`, `targetLanguage=vi`; loader chèn giá trị thiếu; QML dùng catalog fallback có thứ tự zh/vi/en và guard kiểu/danh sách trước khi truy cập. |
 | **INC-027** | 2026-08-29 | Từ trang Transcribe, bấm `Run STT` hoặc `Run OCR` khi model/runtime/Colab chưa sẵn sàng có thể rơi vào generic Error Guidance thay vì mở đúng màn hình setup; OCR còn thiếu preflight cùng nguồn sự thật với backend. | QML tự kiểm tra cấu hình không đầy đủ và nhánh OCR gọi worker trước khi hỏi setup. OCR không phải persisted workflow node nên không thể mở bằng model picker chung; nếu backend gọi `setError` trước thì `Main.qml` mở modal lỗi chung, làm người dùng không tới được model/Colab dialog. | **Setup gate phải là recoverable UI action:** controller cung cấp `workflowNodeSetupIssueForUi()` dùng cùng logic với run path; STT mở model picker, OCR mở exact Colab/local OCR setup; backend phát `workflowSetupRequired` và không gọi `setError` cho thiếu cấu hình. Sau mọi sửa lỗi ở một task phải chạy cross-task regression sweep đủ 8 task theo quy tắc bắt buộc ở Phần 0, đặc biệt kiểm tra cả `Run`, setup, error guidance và retry. |
 | **INC-028** | 2026-08-29 | Upload artifact hiển thị được phần tóm tắt tên file nhưng popup không có nút mở browser/chọn file; sau đó upload đầu tiên trong contract STT + OCR còn có nguy cơ chuyển bước khi file còn lại chưa được nộp. Người dùng cũng cần bỏ qua task mà không chạy worker. | Panel upload truy vấn lại contract bằng presentation id nên có thể tự ẩn dù dialog đã có `specs`; UI chưa thể hiện rõ Upload là local handoff độc lập với Colab. Signal `artifactAccepted` trước đây được xử lý như hoàn tất toàn dialog, không đếm đủ các contract con. Run gate và handoff chưa có một hành động Skip độc lập. | **Artifact/skip contract bắt buộc:** dialog truyền nguyên contract map vào panel (`contractSpec`), panel luôn có `FileDialog`, hiển thị `expectedFiles`/`allowedExtensions`, Upload không phụ thuộc URL/token/model Colab. Dialog và tab Data & Artifacts phải có `Skip task & continue`; controller `skipWorkflowTask()` chỉ ghi state `skipped`, bảo toàn output metadata và gọi `advanceManualStep()` mà không khởi động worker. Với STT + OCR, chỉ emit hoàn tất sau khi đủ 2 artifact; mọi presentation alias phải được normalize trước khi import/skip. Recheck cross-task đủ 8 task, gồm Import/Normalize/Separate/Transcribe/Translate/Synthesize/Align/Mix & Export và cả contract một-file/hai-file. |
+| **INC-029** | 2026-08-29 | Dialog Upload có summary contract nhưng thân dialog có thể trống, khiến người dùng không thấy nút chọn file dù Upload vẫn được mô tả là khả dụng. | `DubbingArtifactUploadPanel.visible` phụ thuộc vào giá trị `QVariant/JS map` tạm thời nên panel bị ẩn trong lúc delegate ổn định; các delegate Repeater dùng `modelData` nhưng không khai báo required property, dẫn tới `ReferenceError` trong Qt 6 và không dựng được nội dung. | Panel phải luôn hiển thị khi được tạo từ contract hợp lệ; delegate phải khai báo `required property var modelData` và truyền `contractSpec/nodeId` rõ ràng. Bắt buộc chạy focused `TestDubbingProject`, full CTest, QML lint, production QML preview và kiểm tra ảnh cửa sổ thật có `Choose output`, `Use uploaded output and continue`, `Skip task & continue` trước khi package. |
 
 ---
 
@@ -211,7 +217,7 @@ Chỉ xác nhận hoàn thành công việc và thông báo cho người dùng k
   `out\package-smoke\0.0.8.7\qml-interaction-trace.json`.
 - Portable EXE: `out\LA-Studio-0.0.8.7\LA-Studio-0.0.8.7.exe`; size
   `30,986,752` bytes; SHA-256
-  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
+  `47C0A81780E596DB5EBFCCF959D034CF11645A6CBF54C2FD45E9E8857501C14F`.
 - Cảnh báo môi trường vẫn phải đọc theo disposition cũ: thiếu Vulkan headers,
   Qt font directory mặc định và eSpeak MSI unsigned chỉ được phép cho internal
   build; đây không phải bằng chứng live Colab/GPU inference.

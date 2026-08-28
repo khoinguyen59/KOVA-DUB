@@ -40,7 +40,11 @@ Rectangle {
     }
     readonly property bool mayChooseOutput: !dubbing.processing || handoffState.canOverride === true
 
-    visible: artifactSpec && artifactSpec.nodeId !== undefined && artifactSpec.nodeId !== ""
+    // The parent Repeater is created only from a validated non-empty artifact
+    // contract.  Do not hide the panel based on a transient QVariant/JS map
+    // conversion while the delegate bindings settle; doing so made the
+    // dialog show its summary but removed every file-picker button.
+    visible: true
     Layout.fillWidth: true
     implicitHeight: content.implicitHeight + Theme.paddingMedium * 2
     radius: Theme.radiusSmall

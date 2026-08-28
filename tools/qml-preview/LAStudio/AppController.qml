@@ -338,8 +338,15 @@ QtObject {
         function exportAudioStem() { return true }
         function exportSubtitles() { return true }
         function importSubtitles() { return true }
-        function workflowArtifactSpec() { return ({}) }
-        function workflowArtifactSpecsForStage() { return [] }
+        function workflowArtifactSpec(nodeId) {
+            var id = String(nodeId || "transcribe")
+            if (id === "source-separate" || id === "isolator" || id === "separate")
+                return { nodeId: "source-separate", title: qsTr("Voice isolation"), description: qsTr("Preview artifact handoff"), expectedFiles: ["vocals.flac", "background.flac"], allowedExtensions: [".flac"], multiple: true }
+            if (id === "translate")
+                return { nodeId: "translate", title: qsTr("Translated subtitles"), description: qsTr("Preview artifact handoff"), expectedFiles: ["translated.srt"], allowedExtensions: [".srt", ".vtt", ".ass", ".ssa", ".txt", ".md", ".markdown"], multiple: false }
+            return { nodeId: id === "ocr" ? "ocr" : "stt", title: id === "ocr" ? qsTr("Subtitle OCR transcript") : qsTr("STT transcript"), description: qsTr("Preview artifact handoff"), expectedFiles: [id === "ocr" ? "ocr.srt" : "transcript.srt"], allowedExtensions: [".srt", ".vtt", ".ass", ".ssa", ".txt", ".md", ".markdown"], multiple: false }
+        }
+        function workflowArtifactSpecsForStage(nodeId) { return [workflowArtifactSpec(nodeId)] }
         function canOverrideRunningWorkflowArtifact() { return false }
         function workflowArtifactHandoffStatus() { return ({}) }
         function importWorkflowArtifactFiles() { return true }

@@ -262,6 +262,7 @@ Rectangle {
                     Repeater {
                         model: root.artifactSpecs
                         delegate: DubbingArtifactUploadPanel {
+                            required property var modelData
                             objectName: "dubbingArtifactUploadPanelReviewItem"
                             dubbing: root.dubbing
                             nodeId: String(modelData.nodeId || modelData.id || root.actionNodeId)

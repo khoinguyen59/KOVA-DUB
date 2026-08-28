@@ -2927,6 +2927,7 @@ void TestDubbingProject::manualArtifactUploadUiOffersPickerAndIndependentSkip()
     QVERIFY(panel.contains(QStringLiteral("signal artifactAccepted()")));
     QVERIFY(panel.contains(QStringLiteral("FileDialog")));
     QVERIFY(panel.contains(QStringLiteral("dubbingArtifactUploadButton")));
+    QVERIFY(panel.contains(QStringLiteral("visible: true")));
     QVERIFY(panel.contains(QStringLiteral("Use uploaded output and continue")));
     QVERIFY(page.contains(QStringLiteral("onArtifactAccepted")));
     QVERIFY(page.contains(QStringLiteral("onSkipRequested")));
@@ -3252,6 +3253,7 @@ void TestDubbingProject::dubbingUiUsesExactModelWorkers()
     const QString taskControlsSource = QString::fromUtf8(taskControls.readAll());
     QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("workflowArtifactSpecsForStage")));
     QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("DubbingArtifactUploadPanel")));
+    QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("required property var modelData")));
     QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("width: artifactScroll.availableWidth")));
     QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("dubbingUploadFormatSummary")));
     QVERIFY(artifactUploadDialogSource.contains(QStringLiteral("Allowed format(s)")));
@@ -3259,6 +3261,7 @@ void TestDubbingProject::dubbingUiUsesExactModelWorkers()
         "qml/components/dubbing/panels/DubbingReviewPanel.qml"));
     QVERIFY(reviewPanel.contains(QStringLiteral("workflowArtifactSpecsForStage(root.actionNodeId)")));
     QVERIFY(reviewPanel.contains(QStringLiteral("dubbingArtifactUploadPanelReviewItem")));
+    QVERIFY(reviewPanel.contains(QStringLiteral("required property var modelData")));
     QVERIFY(taskControlsSource.contains(QStringLiteral("Upload completed output")));
     QVERIFY(taskControlsSource.contains(QStringLiteral("artifactUploadRequested")));
     QVERIFY(taskControlsSource.contains(QStringLiteral("canOverrideRunningWorkflowArtifact")));
