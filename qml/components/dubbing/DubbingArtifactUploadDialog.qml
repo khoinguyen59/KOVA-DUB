@@ -13,6 +13,9 @@ Dialog {
     required property var dubbing
     property string requestedNodeId: ""
     property var specs: []
+    property var acceptedArtifactNodeIds: []
+    signal artifactAccepted(string nodeId)
+    signal skipRequested(string nodeId)
 
     parent: Overlay.overlay
     modal: true
@@ -20,12 +23,26 @@ Dialog {
     width: Math.min(760, Overlay.overlay.width - Theme.paddingXL * 2)
     height: Math.min(650, Overlay.overlay.height - Theme.paddingXL * 2)
     anchors.centerIn: parent
-    standardButtons: Dialog.Close
-
     function openFor(nodeId) {
         requestedNodeId = nodeId || ""
         specs = dubbing ? dubbing.workflowArtifactSpecsForStage(requestedNodeId) : []
+        acceptedArtifactNodeIds = []
         open()
+    }
+
+    function handleArtifactAccepted(nodeId) {
+        var accepted = root.acceptedArtifactNodeIds.slice()
+        var id = String(nodeId || "")
+        if (id !== "" && accepted.indexOf(id) < 0)
+            accepted.push(id)
+        root.acceptedArtifactNodeIds = accepted
+        if (accepted.length >= root.specs.length)
+            root.artifactAccepted(id)
+    }
+
+    function canSkipTask() {
+        var id = String(root.requestedNodeId || "").toLowerCase()
+        return id !== "" && id !== "import" && id !== "media-input" && root.specs.length > 0
     }
 
     function contractFiles() {
@@ -86,8 +103,10 @@ Dialog {
                     model: root.specs
                     delegate: DubbingArtifactUploadPanel {
                         dubbing: root.dubbing
-                        nodeId: modelData.nodeId || ""
+                        nodeId: String(modelData.nodeId || modelData.id || root.requestedNodeId)
+                        contractSpec: modelData
                         Layout.fillWidth: true
+                        onArtifactAccepted: root.handleArtifactAccepted(nodeId)
                     }
                 }
                 Text {
@@ -99,6 +118,55 @@ Dialog {
                     wrapMode: Text.WordWrap
                     verticalAlignment: Text.AlignVCenter
                 }
+                Text {
+                    objectName: "dubbingArtifactUploadProgress"
+                    visible: root.specs.length > 1 && root.acceptedArtifactNodeIds.length > 0
+                    Layout.fillWidth: true
+                    text: qsTr("Accepted %1 of %2 outputs. Choose the remaining file(s) to continue.")
+                          .arg(root.acceptedArtifactNodeIds.length).arg(root.specs.length)
+                    color: Theme.success
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+    }
+
+    footer: Rectangle {
+        implicitHeight: 62
+        color: Theme.surfaceAlt
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.width: 1
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: Theme.paddingMedium
+            spacing: Theme.paddingSmall
+            Text {
+                Layout.fillWidth: true
+                text: root.canSkipTask()
+                      ? qsTr("Upload is optional; skip this task to continue.")
+                      : qsTr("Choose a declared file or close this window.")
+                color: Theme.textSecondary
+                font.pixelSize: Theme.fontSmall
+                elide: Text.ElideRight
+            }
+            PrimaryButton {
+                objectName: "dubbingArtifactSkipButton"
+                text: qsTr("Skip task & continue")
+                iconName: "chevron-right"
+                enabled: root.canSkipTask() && root.dubbing && !root.dubbing.processing
+                toolTip: qsTr("Do not run this task; continue to the next task")
+                onClicked: {
+                    if (root.dubbing.skipWorkflowTask(root.requestedNodeId)) {
+                        root.skipRequested(root.requestedNodeId)
+                        root.close()
+                    }
+                }
+            }
+            PrimaryButton {
+                objectName: "dubbingArtifactUploadCloseButton"
+                text: qsTr("Close")
+                quiet: true
+                onClicked: root.close()
             }
         }
     }

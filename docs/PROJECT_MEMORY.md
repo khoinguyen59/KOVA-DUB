@@ -1,5 +1,23 @@
 # Tri nho du an LA Studio
 
+## 2026-08-29 - Upload local va Skip task doc lap
+
+- Upload workflow output la local handoff: khong phu thuoc Colab, model,
+  URL/token hay viec task da tung chay. Dialog truyen nguyen artifact contract
+  vao panel, panel mo `FileDialog` that va hien dung ten file/suffix truoc khi
+  controller validate/import.
+- Co nut `Skip task & continue` trong Upload dialog va tab Data & Artifacts.
+  Skip chi ghi state `skipped`, bao toan metadata output cu, advance manual
+  step va khong khoi dong worker; Import media van la prerequisite nguon.
+- Contract nhieu file (STT + OCR hoac Vocals + Background) khong duoc advance
+  sau file dau tien; UI phai dem so artifact da accept va chi emit completion
+  khi du contract. Contract mot file thi tiep tuc ngay sau khi import thanh
+  cong.
+- Moi bug fix Upload/Run/Skip phai recheck cung hanh vi tren ca 8 task canonical
+  theo checklist, khong chi test task bao loi.
+
+## 2026-08-29 - Upload local artifact va cross-task recheck
+
 ## 2026-08-29 - Setup preflight parity va recheck lien task
 
 - `Run STT` va `Run OCR` phai preflight bang cung nguon su that controller
@@ -11,7 +29,7 @@
   va workspace contract test da khoa quy tac nay.
 - Verification: 41/41 CTest, QML lint, prebuild 9/9, packaged smoke 19
   events. Artifact `0.0.8.7` SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 
 ## 2026-08-29 - Canonical fusion, workflow order va Align audio
 
@@ -33,7 +51,7 @@
 - Build 0.0.8.7 da qua prebuild gate 9/9, CTest 41/41, QML lint, exact
   bindings 31/31, notebooks 32/32, remote surface 8/8 va packaged smoke 19
   events. EXE portable nam o `out/LA-Studio-0.0.8.7/`, khong co `bin/`; SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 
 ## 2026-08-29 - Transcribe tach STT/OCR va route-safe worker
 

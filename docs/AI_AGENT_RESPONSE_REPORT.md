@@ -1,5 +1,34 @@
 # AI agent response — offline Dubbing artifact upload
 
+## 2026-08-29 — explicit Upload / Skip handoff correction
+
+- Upload is now a local handoff and is independent from `Run`, model setup,
+  URL/token, and Colab connectivity. Every artifact panel has a real lazy
+  `FileDialog`, displays the exact required filename/extension, and validates
+  the selected file through the controller before importing it.
+- The upload dialog and the right-side `Data & Artifacts` tab now expose
+  `Skip task & continue`. Skip records a durable in-session `skipped` state,
+  preserves existing output metadata, advances the manual workflow, and never
+  starts a worker. Import remains the only non-skippable source prerequisite.
+- Combined STT + OCR handoff no longer advances after the first file. It keeps
+  the dialog open and reports `Accepted 1 of 2 outputs` until both independent
+  artifacts are accepted; a single STT-only or OCR-only contract continues
+  immediately.
+- Added regression coverage for the exact contract passed into each QML panel,
+  both picker surfaces, the skip action, multi-artifact counting, alias
+  normalization, and controller skip state. The same recheck applies across
+  all eight canonical tasks, not just the task where the issue was reported.
+
+### Verification for this correction
+
+- `run_tests.ps1`: **41/41 CTest PASS**, including `TestDubbingProject`,
+  `TestDubbingWorkspaceContract`, and `QmlRouteSmoke`.
+- QML lint: PASS. Prebuild gate: PASS, 9/9 groups; exact bindings 31/31;
+  generated notebooks 32/32; remote surface 8/8.
+- Portable EXE refresh: version `0.0.8.7`, packaged QML smoke PASS with 19
+  interaction events. Size `30,986,752` bytes; SHA-256
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
+
 ## 2026-08-29 — setup preflight regression and cross-task recheck rule
 
 - Fixed the remaining Transcribe setup path: `Run STT` now uses the same
@@ -24,9 +53,9 @@
 - QML lint: PASS. Prebuild release gate: PASS, all 9/9 groups; exact bindings
   31/31; generated notebooks 32/32; remote surface 8/8.
 - Portable EXE rebuilt from the corrected source; packaged QML smoke PASS with
-  19 interaction events. File/Product version `0.0.8.7`, size `30,942,720`
+  19 interaction events. File/Product version `0.0.8.7`, size `30,986,752`
   bytes, SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 
 ## 2026-08-29 — canonical STT/OCR handoff and workflow order
 
@@ -54,7 +83,7 @@
   prebuild `9/9` nhóm PASS, CTest `41/41`, packaged smoke `19` interaction
   events, FileVersion/ProductVersion `0.0.8.7`, portable root không có `bin/`.
 - Artifact: `out/LA-Studio-0.0.8.7/LA-Studio-0.0.8.7.exe`, SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 - Đây là bằng chứng build/startup/QML/local contract; không coi nó là bằng
   chứng cho live Colab/GPU inference nếu chưa chạy worker thật với credential.
 

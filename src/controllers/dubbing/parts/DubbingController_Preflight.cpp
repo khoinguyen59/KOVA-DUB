@@ -497,6 +497,71 @@ void DubbingController::advanceManualStep(const QString &completedStepId)
     if (next.contains(completedStepId)) setCurrentStep(next.value(completedStepId));
 }
 
+bool DubbingController::skipWorkflowTask(const QString &nodeId)
+{
+    if (!hasProject()) {
+        setError(QStringLiteral("Open or create a Dubbing project before skipping a task."));
+        return false;
+    }
+    if (processing()) {
+        setBusyError(QStringLiteral("Stop the active Dubbing operation before skipping a task."));
+        return false;
+    }
+
+    const QString requested = nodeId.trimmed().toLower();
+    QString step = requested;
+    if (step == QStringLiteral("import") || step == QStringLiteral("media-input")) {
+        setError(QStringLiteral("Import source media before continuing the Dubbing workflow."));
+        return false;
+    }
+    if (step == QStringLiteral("normalize")) step = QStringLiteral("ingest");
+    else if (step == QStringLiteral("isolator") || step == QStringLiteral("separate")
+             || step == QStringLiteral("source-separation"))
+        step = QStringLiteral("source-separate");
+    else if (step == QStringLiteral("stt") || step == QStringLiteral("transcribe-stt")
+             || step == QStringLiteral("ocr") || step == QStringLiteral("subtitle-ocr")
+             || step == QStringLiteral("review-transcript"))
+        step = QStringLiteral("transcribe");
+    else if (step == QStringLiteral("review-translation"))
+        step = QStringLiteral("translate");
+    else if (step == QStringLiteral("assign-voices") || step == QStringLiteral("tts"))
+        step = QStringLiteral("synthesize");
+    else if (step == QStringLiteral("alignment") || step == QStringLiteral("alignment-subtitle")
+             || step == QStringLiteral("review-conflicts"))
+        step = QStringLiteral("fit-timing");
+    else if (step == QStringLiteral("export-output"))
+        step = QStringLiteral("export");
+
+    static const QSet<QString> supported{
+        QStringLiteral("ingest"), QStringLiteral("source-separate"),
+        QStringLiteral("transcribe"), QStringLiteral("translate"),
+        QStringLiteral("synthesize"), QStringLiteral("fit-timing"),
+        QStringLiteral("mix"), QStringLiteral("export")};
+    if (!supported.contains(step)) {
+        setError(QStringLiteral("This Dubbing task cannot be skipped: %1.").arg(nodeId));
+        return false;
+    }
+
+    // Keep a local record so the workflow state explains why this task did
+    // not run. Preserve any valid output metadata from an earlier run: skip
+    // means bypass this run, not delete a previous result.
+    QVariantMap output = m_stepOutputs.value(step).toMap();
+    output.insert(QStringLiteral("skipped"), true);
+    output.insert(QStringLiteral("skipReason"), QStringLiteral("user-requested"));
+    output.insert(QStringLiteral("manualHandoff"), true);
+    m_stepOutputs.insert(step, output);
+    m_lastCompletedStepId = step;
+    clearError();
+    setWorkflowMode(QStringLiteral("step"));
+    advanceManualStep(step);
+    appendAutomaticEvent(QStringLiteral("Skipped Dubbing task: %1").arg(step),
+                         QStringLiteral("skipped"), step);
+    emit projectChanged();
+    emit workflowChanged();
+    persistAfterEdit();
+    return true;
+}
+
 void DubbingController::prepareWorkflow()
 {
     if (!workflowGraphValid()) {

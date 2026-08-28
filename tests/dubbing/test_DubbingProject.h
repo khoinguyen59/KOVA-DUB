@@ -109,6 +109,7 @@ private slots:
     void dubbingColabModelsMapToExactNotebooks();
     void dubbingManualArtifactSpecsExposeStrictColabContracts();
     void manualArtifactUploadAcceptsPresentationStagesWithoutColab();
+    void manualArtifactUploadUiOffersPickerAndIndependentSkip();
     void dubbingUiUsesExactModelWorkers();
     void transcribeUiSeparatesSttAndOcrCards();
     void dubbingUiUsesSafePublicContractsAndArtifactGates();

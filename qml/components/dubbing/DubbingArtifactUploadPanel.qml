@@ -14,9 +14,17 @@ Rectangle {
 
     required property var dubbing
     required property string nodeId
-    // Do not assign this property after accepting an artifact: that would
-    // remove its binding and leave the panel showing a stale task contract.
-    readonly property var artifactSpec: dubbing ? dubbing.workflowArtifactSpec(nodeId) : ({})
+    // The dialog passes the exact contract object from its Repeater model.
+    // Re-querying by a presentation id caused the panel to disappear for
+    // combined STT/OCR and isolation contracts even though the summary was
+    // populated. The controller remains authoritative for validation.
+    property var contractSpec: ({})
+    readonly property var artifactSpec: (root.contractSpec
+                                          && root.contractSpec.nodeId !== undefined
+                                          && root.contractSpec.nodeId !== "")
+                                         ? root.contractSpec
+                                         : (dubbing ? dubbing.workflowArtifactSpec(nodeId) : ({}))
+    signal artifactAccepted()
     property string uploadStatus: ""
     property string selectedOutputPath: ""
     property string selectedVocalsPath: ""
@@ -66,6 +74,7 @@ Rectangle {
             root.selectedOutputPath = ""
             root.selectedVocalsPath = ""
             root.selectedBackgroundPath = ""
+            root.artifactAccepted()
         } else {
             root.uploadStatus = root.dubbing.lastError
         }

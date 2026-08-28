@@ -78,15 +78,22 @@ Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tr
   - Dialog/panel dùng chung nhưng được mở từ một task cụ thể phải lọc **tất cả** section điều khiển theo `stageIds`, không chỉ lọc danh sách card.
   - Khi mở từ `Separate`, tuyệt đối không được render `Next transcript action`, route `TTS` hoặc route `OCR`. Khi mở từ `Transcribe`, `OCR`, `Synthesize`, `Translate`, `Align`, chỉ được hiện đúng các route liên quan.
   - Phải có smoke assertion cho từng stage-scoped dialog, bao gồm cả visibility và phạm vi nút `Check/Connect`, để ngăn lỗi UI đúng hình nhưng thao tác nhầm stage.
-* [ ] **Cross-task regression sweep sau mọi bug fix (MANDATORY):** Với mỗi lỗi
+* [x] **Cross-task regression sweep sau mọi bug fix (MANDATORY):** Với mỗi lỗi
   mới hoặc mỗi bản sửa, recheck cùng loại hành vi trên đủ 8 task, kể cả các
   task không trực tiếp liên quan. Tối thiểu phải có bằng chứng cho entry,
   setup/model gate, error guidance/log, state/concurrency, handoff và UI
   layout. Không sign-off nếu chỉ có bằng chứng ở task bị báo lỗi.
-* [ ] **Upload artifact độc lập với Colab:** Nút Upload phải mở được khi chưa
+* [x] **Upload artifact độc lập với Colab:** Nút Upload phải mở được khi chưa
   chạy hoặc chưa kết nối Colab. Dialog phải hiện đúng tên file bắt buộc và
   phần mở rộng cho task hiện tại; riêng Separate phải có Vocals + Background,
-  còn STT + OCR phải có output STT + output OCR độc lập.
+  còn STT + OCR phải có output STT + output OCR độc lập. Mỗi panel phải có
+  FileDialog thật và nút `Use uploaded output and continue`; với contract có
+  nhiều output, chỉ chuyển bước sau khi đủ mọi file đã được xác nhận.
+* [x] **Skip task độc lập với Run:** Dialog Upload và tab Data & Artifacts phải
+  có nút `Skip task & continue`. Nút này chỉ ghi nhận `skipped` và chuyển sang
+  bước kế tiếp, không gọi worker, không yêu cầu model/Colab, không xóa output
+  hợp lệ cũ. `Run` vẫn dành riêng cho xử lý thật và không được vô hiệu hóa
+  Upload/Skip chỉ vì thiếu Colab.
 
 ### 2. Kiểm thử thực thi file nhị phân `.exe` thực tế (Live Binary Smoke Test)
 * [x] **Không chỉ nhìn log build/package [SUCCESS]**: Phải chạy trực tiếp file `.exe` đã đóng gói trong thư mục staging (ví dụ: `out\LA-Studio-0.0.8.3\LA-Studio-0.0.8.3.exe`) qua dòng lệnh:
@@ -183,6 +190,7 @@ Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tr
 | **INC-025** | 2026-08-29 | Slider original audio = 0% nhưng sau đoạn ducking tiếng gốc có thể tăng trở lại do release target dùng gain mặc định. | Sidechain compressor dùng target `1.0` trong nhánh release, không nhân với mức original đã chọn. | Truyền `originalGainPercent` vào cả attack/release calculation; regression phải kiểm tra `0/100` và `100/0`, đồng thời verify output không chứa base audio sau release khi original = 0. |
 | **INC-026** | 2026-08-29 | Project mới hoặc catalog ngôn ngữ chưa nạp có thể rơi về English → English thay vì Chinese → Vietnamese. | UI đọc index 0 khi `languageCatalog` rỗng/khác kiểu QVariantList; default C++ chưa được bảo vệ khi migrate project cũ. | C++ tạo project luôn ghi `sourceLanguage=zh`, `targetLanguage=vi`; loader chèn giá trị thiếu; QML dùng catalog fallback có thứ tự zh/vi/en và guard kiểu/danh sách trước khi truy cập. |
 | **INC-027** | 2026-08-29 | Từ trang Transcribe, bấm `Run STT` hoặc `Run OCR` khi model/runtime/Colab chưa sẵn sàng có thể rơi vào generic Error Guidance thay vì mở đúng màn hình setup; OCR còn thiếu preflight cùng nguồn sự thật với backend. | QML tự kiểm tra cấu hình không đầy đủ và nhánh OCR gọi worker trước khi hỏi setup. OCR không phải persisted workflow node nên không thể mở bằng model picker chung; nếu backend gọi `setError` trước thì `Main.qml` mở modal lỗi chung, làm người dùng không tới được model/Colab dialog. | **Setup gate phải là recoverable UI action:** controller cung cấp `workflowNodeSetupIssueForUi()` dùng cùng logic với run path; STT mở model picker, OCR mở exact Colab/local OCR setup; backend phát `workflowSetupRequired` và không gọi `setError` cho thiếu cấu hình. Sau mọi sửa lỗi ở một task phải chạy cross-task regression sweep đủ 8 task theo quy tắc bắt buộc ở Phần 0, đặc biệt kiểm tra cả `Run`, setup, error guidance và retry. |
+| **INC-028** | 2026-08-29 | Upload artifact hiển thị được phần tóm tắt tên file nhưng popup không có nút mở browser/chọn file; sau đó upload đầu tiên trong contract STT + OCR còn có nguy cơ chuyển bước khi file còn lại chưa được nộp. Người dùng cũng cần bỏ qua task mà không chạy worker. | Panel upload truy vấn lại contract bằng presentation id nên có thể tự ẩn dù dialog đã có `specs`; UI chưa thể hiện rõ Upload là local handoff độc lập với Colab. Signal `artifactAccepted` trước đây được xử lý như hoàn tất toàn dialog, không đếm đủ các contract con. Run gate và handoff chưa có một hành động Skip độc lập. | **Artifact/skip contract bắt buộc:** dialog truyền nguyên contract map vào panel (`contractSpec`), panel luôn có `FileDialog`, hiển thị `expectedFiles`/`allowedExtensions`, Upload không phụ thuộc URL/token/model Colab. Dialog và tab Data & Artifacts phải có `Skip task & continue`; controller `skipWorkflowTask()` chỉ ghi state `skipped`, bảo toàn output metadata và gọi `advanceManualStep()` mà không khởi động worker. Với STT + OCR, chỉ emit hoàn tất sau khi đủ 2 artifact; mọi presentation alias phải được normalize trước khi import/skip. Recheck cross-task đủ 8 task, gồm Import/Normalize/Separate/Transcribe/Translate/Synthesize/Align/Mix & Export và cả contract một-file/hai-file. |
 
 ---
 
@@ -202,8 +210,8 @@ Chỉ xác nhận hoàn thành công việc và thông báo cho người dùng k
 - Packaged QML smoke: `PASS`, 19 interaction events; trace tại
   `out\package-smoke\0.0.8.7\qml-interaction-trace.json`.
 - Portable EXE: `out\LA-Studio-0.0.8.7\LA-Studio-0.0.8.7.exe`; size
-  `30,942,720` bytes; SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `30,986,752` bytes; SHA-256
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 - Cảnh báo môi trường vẫn phải đọc theo disposition cũ: thiếu Vulkan headers,
   Qt font directory mặc định và eSpeak MSI unsigned chỉ được phép cho internal
   build; đây không phải bằng chứng live Colab/GPU inference.

@@ -337,6 +337,9 @@ public:
     Q_INVOKABLE QVariantMap workflowArtifactHandoffStatus(const QString &nodeId) const;
     Q_INVOKABLE bool importWorkflowArtifactFiles(const QString &nodeId,
                                                  const QVariantList &paths);
+    // Explicitly bypasses one task without starting a worker. Upload and skip
+    // are local handoff actions and never require a Colab connection.
+    Q_INVOKABLE bool skipWorkflowTask(const QString &nodeId);
     Q_INVOKABLE bool setSubtitleStyle(const QVariantMap &style);
     Q_INVOKABLE bool setSubtitleTextSource(const QString &source);
     Q_INVOKABLE bool setSubtitleBurnIn(bool enabled);

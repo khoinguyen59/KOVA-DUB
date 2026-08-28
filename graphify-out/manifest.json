@@ -1224,9 +1224,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.h": {
-    "mtime": 1787949413.0049481,
-    "seen": 1787950454.6402676,
-    "ast_hash": "11cd3b7ed4bbe810d3b664221cd89749",
+    "mtime": 1787952382.6065097,
+    "seen": 1787954560.6297727,
+    "ast_hash": "9d24f4fbbd5cc1aa5e7f720202a78e95",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingExportJob.cpp": {
@@ -3558,9 +3558,9 @@
     "semantic_hash": ""
   },
   "docs/AI_AGENT_REPORT_SUMMARY.md": {
-    "mtime": 1787950352.5129218,
-    "seen": 1787950454.6928132,
-    "ast_hash": "9b855d2b5a39f23ccaece753595c3fc9",
+    "mtime": 1787954486.5858502,
+    "seen": 1787954560.6838183,
+    "ast_hash": "5c2efe921b0a534c1dfbd24e7eb06bd8",
     "semantic_hash": ""
   },
   "docs/AI_AGENT_REQUEST.md": {
@@ -3570,9 +3570,9 @@
     "semantic_hash": ""
   },
   "docs/AI_AGENT_RESPONSE_REPORT.md": {
-    "mtime": 1787950352.5129218,
-    "seen": 1787950454.692886,
-    "ast_hash": "d88d04b3b3d78f8245d08d93ba30aafa",
+    "mtime": 1787954486.58485,
+    "seen": 1787954560.683894,
+    "ast_hash": "f2ceecc749eca2305ef437787b66e5c6",
     "semantic_hash": ""
   },
   "docs/AI_AGENT_RESPONSE_REPORT_0.0.2.8.md": {
@@ -3672,9 +3672,9 @@
     "semantic_hash": ""
   },
   "docs/PROJECT_MEMORY.md": {
-    "mtime": 1787950365.6345131,
-    "seen": 1787950454.69413,
-    "ast_hash": "3ad6756673d286e1de1966bfb59dd4eb",
+    "mtime": 1787954486.5858502,
+    "seen": 1787954560.6852288,
+    "ast_hash": "562e2238c26ae8e899d4153f7ffb319f",
     "semantic_hash": ""
   },
   "docs/RC_TEST_MATRIX.md": {
@@ -4290,9 +4290,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Preflight.cpp": {
-    "mtime": 1787945641.1025653,
-    "seen": 1787947596.1279287,
-    "ast_hash": "0d737ae0217239a25a9f1424edb2f7b0",
+    "mtime": 1787953378.9592638,
+    "seen": 1787954560.631176,
+    "ast_hash": "30b1b1d184e6ecbb6038efe04a9f0696",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Project.cpp": {
@@ -4314,9 +4314,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Workflow.cpp": {
-    "mtime": 1787949413.0049481,
-    "seen": 1787950454.6418762,
-    "ast_hash": "3c39ad1e369d4f9c0cba794fd73e2cee",
+    "mtime": 1787953563.5717719,
+    "seen": 1787954560.6314125,
+    "ast_hash": "64676684a6fd34478cfee062876f3307",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingTranslationFix_Candidate.cpp": {
@@ -6090,15 +6090,15 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.cpp": {
-    "mtime": 1787949779.3052359,
-    "seen": 1787950454.6730926,
-    "ast_hash": "4bf919167465882823fe09ed0ff16de0",
+    "mtime": 1787953563.5717719,
+    "seen": 1787954560.66335,
+    "ast_hash": "5b5194a906f34a5b3a7d533617f45a1a",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.h": {
-    "mtime": 1787949413.0124497,
-    "seen": 1787950454.673094,
-    "ast_hash": "58036581aa29d47fe8fadc2188f43e27",
+    "mtime": 1787952191.0054858,
+    "seen": 1787954560.6633513,
+    "ast_hash": "6da79a471a3013efbe97bc14456706d9",
     "semantic_hash": ""
   },
   "tests/dubbing/test_TranslationProject.cpp": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787950352.5129218,
-    "seen": 1787950454.6894543,
-    "ast_hash": "7fedac42e156ac818ec7d0fc01beec04",
+    "mtime": 1787954486.5838642,
+    "seen": 1787954560.6802828,
+    "ast_hash": "73e5b085981f9ee513bb859124d95e30",
     "semantic_hash": ""
   },
   "data/presets/vieneu_voices.json": {
@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787950406.4925573,
-    "seen": 1787950454.696911,
-    "ast_hash": "9ff8a4d65f3904ce0c0545cff077fa51",
+    "mtime": 1787954506.840742,
+    "seen": 1787954560.6881623,
+    "ast_hash": "ceba3212a5f403ff0e874c70a0b52678",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {

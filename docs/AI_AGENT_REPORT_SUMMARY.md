@@ -1,4 +1,24 @@
-# 2026-08-29 - Offline Dubbing artifact upload fix
+# 2026-08-29 - Offline Dubbing artifact upload and explicit skip fix
+
+## 2026-08-29 - Upload picker, multi-artifact handoff and Skip task
+
+- Upload no longer depends on a Colab session, model setup, URL/token, or a
+  previous run. The exact controller contract is passed into each QML panel,
+  which exposes a real lazy file picker and shows required filenames/formats.
+- `Skip task & continue` is available in the Upload dialog and the right-side
+  Data & Artifacts tab. It records `skipped`, preserves prior output metadata,
+  advances the manual workflow, and does not start a worker. Import remains a
+  source prerequisite and is not silently skipped.
+- Combined STT + OCR upload waits for both independent artifacts; the first
+  accepted file stays in the dialog with an `Accepted 1 of 2 outputs` status.
+  Single-artifact tasks continue immediately after validation/import.
+- Regression source contracts cover all eight task aliases and the same
+  Upload/Skip/Run behavior is required for every cross-task recheck.
+
+Verification: **41/41 CTest PASS**, QML lint PASS, prebuild gate **9/9**,
+exact bindings **31/31**, notebooks **32/32**, remote surface **8/8**. Packaged
+QML smoke has 19 interaction events; final EXE hash is recorded in the response
+report and checklist after packaging.
 
 ## 2026-08-29 - Setup preflight parity and mandatory cross-task recheck
 
@@ -11,7 +31,7 @@
   handoff and UI behavior. The workspace contract test asserts this rule.
 - Verification: 41/41 CTest PASS, QML lint PASS, prebuild gate 9/9, packaged
   smoke 19 events. EXE SHA-256:
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 
 - Manual Dubbing output upload is now independent of Colab connection or prior
   execution. The controller accepts exact local artifacts after validating
@@ -47,7 +67,7 @@
   surface 8/8; packaged smoke có 19 interaction events.
 - Portable EXE `out/LA-Studio-0.0.8.7/LA-Studio-0.0.8.7.exe` đã xác minh
   version `0.0.8.7`, layout phẳng không có `bin/`, SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 
 ## 2026-08-29 - Tách card STT/OCR và handoff đúng worker
 

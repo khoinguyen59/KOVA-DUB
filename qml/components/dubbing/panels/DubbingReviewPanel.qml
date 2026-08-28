@@ -28,6 +28,12 @@ Rectangle {
     property string playingVoiceClipPath: ""
     property int generatedClipCount: 0
     property bool synthesisComplete: false
+    property var artifactSpecs: root.dubbing
+                                  ? root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
+                                  : []
+    property var acceptedArtifactNodeIds: []
+    onActionNodeIdChanged: acceptedArtifactNodeIds = []
+    onArtifactSpecsChanged: acceptedArtifactNodeIds = []
 
     signal configureNodeRequested(string nodeId)
     signal runStepRequested(string nodeId)
@@ -37,6 +43,8 @@ Rectangle {
     signal fixRequested()
     signal fixSegmentRequested(int index)
     signal artifactUploadRequested(string nodeId)
+    signal artifactAccepted(string nodeId)
+    signal artifactSkipRequested(string nodeId)
     signal openColabSetupRequested(string nodeId)
     signal openOcrColabSetupRequested()
     signal openTranscriptEditorRequested()
@@ -48,6 +56,21 @@ Rectangle {
     signal separationPlaybackStopped()
     signal voiceModelRequested(string nodeId)
     signal segmentSelected(int index)
+
+    function handleArtifactAccepted(nodeId) {
+        var accepted = root.acceptedArtifactNodeIds.slice()
+        var id = String(nodeId || "")
+        if (id !== "" && accepted.indexOf(id) < 0)
+            accepted.push(id)
+        root.acceptedArtifactNodeIds = accepted
+        if (accepted.length >= root.artifactSpecs.length)
+            root.artifactAccepted(id)
+    }
+
+    function skipArtifactTask() {
+        if (root.dubbing && root.dubbing.skipWorkflowTask(root.actionNodeId))
+            root.artifactSkipRequested(root.actionNodeId)
+    }
 
     component SegmentTextArea: AppTextArea {
         color: Theme.textPrimary
@@ -237,21 +260,47 @@ Rectangle {
                     spacing: Theme.paddingSmall
 
                     Repeater {
-                        model: root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
+                        model: root.artifactSpecs
                         delegate: DubbingArtifactUploadPanel {
                             objectName: "dubbingArtifactUploadPanelReviewItem"
                             dubbing: root.dubbing
-                            nodeId: modelData.nodeId || ""
+                            nodeId: String(modelData.nodeId || modelData.id || root.actionNodeId)
+                            contractSpec: modelData
                             Layout.fillWidth: true
+                            onArtifactAccepted: root.handleArtifactAccepted(nodeId)
                         }
                     }
 
                     Text {
-                        visible: root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId).length === 0
+                        visible: root.artifactSpecs.length === 0
                         Layout.fillWidth: true
                         text: qsTr("No upload contract is available for this task.")
                         color: Theme.warning
                         wrapMode: Text.WordWrap
+                    }
+                    RowLayout {
+                        visible: root.artifactSpecs.length > 0
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.artifactSpecs.length > 1 && root.acceptedArtifactNodeIds.length > 0
+                                  ? qsTr("Accepted %1 of %2 outputs")
+                                      .arg(root.acceptedArtifactNodeIds.length)
+                                      .arg(root.artifactSpecs.length)
+                                  : qsTr("Upload is optional")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontSmall
+                            elide: Text.ElideRight
+                        }
+                        PrimaryButton {
+                            objectName: "dubbingArtifactReviewSkipButton"
+                            text: qsTr("Skip task & continue")
+                            iconName: "chevron-right"
+                            enabled: root.dubbing && !root.dubbing.processing
+                            toolTip: qsTr("Do not run this task; continue to the next task")
+                            onClicked: root.skipArtifactTask()
+                        }
                     }
                 }
             }

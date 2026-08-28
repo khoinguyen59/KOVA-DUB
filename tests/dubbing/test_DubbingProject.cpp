@@ -2900,6 +2900,59 @@ void TestDubbingProject::manualArtifactUploadAcceptsPresentationStagesWithoutCol
                           QStringLiteral(".markdown")}));
 }
 
+void TestDubbingProject::manualArtifactUploadUiOffersPickerAndIndependentSkip()
+{
+    const QString sourceRoot = QStringLiteral(LASTUDIO_SOURCE_DIR);
+    auto read = [&sourceRoot](const QString &relativePath) {
+        QFile file(QDir(sourceRoot).filePath(relativePath));
+        if (!file.open(QIODevice::ReadOnly)) return QString();
+        return QString::fromUtf8(file.readAll());
+    };
+
+    const QString dialog = read(QStringLiteral(
+        "qml/components/dubbing/DubbingArtifactUploadDialog.qml"));
+    const QString panel = read(QStringLiteral(
+        "qml/components/dubbing/DubbingArtifactUploadPanel.qml"));
+    const QString page = read(QStringLiteral("qml/pages/DubbingPage.qml"));
+    const QString header = read(QStringLiteral(
+        "src/controllers/dubbing/DubbingController.h"));
+    QVERIFY(dialog.contains(QStringLiteral("signal artifactAccepted(string nodeId)")));
+    QVERIFY(dialog.contains(QStringLiteral("signal skipRequested(string nodeId)")));
+    QVERIFY(dialog.contains(QStringLiteral("contractSpec: modelData")));
+    QVERIFY(dialog.contains(QStringLiteral("Skip task & continue")));
+    QVERIFY(dialog.contains(QStringLiteral("handleArtifactAccepted")));
+    QVERIFY(dialog.contains(QStringLiteral("dubbingArtifactUploadProgress")));
+    QVERIFY(dialog.contains(QStringLiteral("onArtifactAccepted")));
+    QVERIFY(dialog.contains(QStringLiteral("root.skipRequested(root.requestedNodeId)")));
+    QVERIFY(panel.contains(QStringLiteral("signal artifactAccepted()")));
+    QVERIFY(panel.contains(QStringLiteral("FileDialog")));
+    QVERIFY(panel.contains(QStringLiteral("dubbingArtifactUploadButton")));
+    QVERIFY(panel.contains(QStringLiteral("Use uploaded output and continue")));
+    QVERIFY(page.contains(QStringLiteral("onArtifactAccepted")));
+    QVERIFY(page.contains(QStringLiteral("onSkipRequested")));
+    QVERIFY(dialog.contains(QStringLiteral("root.dubbing.skipWorkflowTask")));
+    QFile reviewPanel(QDir(sourceRoot).filePath(
+        QStringLiteral("qml/components/dubbing/panels/DubbingReviewPanel.qml")));
+    QVERIFY(reviewPanel.open(QIODevice::ReadOnly));
+    const QString reviewPanelSource = QString::fromUtf8(reviewPanel.readAll());
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("dubbingArtifactReviewSkipButton")));
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("artifactSkipRequested")));
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("Accepted %1 of %2 outputs")));
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("handleArtifactAccepted")));
+    QVERIFY(header.contains(QStringLiteral(
+        "Q_INVOKABLE bool skipWorkflowTask(const QString &nodeId)")));
+
+    DubbingController controller(nullptr, nullptr);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QVERIFY(controller.newProject(directory.filePath(QStringLiteral("skip-task.ladub.json"))));
+    QVERIFY(controller.skipWorkflowTask(QStringLiteral("source-separate")));
+    const QVariantMap skipped = controller.stepOutput(QStringLiteral("source-separate"));
+    QVERIFY(skipped.value(QStringLiteral("skipped")).toBool());
+    QCOMPARE(skipped.value(QStringLiteral("skipReason")).toString(),
+             QStringLiteral("user-requested"));
+}
+
 void TestDubbingProject::dubbingUiUsesExactModelWorkers()
 {
     const QDir sourceRoot(QStringLiteral(LASTUDIO_SOURCE_DIR));

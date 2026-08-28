@@ -4,6 +4,28 @@ Ngày kiểm tra: 2026-08-28
 Phạm vi: C++/Qt 6, QML, workflow graph, media subprocess, persistence, voice routing, error guidance, 16 tài liệu `doc/front` và `doc/back`.
 Mục tiêu: đối soát code thật sau đợt đại trùng tu giao diện và hardening workflow; ghi nhận bằng chứng, lỗi còn lại và điều kiện để luồng dubbing chạy ổn định.
 
+## Recheck bổ sung 2026-08-29 — Upload local và Skip task
+
+Lỗi Upload hiển thị summary nhưng không có browser đã được truy nguyên về việc
+panel gọi lại contract bằng presentation id thay vì nhận chính contract mà
+dialog đã resolve. Contract map giờ được truyền trực tiếp qua `contractSpec`,
+panel luôn có lazy `FileDialog`, và controller vẫn là authority cuối cùng để
+kiểm tra path, tên file, suffix, số lượng và nội dung.
+
+Handoff mới có hai hành vi tách biệt: `Use uploaded output and continue` import
+artifact local rồi chuyển bước; `Skip task & continue` ghi nhận task bị bỏ qua,
+giữ metadata output cũ và chuyển bước mà không gọi worker hoặc yêu cầu Colab.
+Import media vẫn không được bỏ qua vì đó là nguồn đầu vào của toàn workflow.
+Với contract STT + OCR, UI giữ dialog sau artifact đầu tiên và chỉ hoàn tất
+khi cả hai nguồn độc lập đã được accept.
+
+Cross-task recheck đã được mở rộng cho đủ tám task canonical và các alias
+presentation tương ứng. Bằng chứng source/runtime của lượt này: **41/41 CTest
+PASS**, QML lint PASS, prebuild gate 9/9, exact bindings 31/31, notebooks
+32/32, remote surface 8/8. Packaged smoke 0.0.8.7 PASS với 19 interaction
+events; SHA-256 `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
+Các kết quả này không được hiểu là live Colab/GPU inference.
+
 ## 1. Kết luận điều hành
 
 Các yêu cầu giao diện và hợp đồng workflow chính đã được sửa trong source:
@@ -529,7 +551,7 @@ Live Colab/GPU inference vẫn là acceptance test môi trường triển khai, 
   `8/8`; packaged QML smoke: `19` interaction events.
 - Portable EXE được build lại từ source đã sửa tại
   `out/LA-Studio-0.0.8.7/LA-Studio-0.0.8.7.exe`, version `0.0.8.7`, kích thước
-  `30,942,720` bytes, SHA-256
-  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+  `30,986,752` bytes, SHA-256
+  `EDC70DC753E5DD3E51F38F1C5E5B941372C90A0088A17B6B43001F531F914623`.
 - Bằng chứng này xác nhận local build/startup/QML/contract; live Colab/GPU
   inference vẫn cần nghiệm thu với worker và credential thật.

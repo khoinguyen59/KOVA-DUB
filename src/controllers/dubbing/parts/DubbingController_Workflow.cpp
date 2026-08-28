@@ -64,10 +64,14 @@ QVariantList DubbingController::workflowNodes() const
             const bool normalized = readableDubbingArtifact(m_project.masterAudioPath);
             const bool separated = normalized && readableDubbingArtifact(m_project.vocalsAudioPath)
                 && readableDubbingArtifact(m_project.backgroundAudioPath);
-            state = !hasMedia ? QStringLiteral("missing")
+            const bool skipped = m_stepOutputs.value(QStringLiteral("source-separate"))
+                .toMap().value(QStringLiteral("skipped")).toBool();
+            state = skipped ? QStringLiteral("skipped")
+                : !hasMedia ? QStringLiteral("missing")
                 : !normalized ? QStringLiteral("blocked")
                 : (separated ? QStringLiteral("completed") : QStringLiteral("ready"));
-            detail = separated ? QStringLiteral("Vocals and Background stems available")
+            detail = skipped ? QStringLiteral("Skipped; normalized analysis audio remains available downstream")
+                : separated ? QStringLiteral("Vocals and Background stems available")
                                : !normalized ? QStringLiteral("Normalize source media before running Isolator")
                                : (hasMedia ? QStringLiteral("Run Isolator to create Vocals and Background stems") : QStringLiteral("Import source media"));
         } else if (definition.id == QStringLiteral("transcribe")) {
@@ -173,6 +177,12 @@ QVariantList DubbingController::workflowNodes() const
         } else if (definition.id == QStringLiteral("export")) {
             state = !hasClips ? QStringLiteral("missing") : (!previewPath().isEmpty() ? QStringLiteral("completed") : QStringLiteral("ready"));
             detail = !hasClips ? QStringLiteral("Generate translated audio first") : (!previewPath().isEmpty() ? QStringLiteral("Preview rendered") : QStringLiteral("Render the mixed audio"));
+        }
+        const bool userSkipped = m_stepOutputs.value(definition.id).toMap()
+            .value(QStringLiteral("skipped")).toBool();
+        if (userSkipped && definition.id != QStringLiteral("media-input")) {
+            state = QStringLiteral("skipped");
+            detail = QStringLiteral("Skipped by user; continue is allowed");
         }
         if (workflowWaitingForInput() && definition.id == m_workflowRunner->activeNodeId()) {
             state = QStringLiteral("waiting_for_input");

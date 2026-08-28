@@ -535,6 +535,7 @@ Item {
         var sId = currentStepId || root.displayedStepId
         if (sId === "ingest") sId = "normalize"
         if (sId === "isolator") sId = "source-separate"
+        if (sId === "stt" || sId === "ocr" || sId === "subtitle-ocr") sId = "transcribe"
         if (sId === "tts") sId = "synthesize"
         if (sId === "review-transcript") sId = "transcribe"
         if (sId === "review-translation") sId = "translate"
@@ -941,6 +942,12 @@ Item {
                             // durable artifact node before opening Upload.
                             dubbingArtifactUploadDialog.openFor(root.actionNodeForStage(nodeId))
                         }
+                        onArtifactAccepted: function(nodeId) {
+                            root.goToNextStep(nodeId || root.displayedStepId)
+                        }
+                        onArtifactSkipRequested: function(nodeId) {
+                            root.goToNextStep(nodeId || root.displayedStepId)
+                        }
                         onOpenColabSetupRequested: function(nodeId) { root.openColabSetupForNode(nodeId) }
                         onOpenOcrColabSetupRequested: root.openOcrColabSetup()
                         onOpenTranscriptEditorRequested: transcriptEditor.open()
@@ -1101,6 +1108,13 @@ Item {
         id: dubbingArtifactUploadDialog
         parent: Overlay.overlay
         dubbing: root.dubbing
+        onArtifactAccepted: function(nodeId) {
+            close()
+            root.goToNextStep(nodeId || root.displayedStepId)
+        }
+        onSkipRequested: function(nodeId) {
+            root.goToNextStep(nodeId || root.displayedStepId)
+        }
     }
 
     DubbingSubtitleEditor {
