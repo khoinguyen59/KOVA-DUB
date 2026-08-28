@@ -12,14 +12,44 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
+#include <QStringList>
 #include <QUuid>
 
 namespace LAStudio {
 
 namespace {
-constexpr int kVoiceClonePresetSchemaVersion = 1;
+constexpr int kVoiceClonePresetSchemaVersion = 2;
 constexpr auto kVoiceClonePresetSchemaKey = "schemaVersion";
 constexpr auto kVoiceClonePresetItemsKey = "presets";
+constexpr auto kVieNeuTarget = "vieneu";
+constexpr auto kOmniVoiceTarget = "omnivoice";
+
+QStringList canonicalVoiceTargets()
+{
+    return {QString::fromLatin1(kVieNeuTarget), QString::fromLatin1(kOmniVoiceTarget)};
+}
+
+QVariantList canonicalVoiceTargetVariants()
+{
+    QVariantList targets;
+    for (const QString &target : canonicalVoiceTargets())
+        targets.append(target);
+    return targets;
+}
+
+QString targetModelId(const QString &target)
+{
+    return target.compare(QString::fromLatin1(kVieNeuTarget), Qt::CaseInsensitive) == 0
+        ? QStringLiteral("vieneu-tts-v3-turbo")
+        : QStringLiteral("omnivoice");
+}
+
+bool isCanonicalVoiceTarget(const QString &value)
+{
+    return value.compare(QString::fromLatin1(kVieNeuTarget), Qt::CaseInsensitive) == 0
+        || value.compare(QString::fromLatin1(kOmniVoiceTarget), Qt::CaseInsensitive) == 0
+        || value.startsWith(QStringLiteral("vieneu-tts"), Qt::CaseInsensitive);
+}
 }
 
 VoiceClonePresetService::VoiceClonePresetService(QObject *parent)
@@ -66,11 +96,42 @@ QVariantMap VoiceClonePresetService::normalizePresetMetadata(const QVariantMap &
         compatibleFamilies.append(family);
     };
     addCompatibleFamily(familyId);
-    // VieNeu reference recordings are accepted by the OmniVoice zero-shot
-    // clone worker. Keep the source family in the catalog while publishing
-    // the exact compatible worker family separately.
-    if (familyId.startsWith(QStringLiteral("vieneu")))
-        addCompatibleFamily(QStringLiteral("omnivoice"));
+    // Source family is provenance only. Every reference-backed voice can be
+    // enrolled for either supported target; the actual runtime/worker health
+    // is evaluated later by validatePreset() and the execution controller.
+    addCompatibleFamily(QString::fromLatin1(kVieNeuTarget));
+    addCompatibleFamily(QString::fromLatin1(kOmniVoiceTarget));
+
+    QVariantList voiceTargets;
+    const QVariantList storedTargets = preset.value(
+        QStringLiteral("voiceModelTargets")).toList();
+    for (const QVariant &entry : storedTargets) {
+        const QString target = entry.toString().trimmed().toLower();
+        if (!target.isEmpty() && isCanonicalVoiceTarget(target)
+            && !voiceTargets.contains(target)) {
+            voiceTargets.append(target == QStringLiteral("vieneu-tts-v3-turbo")
+                                    ? QString::fromLatin1(kVieNeuTarget) : target);
+        }
+    }
+    for (const QString &target : canonicalVoiceTargets()) {
+        if (!voiceTargets.contains(target)) voiceTargets.append(target);
+    }
+
+    QVariantMap targetBindings = preset.value(
+        QStringLiteral("targetBindings")).toMap();
+    const QString audioPath = preset.value(QStringLiteral("audioPath"),
+                                            preset.value(QStringLiteral("referenceAudio")))
+                                  .toString().trimmed();
+    for (const QString &target : canonicalVoiceTargets()) {
+        QVariantMap binding = targetBindings.value(target).toMap();
+        binding.insert(QStringLiteral("target"), target);
+        binding.insert(QStringLiteral("modelId"), targetModelId(target));
+        binding.insert(QStringLiteral("referenceAudio"), audioPath);
+        binding.insert(QStringLiteral("referenceText"), referenceText);
+        if (binding.value(QStringLiteral("status")).toString().trimmed().isEmpty())
+            binding.insert(QStringLiteral("status"), QStringLiteral("pending-validation"));
+        targetBindings.insert(target, binding);
+    }
 
     preset.insert(QStringLiteral("displayName"), name);
     preset.insert(QStringLiteral("familyId"), familyId);
@@ -80,6 +141,8 @@ QVariantMap VoiceClonePresetService::normalizePresetMetadata(const QVariantMap &
         QStringLiteral("language"), QStringLiteral("auto")).toString().trimmed());
     preset.insert(QStringLiteral("referenceText"), referenceText);
     preset.insert(QStringLiteral("compatibleModelFamilies"), compatibleFamilies);
+    preset.insert(QStringLiteral("voiceModelTargets"), voiceTargets);
+    preset.insert(QStringLiteral("targetBindings"), targetBindings);
     preset.insert(QStringLiteral("isCustomVoice"),
                   preset.value(QStringLiteral("isUserPreset")).toBool()
                       || !preset.value(QStringLiteral("isBuiltin"), false).toBool());
@@ -110,11 +173,23 @@ QVariantList VoiceClonePresetService::loadAllPresets() const
         const QString filename = QFileInfo(local).fileName();
         if (filename.isEmpty()) return local;
 
-        const QString appVoices = QCoreApplication::applicationDirPath() + QStringLiteral("/resources/voices/") + filename;
+        // Prefer the installed, app-owned copy.  It is present in portable
+        // packages and is covered by the managed-reference allow-list below.
+        const QString appManagedVoices = QCoreApplication::applicationDirPath()
+            + QStringLiteral("/data/presets/voice_clone_refs/") + filename;
+        if (QFile::exists(appManagedVoices)) return appManagedVoices;
+
+        const QString appVoices = QCoreApplication::applicationDirPath()
+            + QStringLiteral("/resources/voices/") + filename;
         if (QFile::exists(appVoices)) return appVoices;
 
 #ifdef LASTUDIO_SOURCE_DIR
-        const QString srcVoices = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/resources/voices/") + filename;
+        const QString sourceManagedVoices = QStringLiteral(LASTUDIO_SOURCE_DIR)
+            + QStringLiteral("/data/presets/voice_clone_refs/") + filename;
+        if (QFile::exists(sourceManagedVoices)) return sourceManagedVoices;
+
+        const QString srcVoices = QStringLiteral(LASTUDIO_SOURCE_DIR)
+            + QStringLiteral("/resources/voices/") + filename;
         if (QFile::exists(srcVoices)) return srcVoices;
 
         const QString pkgVoices = QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/vietnamese_voices_package/audio/") + filename;
@@ -303,14 +378,30 @@ bool VoiceClonePresetService::isStoredReferenceAudio(const QString &audioPath) c
     const auto cs = Qt::CaseSensitive;
 #endif
 
-    if (!absolutePath.isEmpty() && (absolutePath.compare(storagePath, cs) == 0 || absolutePath.startsWith(storagePath + QLatin1Char('/'), cs)))
-        return true;
-    const QString bundledPath = QDir::cleanPath(QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
-    if (!absolutePath.isEmpty() && (absolutePath.compare(bundledPath, cs) == 0 || absolutePath.startsWith(bundledPath + QLatin1Char('/'), cs)))
+    const auto isWithin = [&absolutePath, cs](const QString &root) {
+        const QString normalizedRoot = QDir::cleanPath(QFileInfo(root).absoluteFilePath());
+        return !absolutePath.isEmpty()
+            && (absolutePath.compare(normalizedRoot, cs) == 0
+                || absolutePath.startsWith(normalizedRoot + QLatin1Char('/'), cs));
+    };
+
+    // User-imported references and the read-only references shipped with the
+    // voice catalog are both safe clone inputs.  The latter must be accepted
+    // here; otherwise every bundled voice displays in the gallery but fails at
+    // the moment a user tries to clone it.
+    if (isWithin(storagePath)
+        || isWithin(QCoreApplication::applicationDirPath()
+                    + QStringLiteral("/data/presets/voice_clone_refs"))
+        || isWithin(QCoreApplication::applicationDirPath()
+                    + QStringLiteral("/resources/voices")))
         return true;
 #ifdef LASTUDIO_SOURCE_DIR
-    const QString sourceBundled = QDir::cleanPath(QFileInfo(QStringLiteral(LASTUDIO_SOURCE_DIR) + QStringLiteral("/data/presets/voice_clone_refs")).absoluteFilePath());
-    if (!absolutePath.isEmpty() && (absolutePath.compare(sourceBundled, cs) == 0 || absolutePath.startsWith(sourceBundled + QLatin1Char('/'), cs)))
+    if (isWithin(QStringLiteral(LASTUDIO_SOURCE_DIR)
+                 + QStringLiteral("/data/presets/voice_clone_refs"))
+        || isWithin(QStringLiteral(LASTUDIO_SOURCE_DIR)
+                    + QStringLiteral("/resources/voices"))
+        || isWithin(QStringLiteral(LASTUDIO_SOURCE_DIR)
+                    + QStringLiteral("/vietnamese_voices_package/audio")))
         return true;
 #endif
     return false;
@@ -370,6 +461,23 @@ QVariantMap VoiceClonePresetService::validatePreset(const QVariantMap &preset) c
     result.insert(QStringLiteral("audioPath"), audioPath);
     result.insert(QStringLiteral("valid"), error.isEmpty());
     result.insert(QStringLiteral("validationError"), error);
+
+    QVariantMap targetBindings = result.value(QStringLiteral("targetBindings")).toMap();
+    for (const QString &target : canonicalVoiceTargets()) {
+        QVariantMap binding = targetBindings.value(target).toMap();
+        binding.insert(QStringLiteral("target"), target);
+        binding.insert(QStringLiteral("modelId"), targetModelId(target));
+        binding.insert(QStringLiteral("referenceAudio"), audioPath);
+        binding.insert(QStringLiteral("referenceText"), result.value(
+            QStringLiteral("referenceText")).toString());
+        binding.insert(QStringLiteral("valid"), error.isEmpty());
+        binding.insert(QStringLiteral("status"), error.isEmpty()
+            ? QStringLiteral("reference-ready") : QStringLiteral("unavailable"));
+        binding.insert(QStringLiteral("error"), error);
+        targetBindings.insert(target, binding);
+    }
+    result.insert(QStringLiteral("voiceModelTargets"), canonicalVoiceTargetVariants());
+    result.insert(QStringLiteral("targetBindings"), targetBindings);
     return result;
 }
 
@@ -382,9 +490,25 @@ void VoiceClonePresetService::removeStoredReferenceAudio(const QString &audioPat
 QVariantList VoiceClonePresetService::presetsForFamily(const QString &familyId)
 {
     const QString targetFamily = familyId.trimmed().toLower();
+    const bool targetLookup = targetFamily == QStringLiteral("vieneu")
+        || targetFamily.startsWith(QStringLiteral("vieneu-tts"))
+        || targetFamily == QStringLiteral("omnivoice");
     QVariantList filtered;
     for (const QVariant &val : loadAllPresets()) {
         const QVariantMap preset = val.toMap();
+        if (targetLookup) {
+            const QVariantList targets = preset.value(
+                QStringLiteral("voiceModelTargets")).toList();
+            const bool vieNeuTarget = targetFamily == QStringLiteral("vieneu")
+                || targetFamily.startsWith(QStringLiteral("vieneu-tts"));
+            const QString canonicalTarget = vieNeuTarget
+                ? QString::fromLatin1(kVieNeuTarget)
+                : QString::fromLatin1(kOmniVoiceTarget);
+            bool supportsTarget = targets.contains(canonicalTarget);
+            if (!supportsTarget) continue;
+            filtered.append(validatePreset(preset));
+            continue;
+        }
         QString itemFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
         if (itemFamily.isEmpty()) {
             itemFamily = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();

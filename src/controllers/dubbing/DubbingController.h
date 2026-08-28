@@ -85,6 +85,7 @@ class DubbingController : public QObject
     // Subtitle OCR is intentionally independent from the audio STT runner.
     // Exposing its state separately keeps a running STT job from disabling
     // the OCR action (and the other way round).
+    Q_PROPERTY(bool speechToTextProcessing READ speechToTextProcessing NOTIFY processingChanged)
     Q_PROPERTY(bool subtitleOcrProcessing READ subtitleOcrProcessing NOTIFY subtitleOcrProcessingChanged)
     Q_PROPERTY(bool sttCanRunAlongsideSubtitleOcr READ sttCanRunAlongsideSubtitleOcr NOTIFY workflowChanged)
     Q_PROPERTY(bool subtitleOcrCanRunAlongsideStt READ subtitleOcrCanRunAlongsideStt NOTIFY workflowChanged)
@@ -197,6 +198,7 @@ public:
     QVariantMap workflowNodeConfigurations() const { return m_workflowNodeConfigurations; }
     QVariantMap transcriptConfiguration() const { return m_project.transcriptConfiguration; }
     int unresolvedTranscriptConflictCount() const;
+    bool speechToTextProcessing() const;
     bool subtitleOcrProcessing() const;
     bool sttCanRunAlongsideSubtitleOcr() const;
     bool subtitleOcrCanRunAlongsideStt() const;
@@ -204,6 +206,7 @@ public:
     bool dubbingOcrRoiVisible() const;
     QVariantMap subtitleConfiguration() const;
     QVariantMap timingConfiguration() const;
+    QVariantMap audioMixConfiguration() const;
     QVariantList timingConflicts() const;
     QVariantMap timingResolutionPreview() const { return m_timingResolutionPreview; }
     bool timingUndoAvailable() const { return !m_timingUndoSegments.isEmpty(); }
@@ -293,6 +296,10 @@ public:
     Q_INVOKABLE bool startMediaQueue(const QVariantMap &tasks);
     Q_INVOKABLE void cancelMediaQueue();
     Q_INVOKABLE void transcribeSource();
+    // Starts only the audio Speech-to-Text worker.  This explicit entry point
+    // prevents the STT card from inheriting a combined/reconcile mode saved by
+    // an older project.
+    Q_INVOKABLE bool runSpeechToTextIndependently();
     // Starts only the configured Subtitle OCR worker.  The completed OCR
     // result is durable but is not promoted over an existing STT transcript;
     // reconciliation remains the explicit local-only action.
@@ -339,8 +346,10 @@ public:
                                            int minimumGapMs = 80);
     Q_INVOKABLE bool undoTimingResolution();
     Q_INVOKABLE bool setIntentionalTimingOverlap(int segmentIndex, bool enabled);
+    Q_INVOKABLE bool setAudioMixLevels(int originalPercent, int dubbedPercent);
     Q_INVOKABLE bool exportPackage(const QString &directoryPath);
     Q_INVOKABLE bool exportCapCutDraft(const QString &directoryPath);
+    Q_INVOKABLE bool openCapCutDraft();
     // Imports reviewed OCR results only after an existing Dubbing project is
     // open. The source media/project is left unchanged on validation failure.
     Q_INVOKABLE bool replaceTranscriptSegments(const QVariantList &ocrSegments);
@@ -362,6 +371,10 @@ public:
     Q_INVOKABLE bool chooseDubbingEntryMode(const QString &mode);
     Q_INVOKABLE void reopenDubbingEntryGate();
     Q_INVOKABLE QString defaultWorkflowModelFamily(const QString &nodeId) const;
+    // UI preflight uses the same setup truth as the controller run path.  A
+    // missing/stale model or worker is a setup action, not a runtime error;
+    // QML must open the appropriate picker before it calls a worker.
+    Q_INVOKABLE QVariantMap workflowNodeSetupIssueForUi(const QString &nodeId) const;
     Q_INVOKABLE void prepareWorkflow();
     Q_INVOKABLE bool runWorkflow(const QString &outputPath = QString());
     // Automatic runs are explicitly approved from the preflight wizard.  The
@@ -409,6 +422,8 @@ public:
     Q_INVOKABLE void cancelTranslationFix();
     Q_INVOKABLE void setAdaptiveConfiguration(const QVariantMap &configuration);
     Q_INVOKABLE bool selectCloneVoicePreset(const QString &presetId);
+    Q_INVOKABLE bool selectCloneVoicePresetForTarget(const QString &presetId,
+                                                     const QString &targetModel);
     Q_INVOKABLE void refreshCloneVoicePresets();
     Q_INVOKABLE bool selectTtsVoice(const QString &voiceId);
     Q_INVOKABLE void refreshTtsVoices() { refreshCloneVoicePresets(); }
@@ -514,6 +529,8 @@ private:
     void observeColabSession(const QString &stageId, ColabSession *session);
     void refreshColabSetupSnapshot(const QString &stageId, bool verified);
     QVariantMap effectiveTranscriptConfiguration(bool captureOcrSettings);
+    bool importSubtitlesInternal(const QString &path, const QString &untimedStrategy,
+                                 bool allowIndependentTranscriptWorker);
     void applyStoredSubtitleOcrConfiguration();
     int mediaQueueIndex(const QString &itemId) const;
     void replaceMediaQueueItem(int index, const QVariantMap &item);

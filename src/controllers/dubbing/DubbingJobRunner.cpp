@@ -833,7 +833,8 @@ void DubbingJobRunner::cancel()
     setProcessing(false, QStringLiteral("cancelled"), m_run.progress());
 }
 
-bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString &projectPath, const QString &path)
+bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString &projectPath, const QString &path,
+                                     const QVariantMap &mixConfiguration)
 {
     if (m_run.processing()) {
         setBusyError(QStringLiteral("Finish the active dubbing operation before rendering a preview."));
@@ -873,7 +874,8 @@ bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString
                      .arg(m_run.runId()).arg(m_run.nodeRunId()).arg(mixSegments.size())
                      .arg(m_backgroundAudioPath));
     setProcessing(true, QStringLiteral("mix"), 0);
-    return m_exportJob && m_exportJob->renderPreview(mixSegments, projectPath, m_backgroundAudioPath, path);
+    return m_exportJob && m_exportJob->renderPreview(mixSegments, projectPath, m_backgroundAudioPath, path,
+                                                     mixConfiguration);
 }
 
 bool DubbingJobRunner::startExport(const QString &sourceMediaPath, const QString &outputPath)

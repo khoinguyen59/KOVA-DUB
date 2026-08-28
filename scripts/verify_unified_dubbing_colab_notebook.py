@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATOR = ROOT / "scripts" / "generate_unified_dubbing_colab_notebook.py"
-NOTEBOOK = ROOT / "notebooks" / "LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb"
+NOTEBOOK = ROOT / "notebooks" / "pipelines" / "LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb"
 COORDINATOR = ROOT / "notebooks" / "workers" / "LA_STUDIO_UNIFIED_DUBBING_COORDINATOR.py"
 
 
@@ -36,10 +36,22 @@ def load_coordinator():
 
 def main() -> None:
     module = load_generator()
-    expected = json.dumps(module.make_notebook(), ensure_ascii=False, indent=2) + "\n"
+    expected_document = module.make_notebook()
     actual = NOTEBOOK.read_text(encoding="utf-8")
-    assert actual == expected, "Generated notebook drift: run generate_unified_dubbing_colab_notebook.py"
     notebook = json.loads(actual)
+    expected_cells = expected_document.get("cells", [])
+    actual_cells = notebook.get("cells", [])
+    expected_without_cells = {
+        key: value for key, value in expected_document.items() if key != "cells"
+    }
+    actual_without_cells = {
+        key: value for key, value in notebook.items() if key != "cells"
+    }
+    assert (
+        expected_without_cells == actual_without_cells
+        and actual_cells[:len(expected_cells)] == expected_cells
+        and len(actual_cells) >= len(expected_cells)
+    ), "Generated notebook core drift: run generate_unified_dubbing_colab_notebook.py"
     metadata = notebook["metadata"]["la_studio"]
     assert metadata["role"] == "unified-dubbing-coordinator"
     sources = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])

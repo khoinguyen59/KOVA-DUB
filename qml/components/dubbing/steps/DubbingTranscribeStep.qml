@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "../../base"
 import LAStudio
@@ -11,10 +10,49 @@ Rectangle {
     property bool ocrSetupEditable: true
     property bool stepComplete: false
 
+    readonly property var transcriptConfig: root.dubbing
+        ? (root.dubbing.transcriptConfiguration || {}) : ({})
+    readonly property var sttSegments: root.transcriptConfig.sttSegments || []
+    readonly property var ocrSegments: root.transcriptConfig.ocrSegments || []
+    readonly property bool sttBusy: root.dubbing.speechToTextProcessing === true
+    readonly property bool ocrBusy: root.dubbing.subtitleOcrProcessing === true
+    readonly property bool sttSetupEditable: !root.dubbing.processing
+        || root.dubbing.sttCanRunAlongsideSubtitleOcr
+    readonly property bool sttCanStart: !root.sttBusy
+        && (!root.dubbing.processing || root.dubbing.sttCanRunAlongsideSubtitleOcr)
+    readonly property bool ocrCanStart: !root.ocrBusy
+        && (!root.dubbing.processing || root.dubbing.subtitleOcrCanRunAlongsideStt)
+    readonly property bool hasAnyTranscript: root.sttSegments.length > 0
+        || root.ocrSegments.length > 0
+        || ((root.dubbing.segments || []).length > 0)
+
+    signal configureRequested(string nodeId)
+    signal openColabSetupRequested(string nodeId)
+    signal artifactUploadRequested(string nodeId)
+    // Compatibility signal for older page integrations. New actions use the
+    // node-scoped signal above so STT and OCR stay independent.
     signal openOcrColabSetupRequested()
     signal runRequested(string nodeId)
     signal nextStepRequested()
     signal previousStepRequested()
+
+    function statusText(count, busy) {
+        if (busy) return qsTr("Running")
+        if (count > 0) return qsTr("Completed · %1").arg(count)
+        return qsTr("Not run")
+    }
+
+    function continueToNextStep() {
+        // When both independent sources exist, make the reconciliation step
+        // explicit in the user action. The service keeps all STT/OCR evidence
+        // and uses STT as the deterministic canonical result when cues do not
+        // match, so the next task never receives an arbitrary OCR overwrite.
+        if (root.sttSegments.length > 0 && root.ocrSegments.length > 0) {
+            if (!root.dubbing.reconcileTranscriptSources())
+                return
+        }
+        root.nextStepRequested()
+    }
 
     Layout.fillWidth: true
     implicitHeight: layout.implicitHeight + Theme.paddingMedium * 2
@@ -32,253 +70,253 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.paddingSmall
-            LineIcon { name: "mic"; color: Theme.accentLight; Layout.preferredWidth: 22; Layout.preferredHeight: 22 }
-            ColumnLayout {
+            LineIcon {
+                name: "mic"
+                color: Theme.accentLight
+                Layout.preferredWidth: 22
+                Layout.preferredHeight: 22
+            }
+            Text {
                 Layout.fillWidth: true
-                spacing: 1
-                Text {
-                    text: qsTr("4. NHẬN DẠNG LỜI THOẠI & PHỤ ĐỀ (TRANSCRIBE)")
-                    color: Theme.textPrimary
-                    font.pixelSize: Theme.fontMedium
-                    font.bold: true
+                text: qsTr("4. TRANSCRIBE")
+                color: Theme.textPrimary
+                font.pixelSize: Theme.fontMedium
+                font.bold: true
+                elide: Text.ElideRight
+            }
+            Text {
+                text: root.hasAnyTranscript ? qsTr("Transcript ready") : qsTr("Choose one or both")
+                color: root.hasAnyTranscript ? Theme.success : Theme.textSecondary
+                font.pixelSize: Theme.fontSmall
+                elide: Text.ElideRight
+            }
+        }
+
+        Rectangle {
+            id: dubbingSttCard
+            objectName: "dubbingSttCard"
+            Layout.fillWidth: true
+            implicitHeight: sttLayout.implicitHeight + Theme.paddingSmall * 2
+            radius: Theme.radiusSmall
+            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
+            border.color: root.sttBusy ? Theme.accentLight : Qt.rgba(1, 1, 1, 0.10)
+            border.width: root.sttBusy ? 2 : 1
+
+            ColumnLayout {
+                id: sttLayout
+                anchors.fill: parent
+                anchors.margins: Theme.paddingSmall
+                spacing: Theme.paddingSmall
+
+                RowLayout {
                     Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("STT · Speech-to-Text")
+                        color: Theme.textPrimary
+                        font.pixelSize: Theme.fontMedium
+                        font.bold: true
+                    }
+                    Text {
+                        text: root.statusText(root.sttSegments.length, root.sttBusy)
+                        color: root.sttBusy ? Theme.accentLight
+                                            : (root.sttSegments.length > 0 ? Theme.success : Theme.textSecondary)
+                        font.pixelSize: Theme.fontSmall
+                        font.bold: true
+                    }
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: Theme.paddingSmall
+                    rowSpacing: Theme.paddingSmall
+
+                    PrimaryButton {
+                        objectName: "dubbingSttModelButton"
+                        text: qsTr("Model")
+                        iconName: "settings"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: root.sttSetupEditable
+                        toolTip: qsTr("Choose the Speech-to-Text model")
+                        onClicked: root.configureRequested("transcribe")
+                    }
+                    PrimaryButton {
+                        objectName: "dubbingSttColabButton"
+                        text: qsTr("Colab")
+                        iconName: "cloud"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: root.sttSetupEditable
+                        toolTip: qsTr("Open the Speech-to-Text Colab setup")
+                        onClicked: root.openColabSetupRequested("transcribe")
+                    }
+                    PrimaryButton {
+                        objectName: "dubbingSttUploadButton"
+                        text: qsTr("Upload")
+                        iconName: "folder"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: !root.dubbing.processing
+                        toolTip: qsTr("Upload a saved STT transcript")
+                        onClicked: root.artifactUploadRequested("stt")
+                    }
+                    PrimaryButton {
+                        id: dubbingRunSttButton
+                        objectName: "dubbingRunSttButton"
+                        text: root.sttBusy ? qsTr("Running STT…") : qsTr("Run STT")
+                        iconName: root.sttBusy ? "activity" : "play"
+                        loading: root.sttBusy
+                        Layout.fillWidth: true
+                        buttonColor: Theme.accent
+                        enabled: root.sttCanStart
+                        onClicked: root.runRequested("stt")
+                    }
                 }
             }
         }
 
         Rectangle {
-            id: dubbingTranscriptSourceDetailsPanel
-            objectName: "dubbingTranscriptSourceDetailsPanel"
+            id: dubbingOcrCard
+            objectName: "dubbingOcrCard"
             Layout.fillWidth: true
-            implicitHeight: transcriptSourceLayout.implicitHeight + Theme.paddingSmall * 2
+            implicitHeight: ocrLayout.implicitHeight + Theme.paddingSmall * 2
             radius: Theme.radiusSmall
-            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
-            border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
-            border.width: 1
+            color: Qt.rgba(0.20, 0.55, 0.95, 0.07)
+            border.color: root.ocrBusy ? Theme.accentLight : Qt.rgba(1, 1, 1, 0.10)
+            border.width: root.ocrBusy ? 2 : 1
 
             ColumnLayout {
-                id: transcriptSourceLayout
+                id: ocrLayout
                 anchors.fill: parent
                 anchors.margins: Theme.paddingSmall
                 spacing: Theme.paddingSmall
 
-                Text {
-                    text: qsTr("Nguồn nhận dạng (Transcript source):")
-                    color: Theme.textPrimary
-                    font.bold: true
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-
-                ComboBox {
-                    id: dubbingTranscriptSourceModeDetails
-                    objectName: "dubbingTranscriptSourceModeDetails"
-                    Layout.fillWidth: true
-                    textRole: "label"
-                    valueRole: "id"
-                    model: [
-                        { id: "stt", label: qsTr("Chỉ STT (Nhận dạng âm thanh thoại)") },
-                        { id: "ocr", label: qsTr("Chỉ OCR (Quét chữ từ phụ đề cứng)") },
-                        { id: "reconcile", label: qsTr("Khớp STT + OCR (Tự động hợp nhất)") }
-                    ]
-                    currentIndex: {
-                        var source = root.dubbing.transcriptConfiguration.transcriptSource || "stt"
-                        if (source === "stt+ocr") source = "reconcile"
-                        for (var i = 0; i < model.length; ++i)
-                            if (model[i].id === source) return i
-                        return 0
-                    }
-                    enabled: root.ocrSetupEditable
-                    onActivated: function(index) {
-                        root.dubbing.setWorkflowNodeParameters("transcribe", {
-                            transcriptSource: model[index].id
-                        })
-                    }
-                }
-
-                Text {
-                    text: qsTr("Chính sách khi có xung đột STT/OCR:")
-                    color: Theme.textPrimary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-
-                ComboBox {
-                    id: dubbingFusionPolicyMode
-                    Layout.fillWidth: true
-                    textRole: "label"
-                    valueRole: "id"
-                    model: [
-                        { id: "ask", label: qsTr("Hỏi khi xung đột") },
-                        { id: "prefer-stt", label: qsTr("Ưu tiên STT") },
-                        { id: "prefer-ocr", label: qsTr("Ưu tiên OCR") },
-                        { id: "ai-suggest", label: qsTr("AI gợi ý") }
-                    ]
-                    currentIndex: {
-                        var policy = root.dubbing.transcriptConfiguration.fusionPolicy || "ask"
-                        for (var i = 0; i < model.length; ++i)
-                            if (model[i].id === policy) return i
-                        return 0
-                    }
-                    enabled: root.ocrSetupEditable
-                    onActivated: function(index) {
-                        root.dubbing.setTranscriptFusionPolicy(model[index].id)
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    visible: root.dubbing.unresolvedTranscriptConflictCount > 0
-                    spacing: Theme.paddingSmall
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: qsTr("Có %1 xung đột STT/OCR cần duyệt trước khi chuyển sang bước Dịch.")
-                              .arg(root.dubbing.unresolvedTranscriptConflictCount)
-                        color: Theme.warning
-                        font.pixelSize: Theme.fontSmall
-                        wrapMode: Text.WordWrap
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.paddingSmall
-                        PrimaryButton {
-                            Layout.fillWidth: true
-                            text: qsTr("Dùng STT")
-                            quiet: true
-                            enabled: !root.dubbing.processing
-                            onClicked: root.dubbing.resolveAllTranscriptConflicts("stt")
-                        }
-                        PrimaryButton {
-                            Layout.fillWidth: true
-                            text: qsTr("Dùng OCR")
-                            quiet: true
-                            enabled: !root.dubbing.processing
-                            onClicked: root.dubbing.resolveAllTranscriptConflicts("ocr")
-                        }
-                        PrimaryButton {
-                            readonly property var aiAvailability: root.dubbing.transcriptConflictAiAvailability()
-                            Layout.fillWidth: true
-                            text: qsTr("AI Gợi ý")
-                            quiet: true
-                            enabled: !root.dubbing.processing && aiAvailability.available
-                                     && root.dubbing.unresolvedTranscriptConflictCount > 0
-                            onClicked: root.dubbing.requestTranscriptConflictAiSuggestion(-1)
-                        }
-                    }
-                }
-
-                Text {
-                    text: qsTr("Cấu hình OCR:")
-                    color: Theme.textPrimary
-                    font.pixelSize: Theme.fontSmall
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Theme.paddingSmall
-                    ComboBox {
-                        id: dubbingOcrRouteMode
+                    Text {
                         Layout.fillWidth: true
-                        textRole: "label"
-                        model: [
-                            { id: "local-cpu", label: qsTr("Local CPU") },
-                            { id: "colab-gpu", label: qsTr("Colab GPU") }
-                        ]
-                        currentIndex: (root.dubbing.transcriptConfiguration.ocrExecutionRoute || "local-cpu") === "colab-gpu" ? 1 : 0
-                        enabled: root.ocrSetupEditable
-                        onActivated: function(index) {
-                            if (model[index].id === "colab-gpu")
-                                root.openOcrColabSetupRequested()
-                            else
-                                root.dubbing.setWorkflowNodeParameters("transcribe", {
-                                    "ocrExecutionRoute": "local-cpu"
-                                })
-                        }
+                        text: qsTr("OCR · Subtitle OCR")
+                        color: Theme.textPrimary
+                        font.pixelSize: Theme.fontMedium
+                        font.bold: true
                     }
-                    PrimaryButton {
-                        Layout.preferredWidth: 120
-                        text: (root.dubbing.transcriptConfiguration.ocrExecutionRoute || "local-cpu") === "colab-gpu"
-                              ? qsTr("Colab GPU") : qsTr("Cài đặt Colab")
-                        iconName: "cloud"
-                        quiet: true
-                        enabled: root.ocrSetupEditable
-                        onClicked: root.openOcrColabSetupRequested()
+                    Text {
+                        text: root.statusText(root.ocrSegments.length, root.ocrBusy)
+                        color: root.ocrBusy ? Theme.accentLight
+                                            : (root.ocrSegments.length > 0 ? Theme.success : Theme.textSecondary)
+                        font.pixelSize: Theme.fontSmall
+                        font.bold: true
                     }
                 }
 
-                ComboBox {
-                    id: dubbingOcrModelMode
-                    objectName: "dubbingOcrModelMode"
+                GridLayout {
                     Layout.fillWidth: true
-                    textRole: "displayName"
-                    valueRole: "modelId"
-                    visible: (root.dubbing.transcriptConfiguration.ocrExecutionRoute || "local-cpu") === "colab-gpu"
-                    model: root.dubbing.colabModelOptionsForNode("subtitle-ocr")
-                    currentIndex: {
-                        var selected = root.dubbing.transcriptConfiguration.ocrColabModelId
-                                       || root.dubbing.defaultColabModelForNode("subtitle-ocr")
-                        for (var i = 0; i < model.length; ++i)
-                            if (model[i].modelId === selected) return i
-                        return 0
+                    columns: 2
+                    columnSpacing: Theme.paddingSmall
+                    rowSpacing: Theme.paddingSmall
+
+                    PrimaryButton {
+                        objectName: "dubbingOcrModelButton"
+                        text: qsTr("Model")
+                        iconName: "settings"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: root.ocrSetupEditable
+                        toolTip: qsTr("Choose the Subtitle OCR model and route")
+                        onClicked: root.configureRequested("subtitle-ocr")
                     }
-                    enabled: root.ocrSetupEditable
-                    onActivated: function(index) {
-                        if (model[index] && model[index].modelId)
-                            root.dubbing.selectWorkflowColabModel("subtitle-ocr", model[index].modelId)
+                    PrimaryButton {
+                        objectName: "dubbingOcrColabButton"
+                        text: qsTr("Colab")
+                        iconName: "cloud"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: root.ocrSetupEditable
+                        toolTip: qsTr("Open the Subtitle OCR Colab setup")
+                        onClicked: root.openColabSetupRequested("subtitle-ocr")
+                    }
+                    PrimaryButton {
+                        objectName: "dubbingOcrUploadButton"
+                        text: qsTr("Upload")
+                        iconName: "folder"
+                        quiet: true
+                        Layout.fillWidth: true
+                        enabled: !root.dubbing.processing
+                        toolTip: qsTr("Upload a saved OCR transcript")
+                        onClicked: root.artifactUploadRequested("subtitle-ocr")
+                    }
+                    PrimaryButton {
+                        id: dubbingRunOcrButton
+                        objectName: "dubbingRunOcrButton"
+                        text: root.ocrBusy ? qsTr("Running OCR…") : qsTr("Run OCR")
+                        iconName: root.ocrBusy ? "activity" : "play"
+                        loading: root.ocrBusy
+                        Layout.fillWidth: true
+                        buttonColor: Theme.accent
+                        enabled: root.ocrCanStart
+                        onClicked: root.runRequested("ocr")
                     }
                 }
             }
         }
 
-        // Action Controls & Run Buttons (Clean 2-row layout with zero horizontal overflow)
-        ColumnLayout {
+        Rectangle {
+            visible: root.sttSegments.length > 0 && root.ocrSegments.length > 0
+            Layout.fillWidth: true
+            implicitHeight: fusionLayout.implicitHeight + Theme.paddingSmall * 2
+            radius: Theme.radiusSmall
+            color: Qt.rgba(1, 1, 1, 0.035)
+            border.color: Qt.rgba(1, 1, 1, 0.10)
+            border.width: 1
+
+            RowLayout {
+                id: fusionLayout
+                anchors.fill: parent
+                anchors.margins: Theme.paddingSmall
+                spacing: Theme.paddingSmall
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("STT and OCR are both ready")
+                    color: Theme.textSecondary
+                    font.pixelSize: Theme.fontSmall
+                    elide: Text.ElideRight
+                }
+                PrimaryButton {
+                    objectName: "dubbingReconcileTranscriptButton"
+                    text: qsTr("Reconcile")
+                    iconName: "merge"
+                    quiet: true
+                    enabled: !root.dubbing.processing
+                    onClicked: root.dubbing.reconcileTranscriptSources()
+                }
+            }
+        }
+
+        RowLayout {
             Layout.fillWidth: true
             spacing: Theme.paddingSmall
 
-            // Row 1: Primary Action Button (Full width)
             PrimaryButton {
-                id: runTranscribeBtn
-                text: (root.dubbing.segments || []).length > 0
-                      ? qsTr("⚡ Nhận Dạng Lại Lời Thoại (STT/OCR)")
-                      : qsTr("⚡ Chạy Nhận Dạng Lời Thoại & Phụ Đề (STT)")
-                iconName: root.dubbing.processing ? "activity" : "play"
-                loading: root.dubbing.processing
-                enabled: !root.dubbing.processing && ((root.dubbing.vocalsPath || "").length > 0 || (root.dubbing.normalizedAudioPath || "").length > 0 || (root.dubbing.sourceMediaPath || "").length > 0)
-                Layout.preferredHeight: 40
-                Layout.fillWidth: true
-                buttonColor: Theme.accent
-                onClicked: root.runRequested("transcribe")
+                text: qsTr("Back")
+                iconName: "chevron-left"
+                quiet: true
+                Layout.preferredHeight: 38
+                Layout.preferredWidth: 100
+                onClicked: root.previousStepRequested()
             }
 
-            // Row 2: Navigation Buttons (Quay lại & Tiếp tục)
-            RowLayout {
+            PrimaryButton {
+                objectName: "dubbingTranscribeContinueButton"
+                text: root.sttSegments.length > 0 && root.ocrSegments.length > 0
+                      ? qsTr("Reconcile & Continue") : qsTr("Continue")
+                iconName: "chevron-right"
+                buttonColor: Theme.accent
+                enabled: !root.dubbing.processing && root.hasAnyTranscript
+                Layout.preferredHeight: 38
                 Layout.fillWidth: true
-                spacing: Theme.paddingSmall
-
-                PrimaryButton {
-                    text: qsTr("⬅ Quay lại")
-                    iconName: "chevron-left"
-                    quiet: true
-                    Layout.preferredHeight: 38
-                    Layout.preferredWidth: 100
-                    onClicked: root.previousStepRequested()
-                }
-
-                PrimaryButton {
-                    text: qsTr("Tiếp tục: Duyệt Lời Thoại ➔")
-                    iconName: "chevron-right"
-                    buttonColor: Theme.accent
-                    enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0
-                    Layout.preferredHeight: 38
-                    Layout.fillWidth: true
-                    onClicked: root.nextStepRequested()
-                }
+                onClicked: root.continueToNextStep()
             }
         }
     }

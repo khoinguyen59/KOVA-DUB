@@ -47,6 +47,8 @@
 #include <QJsonArray>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QDesktopServices>
+#include <QProcess>
 #include <QStringList>
 #include <QTimer>
 #include <QRegularExpression>
@@ -73,20 +75,46 @@ QString automaticDefaultFamilyId(const QString &capabilityId,
     return {};
 }
 
-QString normalizedVoiceCloneWorkerFamily(const QVariantMap &preset)
+QString normalizedVoiceCloneTargetModel(const QString &requestedModel)
 {
-    QString sourceFamily = preset.value(QStringLiteral("familyId")).toString().trimmed().toLower();
-    if (sourceFamily.isEmpty())
-        sourceFamily = preset.value(QStringLiteral("modelFamily")).toString().trimmed().toLower();
+    const QString model = requestedModel.trimmed().toLower();
+    if (model == QStringLiteral("vieneu"))
+        return QStringLiteral("vieneu-tts-v3-turbo");
+    if (model.startsWith(QStringLiteral("vieneu-tts-v")))
+        return model;
+    if (model == QStringLiteral("omnivoice"))
+        return model;
+    // Preserve legacy exact clone targets (Qwen/VoxCPM2) when a project has
+    // one. New or empty selections use OmniVoice as the universal default.
+    if (model.startsWith(QStringLiteral("qwen3-tts"))
+        || model == QStringLiteral("voxcpm2"))
+        return model;
+    return model.isEmpty() ? QStringLiteral("omnivoice") : model;
+}
 
-    // A reference sample produced by VieNeu is valid input for the
-    // zero-shot OmniVoice clone worker. Keep the source family in the preset
-    // for display/filtering, but persist the actual worker family separately.
-    if (sourceFamily == QStringLiteral("vieneu")
-        || sourceFamily.startsWith(QStringLiteral("vieneu-tts"))) {
+QString configuredVoiceCloneTargetModel(const QVariantMap &parameters)
+{
+    const QString explicitTarget = parameters.value(
+        QStringLiteral("voiceCloneModelId")).toString();
+    if (!explicitTarget.trimmed().isEmpty())
+        return normalizedVoiceCloneTargetModel(explicitTarget);
+    // `modelId` is the ordinary TTS model and is intentionally not used as a
+    // clone target.  A project can select Kokoro (or another non-cloning TTS
+    // route) and then switch back to a saved reference voice; deriving the
+    // clone worker from that ordinary model would make every universal preset
+    // look incompatible.  New selections therefore use the universal
+    // OmniVoice clone target until the picker writes an explicit target.
+    return QStringLiteral("omnivoice");
+}
+
+QString canonicalVoiceCloneTarget(const QString &modelId)
+{
+    if (modelId.startsWith(QStringLiteral("vieneu-tts"), Qt::CaseInsensitive)
+        || modelId.compare(QStringLiteral("vieneu"), Qt::CaseInsensitive) == 0)
+        return QStringLiteral("vieneu");
+    if (modelId.compare(QStringLiteral("omnivoice"), Qt::CaseInsensitive) == 0)
         return QStringLiteral("omnivoice");
-    }
-    return sourceFamily;
+    return modelId.trimmed().toLower();
 }
 
 QString unifiedColabStageUrl(const QUrl &baseUrl, const QString &capability,
@@ -324,9 +352,18 @@ QString artifactProductionNodeId(const QString &nodeId)
 {
     const QString id = nodeId.trimmed().toLower();
     if (id == QStringLiteral("normalize")) return QStringLiteral("ingest");
-    if (id == QStringLiteral("isolator")) return QStringLiteral("source-separate");
-    if (id == QStringLiteral("alignment-subtitle")) return QStringLiteral("fit-timing");
-    if (id == QStringLiteral("tts")) return QStringLiteral("synthesize");
+    if (id == QStringLiteral("isolator") || id == QStringLiteral("separate")
+        || id == QStringLiteral("source-separation"))
+        return QStringLiteral("source-separate");
+    if (id == QStringLiteral("stt") || id == QStringLiteral("transcribe-stt"))
+        return QStringLiteral("transcribe");
+    if (id == QStringLiteral("ocr")) return QStringLiteral("subtitle-ocr");
+    if (id == QStringLiteral("alignment-subtitle") || id == QStringLiteral("alignment"))
+        return QStringLiteral("fit-timing");
+    if (id == QStringLiteral("tts") || id == QStringLiteral("synthesize-voice"))
+        return QStringLiteral("synthesize");
+    if (id == QStringLiteral("review-translation")) return QStringLiteral("translate");
+    if (id == QStringLiteral("export-output")) return QStringLiteral("export");
     return id;
 }
 
@@ -752,7 +789,11 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
             clearError();
             setAutomaticStatus(
                 QStringLiteral("Manual node completed: %1").arg(visibleStepForNode(nodeId)));
-            advanceManualStep(nodeId);
+            // STT and Subtitle OCR are two independent actions inside the
+            // same Transcribe screen. Completing STT must not move the user
+            // away before they have a chance to run OCR.
+            if (nodeId != QStringLiteral("transcribe"))
+                advanceManualStep(nodeId);
         }
         emit workflowChanged();
     });
@@ -1324,6 +1365,15 @@ void DubbingController::setSubtitleOcrController(SubtitleOcrController *controll
             m_project.transcriptConfiguration.insert(QStringLiteral("ocrSegments"), segments);
             m_project.transcriptConfiguration.insert(QStringLiteral("ocrCompletedAt"),
                                                       QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+            const QVariantList sttSegments = m_project.transcriptConfiguration
+                .value(QStringLiteral("sttSegments")).toList();
+            // OCR-only is a valid transcript path. Promote it to the active
+            // editable segment list only when STT has not already produced the
+            // primary transcript; a later OCR pass remains non-destructive.
+            if (sttSegments.isEmpty()) {
+                m_project.segments = segments;
+                emit segmentsChanged();
+            }
             QVariantMap ocrOutput;
             ocrOutput.insert(QStringLiteral("transcript"), segments);
             ocrOutput.insert(QStringLiteral("transcriptSource"), QStringLiteral("ocr"));
@@ -1359,6 +1409,12 @@ void DubbingController::setSubtitleOcrController(SubtitleOcrController *controll
 bool DubbingController::subtitleOcrProcessing() const
 {
     return m_independentSubtitleOcrActive || (m_subtitleOcr && m_subtitleOcr->processing());
+}
+
+bool DubbingController::speechToTextProcessing() const
+{
+    return m_runner && m_runner->processing()
+        && m_runner->stage() == QStringLiteral("transcribe");
 }
 
 bool DubbingController::sttCanRunAlongsideSubtitleOcr() const
@@ -1509,8 +1565,8 @@ QVariantMap DubbingController::effectiveTranscriptConfiguration(bool captureOcrS
     parameters.insert(QStringLiteral("transcriptSource"), mode);
     parameters.insert(QStringLiteral("fusionPolicy"),
                       DubbingTranscriptFusionService::normalizePolicy(
-                          parameters.value(QStringLiteral("fusionPolicy"),
-                                           QStringLiteral("ask")).toString()));
+                      parameters.value(QStringLiteral("fusionPolicy"),
+                                           QStringLiteral("prefer-stt")).toString()));
     if (captureOcrSettings && m_subtitleOcr) {
         const QVariantMap roi{{QStringLiteral("x"), m_subtitleOcr->roiX()},
                               {QStringLiteral("y"), m_subtitleOcr->roiY()},
@@ -1579,14 +1635,20 @@ bool DubbingController::cloneVoiceSelectionValid() const
 
     const QVariantMap synthesis = m_workflowNodeConfigurations
         .value(QStringLiteral("synthesize")).toMap();
+    const QVariantMap parameters = synthesis.value(QStringLiteral("parameters")).toMap();
     const ExecutionProvider provider = configuredSynthesisProvider(synthesis);
     if (provider == ExecutionProvider::ApiGateway)
         return false;
-    // Do not present a Local run as available when a loaded backend can only
-    // clone a reference per segment. An unloaded model is handled separately
-    // by the workflow's normal "load a TTS model" readiness state.
-    return provider != ExecutionProvider::LocalDev || !m_tts || !m_tts->isModelLoaded()
-        || localTtsSupportsSavedVoiceProfile(m_tts->familyConfig());
+    // Dubbing uses the backend's real reference-clone operation. An unloaded
+    // model is handled separately by the workflow's normal readiness state.
+    if (provider != ExecutionProvider::LocalDev || !m_tts || !m_tts->isModelLoaded())
+        return true;
+    if (!localTtsSupportsReferenceClone(m_tts->familyConfig()))
+        return false;
+    const QString selectedTarget = parameters.value(
+        QStringLiteral("voiceCloneModelId")).toString().trimmed();
+    return selectedTarget.isEmpty()
+        || localTtsMatchesReferenceCloneTarget(m_tts->familyConfig(), selectedTarget);
 }
 
 QString DubbingController::cloneVoiceSelectionError() const
@@ -1603,7 +1665,7 @@ QString DubbingController::cloneVoiceSelectionError() const
     if (preset.isEmpty())
         return QStringLiteral("The selected clone voice is no longer available. Select another saved voice; LA Studio will not substitute one automatically.");
     if (!preset.value(QStringLiteral("compatible"), false).toBool()) {
-        return QStringLiteral("The selected saved voice is not backed by a supported exact Voice Cloning notebook. Restore or recreate it with a supported Voice Cloning model; LA Studio will not substitute a TTS model.");
+        return QStringLiteral("The selected saved voice has no valid VieNeu or OmniVoice target route. Repair its reference audio or choose another voice.");
     }
     const QString validationError = preset.value(QStringLiteral("validationError")).toString().trimmed();
     if (!validationError.isEmpty())
@@ -1614,13 +1676,22 @@ QString DubbingController::cloneVoiceSelectionError() const
     }
     const QVariantMap synthesis = m_workflowNodeConfigurations
         .value(QStringLiteral("synthesize")).toMap();
+    const QVariantMap parameters = synthesis.value(QStringLiteral("parameters")).toMap();
     const ExecutionProvider provider = configuredSynthesisProvider(synthesis);
     if (provider == ExecutionProvider::ApiGateway) {
         return QStringLiteral("This API Gateway TTS route cannot reuse saved clone voices. Select a built-in voice or Direct Colab; LA Studio will not substitute a voice.");
     }
     if (provider == ExecutionProvider::LocalDev && m_tts && m_tts->isModelLoaded()
-        && !localTtsSupportsSavedVoiceProfile(m_tts->familyConfig())) {
-        return QStringLiteral("The active local TTS runtime cannot reuse a saved voice profile. Load Qwen3-TTS or choose Direct Colab; LA Studio will not clone the voice again for each segment.");
+        && !localTtsSupportsReferenceClone(m_tts->familyConfig())) {
+        return QStringLiteral("The active local TTS runtime cannot clone a reference voice. Load VieNeu, OmniVoice, or Qwen3-TTS, or choose Direct Colab.");
+    }
+    if (provider == ExecutionProvider::LocalDev && m_tts && m_tts->isModelLoaded()) {
+        const QString selectedTarget = parameters.value(
+            QStringLiteral("voiceCloneModelId")).toString().trimmed();
+        if (!selectedTarget.isEmpty()
+            && !localTtsMatchesReferenceCloneTarget(m_tts->familyConfig(), selectedTarget)) {
+            return QStringLiteral("The selected clone target does not match the loaded local TTS runtime. Load the selected VieNeu or OmniVoice model, then try again.");
+        }
     }
     return {};
 }
@@ -1628,6 +1699,11 @@ QString DubbingController::cloneVoiceSelectionError() const
 void DubbingController::refreshCloneVoicePresets()
 {
     QVariantList refreshed;
+    const QVariantMap synthesis = m_workflowNodeConfigurations.value(
+        QStringLiteral("synthesize")).toMap();
+    const QVariantMap parameters = synthesis.value(QStringLiteral("parameters")).toMap();
+    const QString targetModel = configuredVoiceCloneTargetModel(parameters);
+    const QString target = canonicalVoiceCloneTarget(targetModel);
     if (m_voiceClonePresetsService) {
         for (const QVariant &entry : m_voiceClonePresetsService->allPresets()) {
             QVariantMap preset = entry.toMap();
@@ -1644,14 +1720,16 @@ void DubbingController::refreshCloneVoicePresets()
             if (id.isEmpty()) continue;
             preset.insert(QStringLiteral("audioPath"), audioPath);
             preset.insert(QStringLiteral("familyId"), familyId);
-            const QString cloneWorkerFamily = normalizedVoiceCloneWorkerFamily(preset);
             preset.insert(QStringLiteral("sourceModelFamily"), familyId);
-            preset.insert(QStringLiteral("voiceCloneModelId"), cloneWorkerFamily);
+            preset.insert(QStringLiteral("voiceCloneTarget"), target);
+            preset.insert(QStringLiteral("voiceCloneModelId"), targetModel);
             preset.insert(QStringLiteral("valid"), preset.value(QStringLiteral("valid"), true).toBool());
-            // A saved clone belongs to the voice-cloning worker which created it or supports it
+            // Compatibility is determined by the selected target and managed
+            // reference asset, never by the source model that created it.
             preset.insert(QStringLiteral("compatible"),
-                          DubbingColabModelRoutes::supports(
-                              QStringLiteral("voice-cloning"), cloneWorkerFamily));
+                          preset.value(QStringLiteral("valid"), false).toBool()
+                              && DubbingColabModelRoutes::supports(
+                                  QStringLiteral("voice-cloning"), targetModel));
             refreshed.append(preset);
         }
     }
@@ -1662,6 +1740,16 @@ void DubbingController::refreshCloneVoicePresets()
 }
 
 bool DubbingController::selectCloneVoicePreset(const QString &presetId)
+{
+    const QVariantMap synthesis = m_workflowNodeConfigurations.value(
+        QStringLiteral("synthesize")).toMap();
+    const QVariantMap parameters = synthesis.value(QStringLiteral("parameters")).toMap();
+    return selectCloneVoicePresetForTarget(presetId,
+                                           configuredVoiceCloneTargetModel(parameters));
+}
+
+bool DubbingController::selectCloneVoicePresetForTarget(const QString &presetId,
+                                                        const QString &targetModel)
 {
     refreshCloneVoicePresets();
     const QString normalized = presetId.trimmed();
@@ -1680,16 +1768,24 @@ bool DubbingController::selectCloneVoicePreset(const QString &presetId)
         setError(QStringLiteral("The selected clone voice is unavailable or its reference audio is missing."));
         return false;
     }
-    if (!selected.value(QStringLiteral("compatible"), false).toBool()) {
-        setError(QStringLiteral("That saved voice has no supported exact Voice Cloning notebook. Choose another saved voice or recreate it with a supported Voice Cloning model."));
-        return false;
-    }
-    const QString cloneModel = selected.value(QStringLiteral("voiceCloneModelId"),
-                                               selected.value(QStringLiteral("familyId")))
-        .toString()
+    const QString cloneModel = normalizedVoiceCloneTargetModel(targetModel);
+    const QString cloneTarget = canonicalVoiceCloneTarget(cloneModel);
+    const QVariantList targets = selected.value(QStringLiteral(
+        "voiceModelTargets")).toList();
+    const QVariantList compatibleFamilies = selected.value(QStringLiteral(
+        "compatibleModelFamilies")).toList();
+    const QString sourceFamily = selected.value(QStringLiteral(
+        "sourceModelFamily"), selected.value(QStringLiteral("familyId"))).toString()
         .trimmed().toLower();
-    if (cloneModel.isEmpty()) {
-        setError(QStringLiteral("That saved voice has no Voice Cloning model identity."));
+    const bool universalTarget = cloneTarget == QStringLiteral("vieneu")
+        || cloneTarget == QStringLiteral("omnivoice");
+    const bool targetDeclared = universalTarget
+        ? targets.contains(cloneTarget)
+        : (compatibleFamilies.contains(cloneModel) || sourceFamily == cloneModel);
+    if (!targetDeclared
+        || !selected.value(QStringLiteral("valid"), false).toBool()
+        || !DubbingColabModelRoutes::supports(QStringLiteral("voice-cloning"), cloneModel)) {
+        setError(QStringLiteral("That saved voice cannot be prepared for the selected clone target. Repair the reference audio or choose another target."));
         return false;
     }
 
@@ -1702,12 +1798,13 @@ bool DubbingController::selectCloneVoicePreset(const QString &presetId)
     if (sameSelection) return true;
     m_project.ttsVoiceId = normalized;
     m_project.cloneVoicePresetId = normalized;
-    // Persist the exact clone family with this project selection.  Do not
-    // overwrite modelId: it remains the user's independent normal-TTS choice.
+    // Persist the exact clone target. The source family remains display
+    // provenance and never controls worker routing.
     parameters.insert(QStringLiteral("voiceCloneModelId"), cloneModel);
     synthesis.insert(QStringLiteral("parameters"), parameters);
     m_workflowNodeConfigurations.insert(QStringLiteral("synthesize"), synthesis);
     m_project.workflowNodeConfigurations = m_workflowNodeConfigurations;
+    refreshCloneVoicePresets();
     emit cloneVoiceSelectionChanged();
     emit projectChanged();
     emit workflowChanged();
@@ -1735,13 +1832,15 @@ bool DubbingController::applySelectedCloneVoiceToSynthesis(QVariantMap *settings
         settings->remove(QStringLiteral("voiceCloneModelId"));
         settings->insert(QStringLiteral("voice"), selectedId.mid(QStringLiteral("builtin:").size()));
     } else {
-        // Dubbing only consumes a verified library preset.  It never receives
-        // a source-media reference, consent form, or clone-model selection.
+        // Dubbing receives the verified managed reference and explicit target
+        // model. The synthesis job dispatches the target backend's clone path.
         settings->remove(QStringLiteral("voice"));
         settings->remove(QStringLiteral("cloneVoicePreset"));
         settings->remove(QStringLiteral("voiceCloningEnabled"));
-        settings->remove(QStringLiteral("voiceCloneModelId"));
-        settings->insert(QStringLiteral("savedTtsVoicePreset"), selectedCloneVoicePreset());
+        const QVariantMap selected = selectedCloneVoicePreset();
+        settings->insert(QStringLiteral("voiceCloneModelId"), selected.value(
+            QStringLiteral("voiceCloneModelId")));
+        settings->insert(QStringLiteral("savedTtsVoicePreset"), selected);
     }
     return true;
 }

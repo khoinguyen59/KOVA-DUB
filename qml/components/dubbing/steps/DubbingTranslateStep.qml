@@ -35,7 +35,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 1
                 Text {
-                    text: qsTr("6. DỊCH THUẬT AI (TRANSLATE)")
+                    text: qsTr("5. DỊCH THUẬT AI (TRANSLATE)")
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true

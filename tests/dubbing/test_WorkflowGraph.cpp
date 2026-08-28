@@ -167,7 +167,7 @@ void TestWorkflowGraph::buildsCanonicalDubbingWorkflowDefinition()
     QCOMPARE(graph.version, DubbingWorkflowDefinition::Version);
     QCOMPARE(graph.kind, QStringLiteral("system"));
     QCOMPARE(graph.nodes.size(), 13);
-    QCOMPARE(graph.edges.size(), 16);
+    QCOMPARE(graph.edges.size(), 15);
     QVERIFY(graph.interfaceDefinition.value(QStringLiteral("inputs")).toList().size() == 3);
     QCOMPARE(graph.policies.value(QStringLiteral("maxParallelNodes")).toInt(), 2);
     QVERIFY(!graph.policies.value(QStringLiteral("offlineOnly")).toBool());
@@ -214,8 +214,10 @@ void TestWorkflowGraph::requiresExplicitSourceSeparationStems()
                 && edge.targetPortId == QStringLiteral("audio");
         });
     QVERIFY(transcribeAudio != graph.edges.cend());
-    QCOMPARE(transcribeAudio->sourceNodeId, QStringLiteral("source-separate"));
-    QCOMPARE(transcribeAudio->sourcePortId, QStringLiteral("vocals"));
+    // Separation is an optional enhancement.  The canonical graph must still
+    // have a valid normalized-audio path so STT can run when no stems exist.
+    QCOMPARE(transcribeAudio->sourceNodeId, QStringLiteral("ingest"));
+    QCOMPARE(transcribeAudio->sourcePortId, QStringLiteral("analysisAudio"));
 }
 
 void TestWorkflowGraph::commitsAndResolvesAtomicArtifacts()

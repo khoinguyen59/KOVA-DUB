@@ -136,8 +136,8 @@ Rectangle {
             enabled: !root.dubbing.processing
                      || root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
             toolTip: root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
-                     ? qsTr("Use a verified manual output and stop this task's automatic Colab transfer")
-                     : qsTr("Upload the exact completed Colab output for this task")
+                     ? qsTr("Use a verified local output and stop this task's automatic transfer")
+                     : qsTr("Upload the exact output for this task; Colab is optional")
             onClicked: root.artifactUploadRequested()
         }
         PrimaryButton { iconName: "reload"; iconOnly: true; toolTip: qsTr("Reload model"); quiet: true; visible: root.canReload(); enabled: !root.lifecycleBusy(); onClicked: root.reloadRequested() }
@@ -224,8 +224,8 @@ Rectangle {
                 enabled: !root.dubbing.processing
                          || root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
                 toolTip: root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
-                         ? qsTr("Use a verified manual output and stop this task's automatic Colab transfer")
-                         : qsTr("Upload the declared Colab output for this task")
+                         ? qsTr("Use a verified local output and stop this task's automatic transfer")
+                         : qsTr("Upload the declared output for this task; Colab is optional")
                 onClicked: root.artifactUploadRequested()
             }
             ComboBox {

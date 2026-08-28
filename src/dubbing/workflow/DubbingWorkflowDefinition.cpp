@@ -58,6 +58,7 @@ WorkflowGraph DubbingWorkflowDefinition::create()
              {{QStringLiteral("analysisSampleRate"), 16000}, {QStringLiteral("masterSampleRate"), 48000}}),
         node(QStringLiteral("source-separate"), QStringLiteral("audio.source-separate"), QStringLiteral("Isolate Voice"),
              {{QStringLiteral("qualityPreset"), QStringLiteral("quality")}, {QStringLiteral("fallback"), QStringLiteral("strict")},
+              {QStringLiteral("optional"), true}, {QStringLiteral("canSkip"), true},
               {QStringLiteral("executionProvider"), QStringLiteral("colab-direct")},
               {QStringLiteral("modelId"), QStringLiteral("sherpa-onnx-spleeter-2stems-fp16")}}),
         node(QStringLiteral("transcribe"), QStringLiteral("audio.transcribe"), QStringLiteral("Transcribe"),
@@ -99,8 +100,9 @@ WorkflowGraph DubbingWorkflowDefinition::create()
     graph.edges = {
         link(QStringLiteral("l01"), QStringLiteral("media-input"), QStringLiteral("value"), QStringLiteral("ingest"), QStringLiteral("media")),
         link(QStringLiteral("l02"), QStringLiteral("ingest"), QStringLiteral("masterAudio"), QStringLiteral("source-separate"), QStringLiteral("audio")),
-        link(QStringLiteral("l02b"), QStringLiteral("source-separate"), QStringLiteral("vocals"), QStringLiteral("transcribe"), QStringLiteral("audio")),
-        link(QStringLiteral("l02c"), QStringLiteral("ingest"), QStringLiteral("analysisAudio"), QStringLiteral("transcribe"), QStringLiteral("fallbackAudio")),
+        // Separation is optional; normalized analysis audio is always a valid
+        // transcription input when the user skips the isolator.
+        link(QStringLiteral("l02c"), QStringLiteral("ingest"), QStringLiteral("analysisAudio"), QStringLiteral("transcribe"), QStringLiteral("audio")),
         link(QStringLiteral("l03"), QStringLiteral("transcribe"), QStringLiteral("transcript"), QStringLiteral("review-transcript"), QStringLiteral("artifact")),
         link(QStringLiteral("l04"), QStringLiteral("review-transcript"), QStringLiteral("artifact"), QStringLiteral("translate"), QStringLiteral("transcript")),
         link(QStringLiteral("l05"), QStringLiteral("translate"), QStringLiteral("transcript"), QStringLiteral("review-translation"), QStringLiteral("artifact")),

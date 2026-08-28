@@ -71,7 +71,8 @@ void DubbingWorkflowAdapter::start(const QString &nodeType, const QVariantMap &i
         m_runner->setBackgroundAudioPath(backgroundPath);
         m_runner->renderPreview(inputs.value(QStringLiteral("timeline")).toList(),
                                 parameters.value(QStringLiteral("projectPath")).toString(),
-                                parameters.value(QStringLiteral("outputPath")).toString());
+                                parameters.value(QStringLiteral("outputPath")).toString(),
+                                parameters.value(QStringLiteral("audioMixConfiguration")).toMap());
     } else if (nodeType == QStringLiteral("media.export")) {
         m_runner->startExport(inputs.value(QStringLiteral("sourceMedia")).toString(),
                               inputs.value(QStringLiteral("dubbedAudio")).toString(),

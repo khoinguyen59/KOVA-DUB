@@ -80,7 +80,8 @@ public:
                               const QVariantMap &synthesisSettings = QVariantMap());
     void fitTiming(const QVariantList &segments, const QString &projectPath);
     void cancel();
-    bool renderPreview(const QVariantList &segments, const QString &projectPath, const QString &path = QString());
+    bool renderPreview(const QVariantList &segments, const QString &projectPath, const QString &path = QString(),
+                       const QVariantMap &mixConfiguration = QVariantMap());
     bool startExport(const QString &sourceMediaPath, const QString &outputPath);
     bool startExport(const QString &sourceMediaPath, const QString &audioPath,
                      const QString &outputPath, const QVariantList &segments = {},

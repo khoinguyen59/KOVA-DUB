@@ -104,6 +104,7 @@ Desktop.ini
 *.log
 *.tmp
 scripts/__pycache__/
+**/__pycache__/
 
 # Models & Runtimes (Avoid committing large binary file
 *.bin

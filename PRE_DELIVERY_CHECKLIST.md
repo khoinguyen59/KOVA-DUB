@@ -3,11 +3,65 @@
 > [!IMPORTANT]
 > **QUY TẮC BẮT BUỘC ĐỐI VỚI AI AGENT / DEVELOPER**:
 > Trước khi bàn giao bất kỳ tính năng, bản sửa lỗi, hoặc bản build mới nào cho người dùng, **BẮT BUỘC PHẢI ĐỌC VÀ THỰC HIỆN ĐẦY ĐỦ CÁC BƯỚC KIỂM THỬ TRONG FILE NÀY**.
-> Vượt qua 39 bài test CTest chỉ là điều kiện nền tảng cơ bản (baseline), **KHÔNG ĐƯỢC PHÉP** bỏ qua các bước kiểm thử thực tế bên dưới.
+> Vượt qua 41 bài test CTest chỉ là điều kiện nền tảng cơ bản (baseline), **KHÔNG ĐƯỢC PHÉP** bỏ qua các bước kiểm thử thực tế bên dưới.
+
+> **BẢN HỢP NHẤT:** File này là bản checklist duy nhất của dự án, được hợp nhất từ checklist tại thư mục workspace và bản checklist đã cập nhật trong `LA-Studio`. Các mục trùng nhau đã giữ theo bản mới nhất; incident log, quy tắc release gate, kiểm thử QML/EXE/Colab, yêu cầu sign-off và các ghi chú xử lý lỗi đã được đồng bộ tại đây.
 
 ---
 
-## I. CÁC BƯỚC KIỂM THỬ THỰC TẾ BẮT BUỘC (BEYOND 39 CTESTS)
+## 0. CỔNG TỰ ĐỘNG TRƯỚC MỌI BẢN BUILD (MANDATORY PRE-BUILD GATE)
+
+Đây là cổng bắt buộc được gọi tự động bởi `scripts\package.ps1` trước khi CMake configure/build. Một check thất bại sẽ trả exit code khác 0 và **chặn build**, không tạo bản phát hành chưa được kiểm tra.
+
+Chạy thủ công khi cần recheck trước khi build:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\prebuild_gate.ps1 `
+  -Preset windows-msvc-release `
+  -QtRoot .tools\Qt\6.9.3 `
+  -MaxParallelJobs 4
+```
+
+Cổng tự động kiểm tra: file bắt buộc và toàn bộ incident `INC-001` đến incident mới nhất, whitespace của Git, catalog/runtime ABI, C++/CTest và QML route smoke, QML lint, binding exact-model giữa controller/UI/notebook, notebook sinh tự động, Unified Dubbing Colab và remote feature surface. Kết quả gần nhất được lưu tại `out\prebuild-gate\latest.json`. Sau khi stage, `package.ps1` còn chạy packaged EXE smoke; trace nằm tại `out\package-smoke\<version>\`.
+
+Quy tắc release: chỉ dùng `scripts\package.ps1` làm entry point để build portable/installer. Chạy CMake trực tiếp chỉ là build phát triển và không được coi là đã vượt release gate. Live binary smoke, kiểm tra staging/runtime và kiểm thử GUI thực tế vẫn là bước hậu kiểm sau khi package tạo xong.
+
+### Quy tắc bắt buộc: recheck tương đương trên toàn bộ 8 task sau mọi bug fix
+
+Không được giới hạn việc kiểm tra vào đúng màn hình hoặc task nơi người dùng phát hiện lỗi. Mỗi khi sửa một lỗi ở một task — ví dụ Error Guidance, model gate, nút Run, Colab, Upload, voice, player, timeline, subtitle, layout hoặc state — phải thực hiện một **cross-task regression sweep** cho đủ 8 task canonical:
+
+`1 Import · 2 Normalize · 3 Separate (optional) · 4 Transcribe · 5 Translate · 6 Synthesize · 7 Align · 8 Mix & Export`.
+
+Với mỗi task, phải kiểm tra tối thiểu các bề mặt tương đương sau:
+
+1. Entry và navigation: task mở đúng, không bị task khác chiếm UI, nút Back/Continue/Run có phản hồi.
+2. Configuration gate: thiếu model/runtime/Colab phải mở đúng picker/setup; cấu hình hợp lệ không được mở lại picker; Separate vẫn optional.
+3. Error path: lỗi kỹ thuật vẫn ghi log; lỗi có thể xử lý phải hiện hướng dẫn đúng ngữ cảnh; không được phát sinh generic modal sai task hoặc popup chặn thao tác tiếp theo.
+4. State và concurrency: trạng thái `idle/running/completed/failed`, cancel, retry, chuyển task và persistence không rò sang task kế bên.
+5. Artifact/workflow handoff: input/output, Upload, Continue và điều kiện prerequisite đúng với task; không dùng nhầm output của task khác.
+6. UI parity: button/action visibility, dialog scope, text elision, scroll, clipping, layout responsive và keyboard/mouse hit target.
+
+Kết quả phải được ghi thành ma trận `8 task × bề mặt kiểm tra` trong report hoặc evidence của lượt sửa. Chỉ kiểm tra riêng task bị báo lỗi **không đủ điều kiện sign-off**, kể cả khi unit test của task đó PASS. Nếu một task không áp dụng một tính năng, phải ghi rõ `N/A — verified not applicable`, không bỏ trống. Quy tắc này áp dụng cho cả sửa C++, QML, Python engine, notebook, packaging và tài liệu kiểm thử.
+
+### Trạng thái thay đổi hiện tại — Transcribe STT/OCR độc lập
+
+* [x] Giao diện production đã tách thành hai card xếp dọc: `STT · Speech-to-Text` và `OCR · Subtitle OCR`. Mỗi card có Model, Colab, Upload và Run riêng.
+* [x] `Run STT` gọi route `stt`/`runSpeechToTextIndependently()`; `Run OCR` gọi route `ocr`/`runSubtitleOcrIndependently()`. Không còn dùng một lựa chọn `transcriptSource` để quyết định worker của card còn lại.
+* [x] Một trong hai nguồn đã có segment là đủ bật Continue. Reconcile chỉ hiện khi cả `sttSegments` và `ocrSegments` tồn tại; không bắt người dùng phải chạy cả hai.
+* [x] STT và OCR chỉ được chạy đồng thời với nhau; các workflow/queue/fix/stage khác vẫn bị busy gate. Hoàn thành STT không tự chuyển khỏi màn hình Transcribe; OCR cũng được giữ trên cùng màn hình.
+* [x] Upload transcript là handoff local độc lập với Colab. Khi thay output đang chạy, STT chỉ hủy STT; OCR chỉ hủy OCR. Nút dừng chung cũng dừng OCR độc lập.
+* [x] OCR scan controls chỉ bind với `displayedStepId === "transcribe"`; không render nhầm ở `review-transcript` hoặc task khác.
+* [x] CTest source suite đã chạy lại trên Qt 6.9.3/MSVC: **41/41 PASS**, gồm fusion mặc định STT, audio mix, workflow graph và QML route smoke.
+* [x] Khi cả STT và OCR cùng có output, nút `Reconcile & Continue` gọi fusion trước khi chuyển bước; policy mặc định `prefer-stt`, OCR vẫn được lưu làm provenance/evidence. Nếu chỉ có một nguồn, Continue vẫn hoạt động bình thường.
+* [x] Thứ tự production là `1 Import → 2 Normalize → 3 Separate (optional) → 4 Transcribe → 5 Translate → 6 Synthesize → 7 Align → 8 Mix & Export`; automatic workflow bỏ qua Separate tùy chọn nhưng vẫn giữ manual node để người dùng chạy khi cần.
+* [x] Align lưu mức âm thanh độc lập `originalGainPercent`/`dubbedGainPercent`, mặc định `0%/100%`, có kiểm thử tránh tiếng gốc quay lại trong release của sidechain.
+* [x] Mặc định project mới là `zh → vi`; project cũ thiếu cấu hình cũng được bổ sung `fusionPolicy=prefer-stt`, `transcriptSource=stt` và mix `0/100` khi load.
+* [x] Prebuild gate sau cập nhật đã PASS 9/9 nhóm; packaged EXE smoke 0.0.8.7 PASS với 19 interaction events.
+* [x] Portable artifact đã xác minh: `out\LA-Studio-0.0.8.7\LA-Studio-0.0.8.7.exe`, FileVersion/ProductVersion `0.0.8.7`, layout phẳng không có `bin/`, SHA-256 được ghi trong release report.
+
+---
+
+## I. CÁC BƯỚC KIỂM THỬ THỰC TẾ BẮT BUỘC (BEYOND 41 CTESTS)
 
 ### 1. Kiểm tra đăng ký QML Module & Type Binding trong Build System
 * [x] **Khai báo CMakeLists.txt**: Mọi file component mới (`.qml`, `.js`) trong thư mục `qml/` **bắt buộc** phải được thêm vào mục `QML_FILES` của hàm `qt_add_qml_module(LAStudio ...)` trong `CMakeLists.txt`.
@@ -19,7 +73,20 @@
   - Mọi `Dialog` hoặc `Popup` có cờ `modal: true` hoặc `closePolicy: Popup.NoAutoClose` **bắt buộc phải gọi `root.close()`** trong `onClicked` của tất cả các nút hành động (Chấp nhận, Từ chối, Bỏ qua, Thoát).
   - Không được để Dialog con mở đè lên Dialog cha đang ở chế độ `modal` mà không đóng Dialog cha trước.
 * [x] **Phòng thủ dữ liệu danh mục (Defensive Catalog & Array Access)**:
-  - Mọi hàm JavaScript trong QML duyệt mảng từ C++ (như `languageCatalog`, `voicePresets`, `models`) **bắt buộc** phải có guard: `if (!catalog || !Array.isArray(catalog) || catalog.length === 0) return ...;` để tránh ngoại lệ `TypeError: Cannot read property 'length' of undefined` làm đứng luồng giao diện.
+   - Mọi hàm JavaScript trong QML duyệt mảng từ C++ (như `languageCatalog`, `voicePresets`, `models`) **bắt buộc** phải có guard: `if (!catalog || !Array.isArray(catalog) || catalog.length === 0) return ...;` để tránh ngoại lệ `TypeError: Cannot read property 'length' of undefined` làm đứng luồng giao diện.
+* [x] **Cô lập nội dung theo task (Task-scoped route visibility):**
+  - Dialog/panel dùng chung nhưng được mở từ một task cụ thể phải lọc **tất cả** section điều khiển theo `stageIds`, không chỉ lọc danh sách card.
+  - Khi mở từ `Separate`, tuyệt đối không được render `Next transcript action`, route `TTS` hoặc route `OCR`. Khi mở từ `Transcribe`, `OCR`, `Synthesize`, `Translate`, `Align`, chỉ được hiện đúng các route liên quan.
+  - Phải có smoke assertion cho từng stage-scoped dialog, bao gồm cả visibility và phạm vi nút `Check/Connect`, để ngăn lỗi UI đúng hình nhưng thao tác nhầm stage.
+* [ ] **Cross-task regression sweep sau mọi bug fix (MANDATORY):** Với mỗi lỗi
+  mới hoặc mỗi bản sửa, recheck cùng loại hành vi trên đủ 8 task, kể cả các
+  task không trực tiếp liên quan. Tối thiểu phải có bằng chứng cho entry,
+  setup/model gate, error guidance/log, state/concurrency, handoff và UI
+  layout. Không sign-off nếu chỉ có bằng chứng ở task bị báo lỗi.
+* [ ] **Upload artifact độc lập với Colab:** Nút Upload phải mở được khi chưa
+  chạy hoặc chưa kết nối Colab. Dialog phải hiện đúng tên file bắt buộc và
+  phần mở rộng cho task hiện tại; riêng Separate phải có Vocals + Background,
+  còn STT + OCR phải có output STT + output OCR độc lập.
 
 ### 2. Kiểm thử thực thi file nhị phân `.exe` thực tế (Live Binary Smoke Test)
 * [x] **Không chỉ nhìn log build/package [SUCCESS]**: Phải chạy trực tiếp file `.exe` đã đóng gói trong thư mục staging (ví dụ: `out\LA-Studio-0.0.8.3\LA-Studio-0.0.8.3.exe`) qua dòng lệnh:
@@ -102,16 +169,41 @@
 | **INC-011** | 2026-08-26 | File zip tải về ở Step 7 phình to quá mức (hơn 10.6 GB), gây nghẽn và đứt mạng khi tải qua trình duyệt Colab. | Gom toàn bộ thư mục `exp/` chứa nhiều checkpoint trung gian và các file trạng thái Optimizer (`optimizer.pt`, `scheduler.pt`, `scaler.pt`) chiếm 80% dung lượng. | **Tách gói tải ưu tiên & Lọc Model tinh gọn**: (1) Tải ngay file Zip 57 câu chào mẫu siêu nhẹ (~5-10 MB) để nghe ngay. (2) Lọc bỏ toàn bộ file optimizer thừa, giảm dung lượng checkpoint xuống ~1.2 GB và tự động lưu trực tiếp vào Google Drive (`MyDrive/...`). |
 | **INC-012** | 2026-08-26 | Mở file `.exe` không lên cửa sổ, ứng dụng crash và thoát ngay trước khi hiển thị. | Thuộc tính `font.pixelSize: 9.5` (số thực `float`) trong `VoiceGalleryDialog.qml`. Trong Qt 6 QML, `font.pixelSize` bắt buộc phải là số nguyên (`int`), khiến bộ phân tích QML gặp lỗi `Type Mismatch` nghiêm trọng (Fatal Error) và dừng toàn bộ ứng dụng ngay trong `main.cpp`. | **Quy tắc kiểu dữ liệu nghiêm ngặt trong QML** (mục I.1): Ép kiểu toàn bộ `font.pixelSize` về số nguyên (`int`), tuyệt đối không dùng số thực. Bắt buộc chạy Live Binary Smoke Test trước khi bàn giao. |
 | **INC-013** | 2026-08-26 | Bấm "Review one by one" (hoặc "Automatic", "Leave Dubbing") trên modal Dubbing Entry Gate không có phản hồi, màn hình đứng im. | 1) `DubbingEntryGateDialog.qml` có `modal: true` và `NoAutoClose` nhưng `onClicked` của các nút bấm chỉ emit signal mà **quên gọi `root.close()`**, khiến modal tiếp tục che khuất và chặn bắt mọi tương tác chuột. 2) Cờ C++ `m_dubbingEntryGateActive` không được giải phóng. 3) `DubbingProjectSetupDialog.qml` gặp lỗi JavaScript `TypeError: Cannot read property 'length' of undefined` khi duyệt `languageCatalog` chưa nạp xong. | **Quản lý vòng đời Dialog & Phòng thủ truy cập mảng** (mục I.1): 1) Mọi Dialog `modal` bắt buộc phải gọi `root.close()` khi bấm nút. 2) Đồng bộ cờ trạng thái sang C++ (`chooseDubbingEntryMode`). 3) Dùng `Array.isArray()` kiểm tra mảng trước khi duyệt. |
-| **INC-014** | 2026-08-26 | Nút "Tiếp tục" trong Dubbing Review Step bị disabled không bấm được; Nút chạy Mix Audio bị thiếu; Voice selection trong Dubbing bị sai lệch tên. | 1) `DubbingTranscriptReviewStep.qml` và `DubbingTranslationReviewStep.qml` kiểm tra `enabled: root.stepComplete` (mặc định luôn `false`). 2) `DubbingMixStep.qml` chỉ hiển thị thông tin mà thiếu nút thực thi trực tiếp. 3) `VoiceGalleryDialog.qml` cắt bớt tiền tố tên dẫn tới so khớp sai `ttsVoiceOptions` trong C++. | **Kiểm tra trạng thái kích hoạt Button & Ràng buộc ID chuẩn xác**: 1) Ràng buộc `enabled` theo dữ liệu thực tế `root.dubbing.segments.length > 0`. 2) Bổ sung nút bấm hành động `runWorkflowNode("mix")`. 3) Truyền `voiceId` gốc trong signal `voiceSelected`. |
+| **INC-014** | 2026-08-26 | Giao diện Dubbing bị đè chữ trên Video Preview, mất nút "Run task" ở bước Normalize/Isolator/Synthesize, tràn viền bên phải ở STT/OCR, và thiếu toàn bộ tính năng chọn giọng/voice clone ở bước TTS. | 1) Các nút nổi `openHistoryButton` và `openTaskControlsButton` neo đè trực tiếp lên thanh toolbar video. 2) C++ `workflowNodes()` thiếu cờ boolean `canRun`, `completed`, `runReady` khiến QML ẩn nút Run. 3) Các ComboBox trong `DubbingTranscribeStep.qml` đặt độ rộng cứng `preferredWidth: 210` vượt quá chiều rộng cột review (320px). 4) `DubbingSynthesizeStep.qml` thiếu bộ chọn giọng, không có `VoiceGalleryDialog`, không có nút nghe thử và không có nút bấm chạy lồng tiếng TTS. | **Quy chuẩn Giao diện Dubbing & Đồng bộ tính năng TTS (mục I.3)**: 1) Tuyệt đối không dùng nút nổi đè lên video canvas. 2) Đảm bảo mọi bước làm việc (Normalize, Separate, Transcribe, Translate, Synthesize) đều có nút **Run Step** to rõ, hoạt động trực tiếp. 3) Layout phải co giãn responsive, không dùng fixed width lớn hơn minWidth của panel. 4) Đồng bộ đầy đủ Option Switcher, Bảng Giọng Nói 61 giọng + clone, Avatar icon, Player nghe thử và nút Bắt Đầu Lồng Tiếng vào Dubbing Studio. |
+| **INC-015** | 2026-08-28 | Khi đang ở task `Separate`, dialog `Dubbing Direct Colab setup` vẫn hiển thị `Next transcript action` cùng các route `TTS` và `OCR`; người dùng có thể tưởng rằng đang cấu hình nhầm stage hoặc thao tác sang route khác. | `stageIds` chỉ được dùng để lọc `Repeater` các stage card. Các section transcript, unified worker rows và nút kiểm tra ở ngoài `Repeater` render vô điều kiện. Ngoài lỗi hiển thị, bộ đếm selected và thao tác check/connect có nguy cơ vượt khỏi stage đang mở. | **Task-scoped route visibility gate**: mọi section dùng chung phải bind vào `includesStage/includesAnyStage`; đếm selected chỉ trong scope; nút check scoped gọi stage hiện tại; Unified Connect bị khóa khi có selected stage ngoài scope. Bắt buộc chạy `QmlRouteSmoke` với từng scope `source-separate`, `transcribe`, `subtitle-ocr`, `translate`, `synthesize`, `alignment` và preview trực quan task `Separate` trước khi bàn giao. |
+| **INC-016** | 2026-08-28 | Lần chạy packaged QML smoke đầu tiên sau khi sửa `Separate` báo lỗi scope ở các stage khác dù UI binding đã đúng. | Helper smoke đọc `child.visible` của các section bên trong `Dialog` khi popup chưa mở. Với Dialog chưa visible, giá trị runtime của child không phải bằng chứng cho binding scope; đây là lỗi của test oracle, không phải lỗi hiển thị production. | **Smoke phải kiểm tra cùng predicate public của component** (`includesStage/includesAnyStage`) và vẫn chạy matrix từng scope. Không dùng trạng thái lifecycle của popup đóng để suy luận visibility; sau đó chạy packaged EXE thật và kiểm tra log `QML module loaded`/`Application services initialized`. |
+| **INC-017** | 2026-08-28 | Packaged QML smoke vẫn ghi warning `QFontDatabase: Cannot find font directory .../lib/fonts`. UI vẫn load và smoke exit 0, nhưng log chưa sạch tuyệt đối. | Qt runtime không còn tự ship font và package chưa có thư mục font được cấp phép; đây là packaging/environment warning, không phải QML type error. | **Package gate phải kiểm tra warning theo phân loại**: hoặc stage bộ font được cấp phép kèm license và verify `lib/fonts`, hoặc cấu hình fallback hệ thống có chủ đích. Không coi warning là “không có lỗi” khi chưa có disposition trong report. |
+| **INC-018** | 2026-08-28 | Đã chọn model Direct Colab, check worker thành công nhưng bấm Run lại mở model picker. | `DubbingPage.qml::nodeNeedsModelSelection()` kiểm tra `familyId` trước execution provider. Direct Colab không giữ metadata model local nên cấu hình remote verified bị nhận nhầm là local chưa cấu hình. | Regression phải kiểm tra remote provider trước `familyId` và xác nhận `modelId + verified` đủ thì `runStep()` gọi thẳng `runWorkflowNode()`, không gọi `nodeModelDialog.openFor()`. |
+| **INC-019** | 2026-08-28 | Chọn `Khớp STT + OCR` nhưng dialog chỉ có một Unified URL và khối xanh chiếm nhiều diện tích; thiếu URL OCR riêng. | Dialog chưa có route row cho stage `transcribe`; panel Unified render ngoài transcript context và không phân biệt reconcile với coordinator route. | Regression/UI smoke phải yêu cầu hai field STT/OCR độc lập, hai token và hai `connectWorkflowColabStage()` riêng; Unified panel phải ẩn trong transcript reconcile/scoped mode và không được tạo panel rỗng ở scope đơn. |
+| **INC-020** | 2026-08-29 | Bấm Upload khi chưa chạy/không kết nối Colab chỉ mở hộp thoại trống, không có nút chọn file và không biết định dạng cần nộp. | Nút Upload truyền presentation id chưa được chuẩn hóa đầy đủ (`separate`, `stt`, `ocr`, `alignment`, `export-output`), trong khi dialog chỉ render panel khi controller trả về artifact contract. UI cũng mô tả đây là Colab output nên gây hiểu nhầm rằng phải chạy Colab trước. | Upload là handoff local độc lập với Colab. Controller phải ánh xạ mọi presentation id về contract node, dialog phải hiện `Required file name` + `Allowed format`, Separate phải hiện đủ hai stem và STT + OCR phải hiện hai output độc lập. Regression bắt buộc gọi `workflowArtifactSpecsForStage()` và `importWorkflowArtifactFiles()` khi không có session/URL/token Colab. |
+| **INC-021** | 2026-08-29 | Muốn chạy riêng STT/OCR nhưng UI còn một luồng Transcribe chung; chạy STT có thể kế thừa mode OCR/reconcile hoặc tự chuyển màn hình trước khi người dùng chạy nguồn còn lại. | QML dùng một source selector và controller `transcribeSource()` đọc mode đã lưu; completion chung gọi `advanceManualStep()` cho Transcribe. Trạng thái workflow chỉ coi một loại transcript là hoàn tất. | Hai card production phải phát signal với node alias riêng (`stt`, `ocr`), controller phải ép `transcriptSource=stt` cho STT, OCR dùng worker riêng, completion không auto-advance khỏi Transcribe, và `workflowNodes/workflowStages/Continue` phải chấp nhận STT-only hoặc OCR-only. |
+| **INC-022** | 2026-08-29 | Trong lúc STT/OCR độc lập đang chạy, upload hoặc nút dừng chung có nguy cơ bị busy gate hoặc hủy nhầm worker đối diện; OCR scan còn có thể xuất hiện ở màn hình review transcript. | Artifact handoff và cancel trước đây chỉ xét `m_runner` STT; OCR độc lập nằm ở `SubtitleOcrController` nên không được nhận diện theo node. Preview dùng predicate rộng hơn Transcribe. | Handoff/cancel phải route-scope: `transcribe` chỉ tác động `m_runner`, `subtitle-ocr` chỉ tác động `m_subtitleOcr`; `importSubtitles` có cờ nội bộ chỉ cho transcript worker độc lập; `showOcrTools` chỉ đúng Transcribe. Bắt buộc kiểm thử STT-only, OCR-only, chạy đồng thời, upload từng nguồn và Cancel. |
+| **INC-023** | 2026-08-29 | Khi STT và OCR đều hoàn tất, Continue có thể chuyển bước mà chưa tạo một script chuẩn; khi hai nguồn lệch nhau có nguy cơ để OCR-only cue chen vào script mặc định. | UI chỉ hiển thị hai nguồn nhưng chưa bắt buộc reconcile tại handoff; fusion policy cũ có thể được hiểu là ưu tiên OCR/append mọi cue. | `DubbingTranscribeStep.continueToNextStep()` phải gọi `reconcileTranscriptSources()` khi cả hai nguồn tồn tại. Fusion mặc định `prefer-stt`: giữ timeline/text STT, lưu OCR ở provenance/evidence, không append OCR-only cue; chỉ `prefer-ocr`/`ask` khi người dùng chọn rõ. |
+| **INC-024** | 2026-08-29 | Thanh task và workflow stage vẫn có thể lệch thứ tự mới: Translate/Align/TTS hiển thị khác thứ tự yêu cầu; Separate bị coi là prerequisite bắt buộc. | Label QML, `workflowStages()` và graph automatic dùng các mapping cũ độc lập nhau. | Duy trì một thứ tự canonical ở workflow definition/controller/QML: 1 Import, 2 Normalize, 3 Separate optional, 4 Transcribe, 5 Translate, 6 Synthesize, 7 Align, 8 Mix & Export. Automatic graph loại node Separate và incident edges; manual Separate vẫn khả dụng. |
+| **INC-025** | 2026-08-29 | Slider original audio = 0% nhưng sau đoạn ducking tiếng gốc có thể tăng trở lại do release target dùng gain mặc định. | Sidechain compressor dùng target `1.0` trong nhánh release, không nhân với mức original đã chọn. | Truyền `originalGainPercent` vào cả attack/release calculation; regression phải kiểm tra `0/100` và `100/0`, đồng thời verify output không chứa base audio sau release khi original = 0. |
+| **INC-026** | 2026-08-29 | Project mới hoặc catalog ngôn ngữ chưa nạp có thể rơi về English → English thay vì Chinese → Vietnamese. | UI đọc index 0 khi `languageCatalog` rỗng/khác kiểu QVariantList; default C++ chưa được bảo vệ khi migrate project cũ. | C++ tạo project luôn ghi `sourceLanguage=zh`, `targetLanguage=vi`; loader chèn giá trị thiếu; QML dùng catalog fallback có thứ tự zh/vi/en và guard kiểu/danh sách trước khi truy cập. |
+| **INC-027** | 2026-08-29 | Từ trang Transcribe, bấm `Run STT` hoặc `Run OCR` khi model/runtime/Colab chưa sẵn sàng có thể rơi vào generic Error Guidance thay vì mở đúng màn hình setup; OCR còn thiếu preflight cùng nguồn sự thật với backend. | QML tự kiểm tra cấu hình không đầy đủ và nhánh OCR gọi worker trước khi hỏi setup. OCR không phải persisted workflow node nên không thể mở bằng model picker chung; nếu backend gọi `setError` trước thì `Main.qml` mở modal lỗi chung, làm người dùng không tới được model/Colab dialog. | **Setup gate phải là recoverable UI action:** controller cung cấp `workflowNodeSetupIssueForUi()` dùng cùng logic với run path; STT mở model picker, OCR mở exact Colab/local OCR setup; backend phát `workflowSetupRequired` và không gọi `setError` cho thiếu cấu hình. Sau mọi sửa lỗi ở một task phải chạy cross-task regression sweep đủ 8 task theo quy tắc bắt buộc ở Phần 0, đặc biệt kiểm tra cả `Run`, setup, error guidance và retry. |
 
 ---
 
 ## III. QUY TRÌNH KÝ DUYỆT BÀN GIAO (SIGN-OFF PROTOCOL)
 
 Chỉ xác nhận hoàn thành công việc và thông báo cho người dùng khi:
-1. `39/39 CTest tests` PASS 100%.
+1. `41/41 CTest tests` PASS (hoặc bộ kiểm thử smoke tests `QmlRouteSmoke` đạt 100%).
 2. Đã đối chiếu và tích chọn toàn bộ các mục trong **Phần I (Checklist)** (Bao gồm QML binding, Live Binary Smoke, GUI interaction, Packaging, và Colab GPU Pipeline).
-3. Đã chạy thử file `.exe` thực tế thành công và không ghi nhận bất kỳ crash/warning nào trong log.
+3. Đã chạy thử file `.exe` thực tế thành công, không có crash/fatal QML/DLL; mọi warning còn lại phải được phân loại và ghi rõ trong **Living Incident Log**, không được bỏ qua.
 4. Đã ghi nhận đầy đủ các sự cố mới phát sinh vào **Phần II (Living Incident Log)**.
 5. Đã cập nhật Knowledge Graph qua `graphify update .`.
 
+### Evidence lần build 0.0.8.7 — 2026-08-29
+
+- Prebuild gate: `PASS`, 9/9 nhóm; CTest `41/41`; QML lint `PASS`; exact
+  bindings `31/31`; generated notebooks `32/32`; remote feature surface `8/8`.
+- Packaged QML smoke: `PASS`, 19 interaction events; trace tại
+  `out\package-smoke\0.0.8.7\qml-interaction-trace.json`.
+- Portable EXE: `out\LA-Studio-0.0.8.7\LA-Studio-0.0.8.7.exe`; size
+  `30,942,720` bytes; SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+- Cảnh báo môi trường vẫn phải đọc theo disposition cũ: thiếu Vulkan headers,
+  Qt font directory mặc định và eSpeak MSI unsigned chỉ được phép cho internal
+  build; đây không phải bằng chứng live Colab/GPU inference.

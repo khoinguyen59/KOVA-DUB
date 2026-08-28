@@ -13,7 +13,7 @@ namespace LAStudio {
 class DubbingProject
 {
 public:
-    static constexpr int CurrentSchemaVersion = 14;
+    static constexpr int CurrentSchemaVersion = 15;
 
     QString projectPath;
     QString sourceMediaPath;
@@ -64,6 +64,10 @@ public:
     // Resolution policy is persisted, but the original media is never
     // rewritten. Individual segment ripple offsets remain reviewable.
     QVariantMap timingConfiguration;
+    // Persisted original/dubbed mix balance. Preview and final export read
+    // the same values so a user never hears a different mix at export time.
+    QVariantMap audioMixConfiguration = QVariantMap{{QStringLiteral("originalGainPercent"), 0},
+                                                     {QStringLiteral("dubbedGainPercent"), 100}};
     QVariantMap customRewriteConfiguration;
     QVariantList speakers;
     QVariantList segments;

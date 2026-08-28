@@ -582,7 +582,13 @@ Rectangle {
                     id: thumbnailPoster
                     objectName: "dubbingVideoThumbnail"
                     anchors.fill: parent
-                    visible: root.isVideoSource && !root.thumbnailReady
+                    // Keep the extracted first frame visible until playback
+                    // actually starts. MediaPlayer can report LoadedMedia
+                    // before VideoOutput has painted its first frame, which
+                    // otherwise leaves a black canvas in the editor.
+                    visible: root.isVideoSource && (!root.thumbnailReady
+                                                     || mediaPlayer.playbackState !== MediaPlayer.PlayingState)
+                    z: 6
                     color: "#11121a"
                     Image {
                         id: sourceThumbnailImage
@@ -934,7 +940,7 @@ Rectangle {
             Button { text: qsTr("Preset lower region"); enabled: !root.dubbing.processing && root.isVideoSource; onClicked: root.dubbing.presetDubbingOcrLowerRegion() }
             Button { text: qsTr("Reset region"); enabled: !root.dubbing.processing && root.isVideoSource; onClicked: root.dubbing.resetDubbingOcrRoi() }
             Button { text: qsTr("Preview crop"); enabled: !root.dubbing.processing && root.isVideoSource; onClicked: root.dubbing.previewDubbingOcrCrop(mediaPlayer.position) }
-            Text { visible: root.isVideoSource; text: root.dubbing.processing ? qsTr("OCR scan area is locked while Transcribe runs.") : (root.ocrRoiEditMode ? qsTr("Drag the purple area to move it; drag a round handle to resize it.") : qsTr("Click Edit OCR scan area before moving or resizing the scan box.")); color: root.dubbing.processing ? Theme.warning : Theme.textSecondary; topPadding: 7; font.pixelSize: 10 }
+            Text { visible: root.isVideoSource && root.dubbing.processing; text: qsTr("OCR locked"); color: Theme.warning; topPadding: 7; font.pixelSize: 10 }
             Text { visible: root.isVideoSource; text: qsTr("ROI: x %1, y %2, w %3, h %4").arg(Number(root.draftOcrRoi.x).toFixed(3)).arg(Number(root.draftOcrRoi.y).toFixed(3)).arg(Number(root.draftOcrRoi.width).toFixed(3)).arg(Number(root.draftOcrRoi.height).toFixed(3)); color: Theme.textSecondary; topPadding: 7; font.pixelSize: 10 }
             Text { visible: !root.isVideoSource; text: qsTr("Choose a video to set the OCR scan region."); color: Theme.textSecondary; topPadding: 7; font.pixelSize: 10 }
         }

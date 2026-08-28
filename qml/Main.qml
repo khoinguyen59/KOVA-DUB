@@ -133,6 +133,46 @@ ApplicationWindow {
         return true
     }
 
+    function qmlPreviewOpenDubbingColab() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewOpenDubbingColab
+                ? page.qmlPreviewOpenDubbingColab() : false
+    }
+
+    function qmlPreviewCloseDubbingColab() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewCloseDubbingColab
+                ? page.qmlPreviewCloseDubbingColab() : false
+    }
+
+    function qmlPreviewDubbingColabDialog() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewDubbingColabDialog
+                ? page.qmlPreviewDubbingColabDialog() : null
+    }
+
+    function qmlPreviewOpenDubbingHistory() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewOpenDubbingHistory
+                ? page.qmlPreviewOpenDubbingHistory() : false
+    }
+
+    function qmlPreviewCloseDubbingHistory() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewCloseDubbingHistory
+                ? page.qmlPreviewCloseDubbingHistory() : false
+    }
+
+    function qmlPreviewDubbingHistoryOverlay() {
+        var page = dubbingLoader ? dubbingLoader.item : null
+        return page && page.qmlPreviewDubbingHistoryOverlay
+                ? page.qmlPreviewDubbingHistoryOverlay() : null
+    }
+
+    function qmlPreviewDubbingOverlay() {
+        return Overlay.overlay
+    }
+
     function requestStudioRoute(routeId, familyId) {
         workflowsPopup.close()
         downloadsPopup.close()

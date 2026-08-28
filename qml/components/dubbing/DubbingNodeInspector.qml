@@ -29,6 +29,10 @@ Rectangle {
     // Keep the project TTS voice selector visible before a model/runtime is
     // loaded as well; model setup must not hide a required run configuration.
     readonly property bool ttsVoiceAvailable: nodeId === "synthesize"
+    readonly property var cloneTargetModels: [
+        { id: "vieneu-tts-v3-turbo", name: "VieNeu-TTS v3 Turbo" },
+        { id: "omnivoice", name: "OmniVoice" }
+    ]
     readonly property bool isRemoteTranscription: nodeId === "transcribe"
                                                   && String(dynamicSettings.executionProvider || "local-dev").toLowerCase() !== "local-dev"
     readonly property string alignmentModelId:
@@ -61,6 +65,40 @@ Rectangle {
         var patch = ({})
         patch[parameterId] = value
         root.dubbing.setWorkflowNodeParameters(root.nodeId, patch)
+    }
+
+    function isSavedCloneVoice(item) {
+        return item && (item.kind === "saved-clone"
+                        || (item.id && String(item.id).indexOf("builtin:") !== 0
+                            && (item.audioPath || item.referenceAudio)))
+    }
+
+    function cloneTargetIndex() {
+        var selected = root.node && root.node.parameters
+                ? String(root.node.parameters.voiceCloneModelId || "omnivoice").toLowerCase()
+                : "omnivoice"
+        for (var i = 0; i < root.cloneTargetModels.length; ++i) {
+            if (root.cloneTargetModels[i].id === selected
+                    || (selected === "vieneu" && root.cloneTargetModels[i].id.indexOf("vieneu-") === 0))
+                return i
+        }
+        return 1
+    }
+
+    function selectedTtsVoiceObject() {
+        var options = root.dubbing.ttsVoiceOptions || []
+        for (var i = 0; i < options.length; ++i) {
+            if (options[i].id === root.dubbing.selectedTtsVoiceId) return options[i]
+        }
+        return null
+    }
+
+    function selectCloneTarget(index) {
+        var selected = root.selectedTtsVoiceObject()
+        if (!root.isSavedCloneVoice(selected) || !root.cloneTargetModels[index]) return
+        if (root.dubbing.selectCloneVoicePresetForTarget(selected.id,
+                                                         root.cloneTargetModels[index].id))
+            root.voiceModelRequested(root.nodeId)
     }
 
     function updateDurationControl(parameterId, value) {
@@ -238,12 +276,7 @@ Rectangle {
                                 var selected = model[index]
                                 if (!selected || !root.dubbing.selectTtsVoice(selected.id))
                                     return
-                                var family = String(selected.sourceModelFamily
-                                                    || selected.modelFamily
-                                                    || selected.familyId || "").toLowerCase()
-                                var worker = String(selected.voiceCloneModelId || "").toLowerCase()
-                                if (worker === "omnivoice" || family === "omnivoice"
-                                        || family.indexOf("vieneu") === 0)
+                                if (root.isSavedCloneVoice(selected))
                                     root.voiceModelRequested(root.nodeId)
                             }
                         }
@@ -257,6 +290,36 @@ Rectangle {
                             onClicked: dubbingVoiceGalleryDialog.open()
                         }
                     }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        visible: root.isSavedCloneVoice(root.selectedTtsVoiceObject())
+
+                        Text {
+                            text: qsTr("Clone model")
+                            color: Theme.textSecondary
+                            font.pixelSize: Theme.fontSmall
+                        }
+
+                        ComboBox {
+                            Layout.fillWidth: true
+                            model: root.cloneTargetModels
+                            textRole: "name"
+                            currentIndex: root.cloneTargetIndex()
+                            enabled: !root.dubbing.processing
+                            onActivated: function(index) { root.selectCloneTarget(index) }
+                        }
+
+                        PrimaryButton {
+                            text: qsTr("Open model")
+                            iconName: "settings"
+                            quiet: true
+                            implicitWidth: 104
+                            onClicked: root.voiceModelRequested(root.nodeId)
+                        }
+                    }
+
                     Text {
                         Layout.fillWidth: true
                         text: qsTr("Choose a voice from the catalog or a saved reference. The selected voice is applied consistently to the dubbing run.")
@@ -648,9 +711,7 @@ Rectangle {
         onVoiceSelected: function(audioPath, referenceText, name, familyId, voiceId) {
             root.dubbing.refreshCloneVoicePresets()
             if (voiceId && voiceId.length > 0) {
-                if (root.dubbing.selectTtsVoice(voiceId)
-                        && (String(familyId || "").toLowerCase() === "omnivoice"
-                            || String(familyId || "").toLowerCase().indexOf("vieneu") === 0))
+                if (root.dubbing.selectTtsVoice(voiceId))
                     root.voiceModelRequested(root.nodeId)
                 return
             }
@@ -659,21 +720,14 @@ Rectangle {
             for (var i = 0; i < opts.length; ++i) {
                 var optClean = String(opts[i].name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
                 if (opts[i].id === voiceId || opts[i].name === name || optClean === cleanName || opts[i].audioPath === audioPath || opts[i].id === ("builtin:" + name)) {
-                    if (root.dubbing.selectTtsVoice(opts[i].id)
-                            && (String(opts[i].voiceCloneModelId || "").toLowerCase() === "omnivoice"
-                                || String(opts[i].sourceModelFamily || opts[i].modelFamily || "").toLowerCase().indexOf("vieneu") === 0))
+                    if (root.dubbing.selectTtsVoice(opts[i].id))
                         root.voiceModelRequested(root.nodeId)
                     return
                 }
             }
             for (var j = 0; j < opts.length; ++j) {
                 if (opts[j].audioPath && audioPath && opts[j].audioPath.indexOf(audioPath) !== -1) {
-                    var fallbackWorker = String(opts[j].voiceCloneModelId || "").toLowerCase()
-                    var fallbackFamily = String(opts[j].sourceModelFamily
-                                                 || opts[j].modelFamily || "").toLowerCase()
-                    if (root.dubbing.selectTtsVoice(opts[j].id)
-                            && (fallbackWorker === "omnivoice"
-                                || fallbackFamily.indexOf("vieneu") === 0))
+                    if (root.dubbing.selectTtsVoice(opts[j].id))
                         root.voiceModelRequested(root.nodeId)
                     return
                 }

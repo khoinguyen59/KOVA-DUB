@@ -22,7 +22,8 @@ public:
 
     bool running() const { return m_running; }
     bool renderPreview(const QVariantList &segments, const QString &projectPath,
-                       const QString &backgroundPath, const QString &path = QString());
+                       const QString &backgroundPath, const QString &path = QString(),
+                       const QVariantMap &mixConfiguration = QVariantMap());
     bool startExport(const QString &sourceMediaPath, const QString &audioPath,
                      const QString &outputPath, const QVariantList &segments = {},
                      const QVariantMap &subtitleConfiguration = QVariantMap());

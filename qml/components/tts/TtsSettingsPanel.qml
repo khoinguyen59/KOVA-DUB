@@ -32,6 +32,16 @@ ColumnLayout {
                                               && AppController.colabVoiceClone.colabActive
                                               ? AppController.colabVoiceClone.model.trim().toLowerCase() : ""
     readonly property bool cloneVoiceActive: cloneVoiceModel !== ""
+    readonly property bool localReferenceCloneActive: {
+        var familyId = root.family && root.family.id ? String(root.family.id).trim().toLowerCase() : ""
+        var localTarget = root.normalizedCloneTargetModel(familyId)
+        var selectedTarget = root.selectedCloneTargetModel()
+        return !root.remoteFirstMode && !!AppController.tts && AppController.tts.modelLoaded
+               && (familyId === "omnivoice" || familyId.indexOf("vieneu-tts") === 0)
+               && selectedTarget === localTarget
+    }
+    readonly property bool cloneRouteReadyForSelectedVoice: cloneWorkerActiveForSelectedVoice
+                                                            || localReferenceCloneActive
     property var reusableCloneVoices: []
     property int reusableCloneVoiceIndex: -1
     property bool reusableCloneConsent: false
@@ -105,51 +115,75 @@ ColumnLayout {
     property string activeOptionTab: "colab" // "colab", "gateway", "clone"
 
     readonly property var cloneModelOptions: [
-        { id: "", title: qsTr("All Model Families") },
+        { id: "", title: qsTr("All Clone Targets") },
         { id: "vieneu-tts-v3-turbo", title: "VieNeu-TTS v3 Turbo" },
+        { id: "omnivoice", title: "OmniVoice" },
         { id: "qwen3-tts-1.7b-base", title: "Qwen3-TTS 1.7B Base" },
         { id: "qwen3-tts-0.6b-base", title: "Qwen3-TTS 0.6B Base" },
-        { id: "omnivoice", title: "OmniVoice" },
         { id: "vieneu-tts-v2-turbo", title: "VieNeu-TTS v2 Turbo" },
         { id: "voxcpm2", title: "VoxCPM2" }
     ]
     property string selectedCloneModelFilter: ""
     property int selectedCloneModelFilterIndex: 0
 
-    function selectedVoiceModelTitle() {
-        var voice = selectedReusableCloneVoice()
-        if (!voice || !voice.familyId) return qsTr("Unknown Model")
-        var famId = String(voice.familyId).trim().toLowerCase()
+    function normalizedCloneTargetModel(value) {
+        var model = String(value || "").trim().toLowerCase()
+        if (model === "vieneu") return "vieneu-tts-v3-turbo"
+        if (model.indexOf("vieneu-tts-v") === 0) return model
+        if (model === "omnivoice") return model
+        return model
+    }
+
+    function localCloneTargetModel() {
+        var familyId = root.family && root.family.id ? String(root.family.id).trim().toLowerCase() : ""
+        if (familyId === "omnivoice" || familyId.indexOf("vieneu-tts-v") === 0)
+            return root.normalizedCloneTargetModel(familyId)
+        return ""
+    }
+
+    function selectedCloneTargetModel() {
+        var target = root.selectedCloneModelFilter !== ""
+                ? root.selectedCloneModelFilter
+                : (root.cloneVoiceModel !== "" ? root.cloneVoiceModel : root.localCloneTargetModel())
+        return root.normalizedCloneTargetModel(target || "omnivoice")
+    }
+
+    function modelTitleFor(targetModel) {
+        var normalized = root.normalizedCloneTargetModel(targetModel)
         for (var i = 0; i < root.cloneModelOptions.length; ++i) {
-            if (root.cloneModelOptions[i].id === famId)
+            if (root.normalizedCloneTargetModel(root.cloneModelOptions[i].id) === normalized
+                    && root.cloneModelOptions[i].id !== "")
                 return root.cloneModelOptions[i].title
         }
-        return famId
+        return normalized !== "" ? normalized : qsTr("All Clone Targets")
+    }
+
+    function selectedVoiceModelTitle() {
+        return root.modelTitleFor(root.selectedCloneTargetModel())
     }
 
     readonly property bool cloneWorkerActiveForSelectedVoice: {
         var voice = selectedReusableCloneVoice()
-        if (!voice || !voice.familyId) return false
-        var voiceFam = String(voice.familyId).trim().toLowerCase()
+        if (!voice) return false
+        var voiceTarget = root.selectedCloneTargetModel()
         return AppController.colabVoiceClone
                && AppController.colabVoiceClone.colabActive
-               && AppController.colabVoiceClone.model.trim().toLowerCase() === voiceFam
+               && AppController.colabVoiceClone.model.trim().toLowerCase() === voiceTarget
     }
 
     function syncSelectedVoiceModel() {
-        var voice = selectedReusableCloneVoice()
-        if (voice && voice.familyId) {
-            var famId = String(voice.familyId).trim().toLowerCase()
-            if (AppController.colabVoiceClone && famId !== "") {
-                AppController.colabVoiceClone.selectColabModel(famId)
-            }
+        var target = root.selectedCloneTargetModel()
+        if (AppController.colabVoiceClone && target !== "") {
+            AppController.colabVoiceClone.selectColabModel(target)
         }
     }
 
     function refreshReusableCloneVoices() {
         var voices = []
         if (AppController.voiceClonePresets) {
-            var targetFamily = root.selectedCloneModelFilter !== "" ? root.selectedCloneModelFilter : root.cloneVoiceModel
+            var targetFamily = root.selectedCloneModelFilter !== ""
+                    ? root.selectedCloneModelFilter
+                    : (root.cloneVoiceModel !== "" ? root.cloneVoiceModel : root.localCloneTargetModel())
             voices = targetFamily !== ""
                      ? AppController.voiceClonePresets.presetsForFamily(targetFamily)
                      : (root.cloneVoiceModel !== ""
@@ -215,9 +249,7 @@ ColumnLayout {
     Connections {
         target: AppController.voiceClonePresets
         function onPresetsChanged(familyId) {
-            var normalizedFamilyId = String(familyId || "").trim().toLowerCase()
-            if (normalizedFamilyId === "" || root.selectedCloneModelFilter === "" || normalizedFamilyId === root.selectedCloneModelFilter)
-                root.refreshReusableCloneVoices()
+            root.refreshReusableCloneVoices()
         }
     }
 
@@ -533,16 +565,16 @@ ColumnLayout {
 
                 Text {
                     Layout.fillWidth: true
-                    text: root.cloneWorkerActiveForSelectedVoice
-                          ? qsTr("The verified %1 Colab GPU worker is ready. You can now generate speech with your saved voice.").arg(root.selectedVoiceModelTitle())
-                          : qsTr("Each model family has distinct data. Select the model and saved cloned voice below.")
-                    color: root.cloneWorkerActiveForSelectedVoice ? Theme.success : Theme.textSecondary
+                    text: root.cloneRouteReadyForSelectedVoice
+                          ? qsTr("%1 clone target is ready.").arg(root.selectedVoiceModelTitle())
+                          : qsTr("Select a clone target and a saved voice.")
+                    color: root.cloneRouteReadyForSelectedVoice ? Theme.success : Theme.textSecondary
                     font.pixelSize: Theme.fontSmall
                     wrapMode: Text.WordWrap
                 }
 
                 // 1. Model Family Filter / Selector
-                Text { text: qsTr("Filter by model family"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                Text { text: qsTr("Clone target"); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                 AppComboBox {
                     id: cloneModelFilterCombo
                     Layout.fillWidth: true
@@ -622,7 +654,7 @@ ColumnLayout {
                                 Layout.preferredHeight: 14
                             }
                             Text {
-                                text: qsTr("Source Model:")
+                                text: qsTr("Clone Target:")
                                 color: Theme.textSecondary
                                 font.pixelSize: Theme.fontSmall
                             }
@@ -636,10 +668,12 @@ ColumnLayout {
 
                         Text {
                             Layout.fillWidth: true
-                            text: root.cloneWorkerActiveForSelectedVoice
-                                  ? qsTr("Colab GPU Worker is connected and verified.")
-                                  : qsTr("Status: Colab GPU worker not connected yet.")
-                            color: root.cloneWorkerActiveForSelectedVoice ? Theme.success : Theme.warning
+                            text: root.localReferenceCloneActive
+                                  ? qsTr("Local model is ready for reference cloning.")
+                                  : (root.cloneWorkerActiveForSelectedVoice
+                                     ? qsTr("Colab GPU worker is connected and verified.")
+                                     : qsTr("Select or connect the clone target to continue."))
+                            color: root.cloneRouteReadyForSelectedVoice ? Theme.success : Theme.warning
                             font.pixelSize: Theme.fontSmall - 1
                             wrapMode: Text.WordWrap
                         }
@@ -649,7 +683,7 @@ ColumnLayout {
                 // 4. In-Place Colab Connection Controls (visible when worker is not connected)
                 Rectangle {
                     Layout.fillWidth: true
-                    visible: root.selectedReusableCloneVoice() !== null && !root.cloneWorkerActiveForSelectedVoice
+                    visible: root.selectedReusableCloneVoice() !== null && !root.cloneRouteReadyForSelectedVoice
                     radius: Theme.radiusSmall
                     color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.04)
                     border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
@@ -731,13 +765,13 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: qsTr("I have permission to use this cloned voice for TTS")
                     checked: root.reusableCloneConsent
-                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.cloneWorkerActiveForSelectedVoice
+                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.cloneRouteReadyForSelectedVoice
                     onCheckedChanged: root.reusableCloneConsent = checked
                 }
 
                 PrimaryButton {
                     Layout.fillWidth: true
-                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.reusableCloneConsent && root.cloneWorkerActiveForSelectedVoice
+                    enabled: !root.locked && root.reusableCloneVoiceIndex >= 0 && root.reusableCloneConsent && root.cloneRouteReadyForSelectedVoice
                     text: root.selectedRemoteProvider === "clone"
                           ? qsTr("Cloned voice route active")
                           : qsTr("Use cloned voice in TTS")

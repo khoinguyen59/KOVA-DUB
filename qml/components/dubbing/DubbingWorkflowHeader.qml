@@ -272,15 +272,25 @@ Rectangle {
                 quiet: true
                 toolTip: qsTr("More Dubbing actions")
                 accessibleName: toolTip
-                onClicked: actionMenu.open()
+                onClicked: root.openActionMenu()
             }
         }
     }
 
+    function openActionMenu() {
+        // Menu is reparented to the application overlay when opened. The
+        // button's local x/y therefore cannot be used as popup coordinates:
+        // at runtime that placed the menu near the left edge. Resolve the
+        // trigger in scene coordinates before opening and clamp it to the
+        // current header bounds.
+        var anchor = moreActionsButton.mapToItem(null, 0, moreActionsButton.height)
+        actionMenu.x = Math.max(0, Math.min(anchor.x, root.width - actionMenu.width))
+        actionMenu.y = anchor.y
+        actionMenu.open()
+    }
+
     Menu {
         id: actionMenu
-        x: Math.max(0, moreActionsButton.x + moreActionsButton.width - width)
-        y: moreActionsButton.y + moreActionsButton.height
         width: 220
 
         MenuItem {

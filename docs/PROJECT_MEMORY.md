@@ -1,5 +1,72 @@
 # Tri nho du an LA Studio
 
+## 2026-08-29 - Setup preflight parity va recheck lien task
+
+- `Run STT` va `Run OCR` phai preflight bang cung nguon su that controller
+  truoc khi goi worker. Thieu model/runtime/Colab thi mo dung model picker
+  hoac OCR setup dialog, khong day qua generic Error Guidance; loi runtime
+  that van ghi log.
+- Moi bug fix bat buoc recheck theo ma tran tuong duong tren ca 8 task: entry,
+  setup gate, error guidance/log, state/concurrency, handoff va UI. Checklist
+  va workspace contract test da khoa quy tac nay.
+- Verification: 41/41 CTest, QML lint, prebuild 9/9, packaged smoke 19
+  events. Artifact `0.0.8.7` SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+
+## 2026-08-29 - Canonical fusion, workflow order va Align audio
+
+- Khi ca STT va OCR cung co output, nut `Reconcile & Continue` phai goi fusion
+  truoc khi chuyen buoc. Policy mac dinh la `prefer-stt`: STT giu timeline va
+  noi dung canonical khi hai script khong khop; OCR chi duoc luu lam evidence/
+  provenance. OCR-only cue khong duoc tu chen vao script mac dinh.
+- Mot nguon duy nhat (STT-only hoac OCR-only) van duoc Continue; chi khi co ca
+  hai moi bat buoc reconcile. `AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md`
+  la contract cho agent/IDE ben ngoai.
+- Thu tu canonical: `1 Import -> 2 Normalize -> 3 Separate optional -> 4
+  Transcribe -> 5 Translate -> 6 Synthesize -> 7 Align -> 8 Mix & Export`.
+  Automatic graph bo qua Separate optional; manual node van giu.
+- Align luu `originalGainPercent`/`dubbedGainPercent` (mac dinh `0/100`) va
+  sidechain release phai ton trong original gain, khong de tieng goc quay lai.
+- Project moi va migration thieu ngon ngu mac dinh `zh -> vi`; translation
+  prompt phai giu cue count, timeline, speaker/role/context va target text
+  khong rong.
+- Build 0.0.8.7 da qua prebuild gate 9/9, CTest 41/41, QML lint, exact
+  bindings 31/31, notebooks 32/32, remote surface 8/8 va packaged smoke 19
+  events. EXE portable nam o `out/LA-Studio-0.0.8.7/`, khong co `bin/`; SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+
+## 2026-08-29 - Transcribe tach STT/OCR va route-safe worker
+
+- Dubbing Transcribe phai hien hai card doc lap xep doc: `STT` va `OCR`. Moi
+  card tu goi model/Colab/upload/run cua minh; khong dung mot selector
+  `transcriptSource` de bat/tat worker con lai.
+- `stt` goi `runSpeechToTextIndependently()` va chi ghi `sttSegments`; `ocr`
+  goi `runSubtitleOcrIndependently()` va chi ghi `ocrSegments`. Mot trong hai
+  ket qua la du de Continue sang review/luong tiep theo; Reconcile chi hien
+  khi ca hai nguon da co.
+- Ngoai le concurrency duy nhat la STT va OCR manual chay song song. Upload,
+  cancel va thay artifact phai dung dung worker theo node: STT khong duoc
+  cancel OCR, OCR khong duoc cancel STT. Cancel chung phai dung ca OCR doc lap.
+- `showOcrTools` chi duoc true o `displayedStepId === "transcribe"`.
+- Source regression contract da them; QML lint/diff check pass. Chua co
+  CTest/build moi vi may hien tai thieu Qt 6 MSVC dev kit va test build tree.
+
+## 2026-08-29 - Manual artifact upload khong phu thuoc Colab
+
+- Upload output la mot handoff local: nguoi dung co the chon file da co san
+  tren may ma khong can chay/kết nối Colab, URL, token hay model. Colab chi la
+  route cho nut Run.
+- `workflowArtifactSpecsForStage()` phai nhan ca durable node id va
+  presentation id (`separate`, `stt`, `ocr`, `alignment`, `export-output`) de
+  dialog khong bao gio mo rong. Dialog phai hien ten file bat buoc va suffix
+  duoc phep.
+- STT + OCR la hai handoff doc lap; dialog hien hai output. Reconciliation
+  van la buoc sau, khong duoc bien STT/OCR thanh mot file review duy nhat khi
+  nguoi dung dang upload nguon.
+- C++ test moi: `manualArtifactUploadAcceptsPresentationStagesWithoutColab`.
+  Neu sua QML/controller upload, phai re-run CTest va QML lint tren moi truong
+  co Qt 6 MSVC truoc khi package.
+
 ## 2026-08-24 - Dong bo revision OCR va artifact upload
 
 - `subtitle-ocr` desktop handshake va generated exact notebook la mot cap

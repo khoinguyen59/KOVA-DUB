@@ -43,7 +43,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 1
                 Text {
-                    text: qsTr("9. TRỘN ÂM THANH (MIX AUDIO)")
+                    text: qsTr("8. MIX & EXPORT")
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true

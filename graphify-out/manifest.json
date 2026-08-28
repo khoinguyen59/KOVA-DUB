@@ -816,9 +816,9 @@
     "semantic_hash": ""
   },
   "notebooks/workers/LA_STUDIO_UNIFIED_DUBBING_COORDINATOR.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788262,
-    "ast_hash": "b8a305cc810c3ad93e6d092919dc4c7d",
+    "mtime": 1787926160.9810505,
+    "seen": 1787940944.359813,
+    "ast_hash": "36dd9131cb605c3e471ff6495b3039c2",
     "semantic_hash": ""
   },
   "qml/components/base/colabNotebookUrls.js": {
@@ -900,9 +900,9 @@
     "semantic_hash": ""
   },
   "scripts/generate_spleeter_safe_colab_notebook.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788377,
-    "ast_hash": "4dcc7bf4640fc911db7434aa3d61299a",
+    "mtime": 1787926326.3089428,
+    "seen": 1787940944.361082,
+    "ast_hash": "8d6c2dbb1e3048719db4aac00e889fb8",
     "semantic_hash": ""
   },
   "scripts/generate_stt_colab_notebooks.py": {
@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "scripts/generate_unified_dubbing_colab_notebook.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788408,
-    "ast_hash": "800e815794e53f8cdd3a01e15a139388",
+    "mtime": 1787926160.996684,
+    "seen": 1787940944.3615406,
+    "ast_hash": "6d360720d636315054088498ccdb97ce",
     "semantic_hash": ""
   },
   "scripts/generate_voice_colab_notebooks.py": {
@@ -942,9 +942,9 @@
     "semantic_hash": ""
   },
   "scripts/package.ps1": {
-    "mtime": 1787684972.5985048,
-    "seen": 1787686997.5932345,
-    "ast_hash": "b30e43caf1fea69d8eaf108667c81394",
+    "mtime": 1787938550.7553132,
+    "seen": 1787940944.361742,
+    "ast_hash": "f819fbcf8bb2e23579cd2908e3844561",
     "semantic_hash": ""
   },
   "scripts/prepare_paddle_ocr_runtime.ps1": {
@@ -1014,15 +1014,15 @@
     "semantic_hash": ""
   },
   "scripts/verify_colab_model_bindings.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788527,
-    "ast_hash": "34bf499e1ce46c15dadac9f58fa935e6",
+    "mtime": 1787925987.0374513,
+    "seen": 1787940944.3629103,
+    "ast_hash": "74734fdece6ebeb8c5a56e312ae5628c",
     "semantic_hash": ""
   },
   "scripts/verify_generated_colab_notebooks.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788534,
-    "ast_hash": "49bf8768a6df5708ea436b2f8e113672",
+    "mtime": 1787925960.2040184,
+    "seen": 1787940944.3629127,
+    "ast_hash": "108fb54430130877deb4f01adfcb8557",
     "semantic_hash": ""
   },
   "scripts/verify_release_version.ps1": {
@@ -1032,9 +1032,9 @@
     "semantic_hash": ""
   },
   "scripts/verify_remote_feature_surface.ps1": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788568,
-    "ast_hash": "a08881bf9cf97407306f4a14ffdd989f",
+    "mtime": 1787926375.84155,
+    "seen": 1787940944.363008,
+    "ast_hash": "0efcce72e626ce9df8ff8be110899eab",
     "semantic_hash": ""
   },
   "scripts/verify_runtime_abi.ps1": {
@@ -1044,9 +1044,9 @@
     "semantic_hash": ""
   },
   "scripts/verify_unified_dubbing_colab_notebook.py": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7788582,
-    "ast_hash": "5506c7d416b63a67b163de3e34898867",
+    "mtime": 1787926022.8633616,
+    "seen": 1787940944.3631017,
+    "ast_hash": "92a7878c3477f7a4a423a7ce8feb402e",
     "semantic_hash": ""
   },
   "scripts/write_toolchain_manifest.ps1": {
@@ -1218,39 +1218,39 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.cpp": {
-    "mtime": 1787910454.2468932,
-    "seen": 1787912478.1536264,
-    "ast_hash": "de0d75c1709fc604f9ed22daf5c99ba2",
+    "mtime": 1787945300.4457178,
+    "seen": 1787947596.1268845,
+    "ast_hash": "8509d946f965ed29f9c792b041b9d3a9",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingController.h": {
-    "mtime": 1787911269.0476,
-    "seen": 1787912478.1536288,
-    "ast_hash": "65909a36ff3abaca5af79239f7ba784c",
+    "mtime": 1787949413.0049481,
+    "seen": 1787950454.6402676,
+    "ast_hash": "11cd3b7ed4bbe810d3b664221cd89749",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingExportJob.cpp": {
-    "mtime": 1787891756.2788374,
-    "seen": 1787892328.3533971,
-    "ast_hash": "25e2a6f9d86e759f90407dacd3039e75",
+    "mtime": 1787945454.7577255,
+    "seen": 1787947596.126887,
+    "ast_hash": "a84b72bbbb5b32e2002bedc023402545",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingExportJob.h": {
-    "mtime": 1787891309.231901,
-    "seen": 1787892328.3533995,
-    "ast_hash": "ac55e78370a4726c94f02e3488c22095",
+    "mtime": 1787945454.7567308,
+    "seen": 1787947596.126888,
+    "ast_hash": "739fa10e901c15e86b5b0ac092b6a84d",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingJobRunner.cpp": {
-    "mtime": 1787683489.7975814,
-    "seen": 1787686997.5958197,
-    "ast_hash": "e47696249e8b01f46ee3f7c7a631a42d",
+    "mtime": 1787945454.7587233,
+    "seen": 1787947596.126889,
+    "ast_hash": "fe964abbb8fda92897ebacaf2eaa1c90",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingJobRunner.h": {
-    "mtime": 1787683489.7975814,
-    "seen": 1787686997.5958211,
-    "ast_hash": "ed0bafa2a021598a88f3b6e8a7a2af05",
+    "mtime": 1787945454.7587233,
+    "seen": 1787947596.12689,
+    "ast_hash": "675261af0cf7fea47af04bd11988df4b",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingRunCoordinator.cpp": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingSynthesisJob.cpp": {
-    "mtime": 1787858777.7324204,
-    "seen": 1787863374.8317518,
-    "ast_hash": "60dce111bd976ce9f0603b48417d4d49",
+    "mtime": 1787921594.6248863,
+    "seen": 1787940944.3680005,
+    "ast_hash": "308ccb9b3349091720a1aa79543c516a",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/DubbingSynthesisJob.h": {
@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.cpp": {
-    "mtime": 1787866323.9194975,
-    "seen": 1787867160.654811,
-    "ast_hash": "ee864ebf4204600ab04aba5242db956b",
+    "mtime": 1787921044.0387948,
+    "seen": 1787940944.3754265,
+    "ast_hash": "838d1fcbeb8f8bcb9a6cbd51b4f72e4e",
     "semantic_hash": ""
   },
   "src/controllers/shared/VoiceClonePresetService.h": {
@@ -1800,9 +1800,9 @@
     "semantic_hash": ""
   },
   "src/dubbing/workflow/DubbingWorkflowAdapter.cpp": {
-    "mtime": 1787834407.8764024,
-    "seen": 1787863374.848892,
-    "ast_hash": "d6284c542fd45a26a97d2e85ddcc386c",
+    "mtime": 1787945454.7597232,
+    "seen": 1787947596.1405888,
+    "ast_hash": "4a9710b7829c13a7ed55db6ff8dab153",
     "semantic_hash": ""
   },
   "src/dubbing/workflow/DubbingWorkflowAdapter.h": {
@@ -1812,15 +1812,15 @@
     "semantic_hash": ""
   },
   "src/dubbing/workflow/DubbingWorkflowDefinition.cpp": {
-    "mtime": 1787833715.6431823,
-    "seen": 1787863374.848981,
-    "ast_hash": "cef3242fe9fecf6120965908d027822e",
+    "mtime": 1787945372.8616314,
+    "seen": 1787947596.1406624,
+    "ast_hash": "00d9a7e4654e6f80e036473bbb778b19",
     "semantic_hash": ""
   },
   "src/dubbing/workflow/DubbingWorkflowDefinition.h": {
-    "mtime": 1787683489.99749,
-    "seen": 1787686997.6016688,
-    "ast_hash": "4cd6a71d383ad01fbeea5d62c83a6d8b",
+    "mtime": 1787945372.8616314,
+    "seen": 1787947596.1406636,
+    "ast_hash": "7031920c8ff546a6263b06d085b14e33",
     "semantic_hash": ""
   },
   "src/dubbing/workflow/DubbingWorkflowNodes.cpp": {
@@ -3276,9 +3276,9 @@
     "semantic_hash": ""
   },
   "CMakeLists.txt": {
-    "mtime": 1787858151.4223769,
-    "seen": 1787863374.893325,
-    "ast_hash": "62ab10f739ceb178345a54409ae570f2",
+    "mtime": 1787946648.449592,
+    "seen": 1787947596.1745257,
+    "ast_hash": "40c6782d43a496c283a27b0e1ba21b9f",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -3558,9 +3558,9 @@
     "semantic_hash": ""
   },
   "docs/AI_AGENT_REPORT_SUMMARY.md": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.77944,
-    "ast_hash": "0b9e4e6a5887b32411e5c1d9ca453d7a",
+    "mtime": 1787950352.5129218,
+    "seen": 1787950454.6928132,
+    "ast_hash": "9b855d2b5a39f23ccaece753595c3fc9",
     "semantic_hash": ""
   },
   "docs/AI_AGENT_REQUEST.md": {
@@ -3570,9 +3570,9 @@
     "semantic_hash": ""
   },
   "docs/AI_AGENT_RESPONSE_REPORT.md": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7794414,
-    "ast_hash": "9b90ef9ac79cf2eb6d62e181b48a61e5",
+    "mtime": 1787950352.5129218,
+    "seen": 1787950454.692886,
+    "ast_hash": "d88d04b3b3d78f8245d08d93ba30aafa",
     "semantic_hash": ""
   },
   "docs/AI_AGENT_RESPONSE_REPORT_0.0.2.8.md": {
@@ -3672,9 +3672,9 @@
     "semantic_hash": ""
   },
   "docs/PROJECT_MEMORY.md": {
-    "mtime": 1787563435.0,
-    "seen": 1787601027.7794545,
-    "ast_hash": "d922b5c4266dad55c1d3aab5d636e403",
+    "mtime": 1787950365.6345131,
+    "seen": 1787950454.69413,
+    "ast_hash": "3ad6756673d286e1de1966bfb59dd4eb",
     "semantic_hash": ""
   },
   "docs/RC_TEST_MATRIX.md": {
@@ -4272,9 +4272,9 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Artifacts.cpp": {
-    "mtime": 1787861602.7782207,
-    "seen": 1787863374.8326654,
-    "ast_hash": "5607877af80c7e8cb042e6006cea5e19",
+    "mtime": 1787945466.973961,
+    "seen": 1787947596.1277766,
+    "ast_hash": "125214f0f029d047a344436bf7ceda16",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Colab.cpp": {
@@ -4290,15 +4290,15 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Preflight.cpp": {
-    "mtime": 1787834217.0872216,
-    "seen": 1787863374.8328693,
-    "ast_hash": "3506a92cf0ca1a96f7ed7a0460fe358c",
+    "mtime": 1787945641.1025653,
+    "seen": 1787947596.1279287,
+    "ast_hash": "0d737ae0217239a25a9f1424edb2f7b0",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Project.cpp": {
-    "mtime": 1787910463.149655,
-    "seen": 1787912478.155231,
-    "ast_hash": "3db0286329a2ec89a1ee94e8a132c281",
+    "mtime": 1787945300.4457178,
+    "seen": 1787947596.1279302,
+    "ast_hash": "dfd09d99f3d7064c5b5c58d067e65399",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Segments.cpp": {
@@ -4308,15 +4308,15 @@
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Stages.cpp": {
-    "mtime": 1787864382.6789806,
-    "seen": 1787864730.7053742,
-    "ast_hash": "fef6f5c205363a0c239a8e3f67ab65a1",
+    "mtime": 1787949413.0049481,
+    "seen": 1787950454.641875,
+    "ast_hash": "aa28ddf80d72ee64b09b9825743ed790",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingController_Workflow.cpp": {
-    "mtime": 1787911378.157054,
-    "seen": 1787912478.1554103,
-    "ast_hash": "f8df35c1799c418ed107985c7595b665",
+    "mtime": 1787949413.0049481,
+    "seen": 1787950454.6418762,
+    "ast_hash": "3c39ad1e369d4f9c0cba794fd73e2cee",
     "semantic_hash": ""
   },
   "src/controllers/dubbing/parts/DubbingTranslationFix_Candidate.cpp": {
@@ -4722,15 +4722,15 @@
     "semantic_hash": ""
   },
   "src/dubbing/audio/AudioTimelineMixer.cpp": {
-    "mtime": 1787838043.4471908,
-    "seen": 1787863374.846055,
-    "ast_hash": "d2877aade9a26f7019b71c3d931cf505",
+    "mtime": 1787946346.700549,
+    "seen": 1787947596.1383147,
+    "ast_hash": "51e8666ba5e5cede3ca6989058c92d24",
     "semantic_hash": ""
   },
   "src/dubbing/audio/AudioTimelineMixer.h": {
-    "mtime": 1787563435.0,
-    "seen": 1787686997.6010652,
-    "ast_hash": "ebc06281597a181ec5c25f9b9b6e084c",
+    "mtime": 1787945454.7557223,
+    "seen": 1787947596.138316,
+    "ast_hash": "74f02260c45020fe6276c222540d2074",
     "semantic_hash": ""
   },
   "src/dubbing/audio/DubbingTranslationService.cpp": {
@@ -4806,27 +4806,27 @@
     "semantic_hash": ""
   },
   "src/dubbing/fusion/DubbingTranscriptFusionService.cpp": {
-    "mtime": 1787683489.9949884,
-    "seen": 1787686997.601084,
-    "ast_hash": "1d9a48263a50a2ef75110b6eccefbb7e",
+    "mtime": 1787947009.6993618,
+    "seen": 1787947596.1391966,
+    "ast_hash": "7675e7409169b84a94d25c06cabf49e3",
     "semantic_hash": ""
   },
   "src/dubbing/fusion/DubbingTranscriptFusionService.h": {
-    "mtime": 1787563435.0,
-    "seen": 1787686997.601085,
-    "ast_hash": "2169fb056ab3f612d3756af2925afbb0",
+    "mtime": 1787945275.674971,
+    "seen": 1787947596.1391976,
+    "ast_hash": "48657a696e08d5bf6d6385e65004f7c4",
     "semantic_hash": ""
   },
   "src/dubbing/project/DubbingProject.cpp": {
-    "mtime": 1787861250.0175836,
-    "seen": 1787863374.8481607,
-    "ast_hash": "9bf5634972bfa2407dc96aa5bbc5d6d6",
+    "mtime": 1787945748.8402188,
+    "seen": 1787947596.1400132,
+    "ast_hash": "1e1b4cfa45e7b01b9c6d520aa544ef50",
     "semantic_hash": ""
   },
   "src/dubbing/project/DubbingProject.h": {
-    "mtime": 1787861250.0175836,
-    "seen": 1787863374.8481627,
-    "ast_hash": "58e937ed0f3902f8272c668f58d53eec",
+    "mtime": 1787945275.674971,
+    "seen": 1787947596.1400146,
+    "ast_hash": "6ab8d3e2b156627a8b74b31294ec94ac",
     "semantic_hash": ""
   },
   "src/dubbing/timing/DubbingDuration.cpp": {
@@ -5562,9 +5562,9 @@
     "semantic_hash": ""
   },
   "src/tts/pipeline/TtsSavedVoiceProfile.h": {
-    "mtime": 1787563435.0,
-    "seen": 1787686997.6042762,
-    "ast_hash": "a1e9e1412b9716e040e7774a5d100525",
+    "mtime": 1787921637.6081152,
+    "seen": 1787940944.4025733,
+    "ast_hash": "1c3d178fa8e427d871091483933ba14c",
     "semantic_hash": ""
   },
   "src/tts/processing/TextNormalizationPolicy.cpp": {
@@ -5940,9 +5940,9 @@
     "semantic_hash": ""
   },
   "tests/core/test_MediaIngestService.cpp": {
-    "mtime": 1787907455.1591678,
-    "seen": 1787907930.0263276,
-    "ast_hash": "62c93c8694e9fd555493eede71075fb3",
+    "mtime": 1787917180.4191892,
+    "seen": 1787940944.4084618,
+    "ast_hash": "f53a3a16e358a90a1addcba814e0a3b0",
     "semantic_hash": ""
   },
   "tests/core/test_MediaIngestService.h": {
@@ -6090,15 +6090,15 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.cpp": {
-    "mtime": 1787911921.6309931,
-    "seen": 1787912478.189676,
-    "ast_hash": "df829db7dbd6bdc5eb0750b6a64f0bbd",
+    "mtime": 1787949779.3052359,
+    "seen": 1787950454.6730926,
+    "ast_hash": "4bf919167465882823fe09ed0ff16de0",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingProject.h": {
-    "mtime": 1787911921.6309931,
-    "seen": 1787912478.1896777,
-    "ast_hash": "c5cb05a921c8426641e81af7ec822d29",
+    "mtime": 1787949413.0124497,
+    "seen": 1787950454.673094,
+    "ast_hash": "58036581aa29d47fe8fadc2188f43e27",
     "semantic_hash": ""
   },
   "tests/dubbing/test_TranslationProject.cpp": {
@@ -6114,9 +6114,9 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_WorkflowGraph.cpp": {
-    "mtime": 1787861556.3823023,
-    "seen": 1787863374.8740766,
-    "ast_hash": "7a5e8fb096cdb41f06932cec06748d40",
+    "mtime": 1787946844.9661343,
+    "seen": 1787947596.1589077,
+    "ast_hash": "d1c5aa4c5a09f21bb6feb886fe3c7c77",
     "semantic_hash": ""
   },
   "tests/dubbing/test_WorkflowGraph.h": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "PRE_DELIVERY_CHECKLIST.md": {
-    "mtime": 1787762354.5865004,
-    "seen": 1787762425.7283113,
-    "ast_hash": "86afa267a82dad813ae68f4a8e94ced0",
+    "mtime": 1787950352.5129218,
+    "seen": 1787950454.6894543,
+    "ast_hash": "7fedac42e156ac818ec7d0fc01beec04",
     "semantic_hash": ""
   },
   "data/presets/vieneu_voices.json": {
@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787912332.3192596,
-    "seen": 1787912478.2166338,
-    "ast_hash": "0f3e6f25d347e4f512fa1ed933ec63a7",
+    "mtime": 1787950406.4925573,
+    "seen": 1787950454.696911,
+    "ast_hash": "9ff8a4d65f3904ce0c0545cff077fa51",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {
@@ -7452,15 +7452,15 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.cpp": {
-    "mtime": 1787911579.1423695,
-    "seen": 1787912478.1896803,
-    "ast_hash": "9fcdc5960c315ee9ad71cc31b796b158",
+    "mtime": 1787949608.8104873,
+    "seen": 1787950454.6730957,
+    "ast_hash": "680546c6d4a3b58ea8597c064a21665e",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.h": {
-    "mtime": 1787866323.9194975,
-    "seen": 1787867160.6954877,
-    "ast_hash": "226794c97ac2b5413b674d7f50848e29",
+    "mtime": 1787936986.617494,
+    "seen": 1787940944.410606,
+    "ast_hash": "17cf97f355fb4aa4b40dead94f49be0e",
     "semantic_hash": ""
   },
   "src/dubbing/media/MediaProcessTimeout.h": {
@@ -7470,9 +7470,39 @@
     "semantic_hash": ""
   },
   "dubbing-qml-interaction-trace.json": {
-    "mtime": 1787901866.6236598,
-    "seen": 1787902760.3892455,
+    "mtime": 1787934407.7288027,
+    "seen": 1787940944.3556147,
     "ast_hash": "b71cb3d3e224c0089f2485bdfd6264e4",
+    "semantic_hash": ""
+  },
+  "scripts/prebuild_gate.ps1": {
+    "mtime": 1787937923.0718403,
+    "seen": 1787940944.3617454,
+    "ast_hash": "ebf6f90575d25e0241932b62a8224e4d",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-08-28-voice-target-compatibility.md": {
+    "mtime": 1787921883.7625937,
+    "seen": 1787940944.441279,
+    "ast_hash": "b1c9f434369a5c043343899db9d57471",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-08-29-prebuild-release-gate.md": {
+    "mtime": 1787938756.8129852,
+    "seen": 1787940944.4412806,
+    "ast_hash": "44f899bce70864aa80ce7e6dfa81c228",
+    "semantic_hash": ""
+  },
+  "docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md": {
+    "mtime": 1787945735.011947,
+    "seen": 1787947596.1781943,
+    "ast_hash": "d3c9070a0d41900e4a6b0b279073a6d4",
+    "semantic_hash": ""
+  },
+  "docs/AI_AGENT_TRANSLATION_PROMPT.md": {
+    "mtime": 1787945735.011947,
+    "seen": 1787947596.1781957,
+    "ast_hash": "15298297544f9153d66967afee34cde1",
     "semantic_hash": ""
   }
 }

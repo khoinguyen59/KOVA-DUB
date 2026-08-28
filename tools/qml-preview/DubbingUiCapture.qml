@@ -46,6 +46,19 @@ Main {
         return false
     }
 
+    function captureObject(target, path) {
+        var item = target && target.contentItem ? target.contentItem : target
+        if (item && item.parent && item.parent.width >= item.width
+                && item.parent.height >= item.height)
+            item = item.parent
+        if (!item || typeof item.grabToImage !== "function")
+            return false
+        item.grabToImage(function(result) {
+            result.saveToFile(path)
+        })
+        return true
+    }
+
     function outputPath(name) {
         return "C:/Users/Nguyen Trong Khoi/Downloads/TTS/LA-Studio/out/ui-demo/dubbing-"
                 + name + "-" + previewRoot.captureSuffix + ".png"
@@ -113,6 +126,61 @@ Main {
             if (!previewRoot.captureDrawer(
                         previewRoot.outputPath("drawer-settings")))
                 console.warn("Unable to capture Dubbing settings drawer")
+            if (previewRoot.qmlPreviewSelectDubbingStep
+                    && previewRoot.qmlPreviewSelectDubbingStep("alignment-subtitle"))
+                alignmentCaptureTimer.start()
+            else
+                ocrTimer.start()
+        }
+    }
+
+    Timer {
+        id: alignmentCaptureTimer
+        interval: 700
+        repeat: false
+        onTriggered: {
+            if (!previewRoot.capture(previewRoot.outputPath("align")))
+                console.warn("Unable to capture Dubbing Align state")
+            if (previewRoot.qmlPreviewOpenDubbingColab
+                    && previewRoot.qmlPreviewOpenDubbingColab())
+                colabCaptureTimer.start()
+            else
+                ocrTimer.start()
+        }
+    }
+
+    Timer {
+        id: colabCaptureTimer
+        interval: 850
+        repeat: false
+        onTriggered: {
+            if (!previewRoot.captureObject(
+                        previewRoot.qmlPreviewDubbingColabDialog
+                            ? previewRoot.qmlPreviewDubbingColabDialog() : null,
+                        previewRoot.outputPath("colab")))
+                console.warn("Unable to capture Dubbing Colab setup")
+            if (previewRoot.qmlPreviewCloseDubbingColab)
+                previewRoot.qmlPreviewCloseDubbingColab()
+            if (previewRoot.qmlPreviewOpenDubbingHistory
+                    && previewRoot.qmlPreviewOpenDubbingHistory())
+                historyCaptureTimer.start()
+            else
+                ocrTimer.start()
+        }
+    }
+
+    Timer {
+        id: historyCaptureTimer
+        interval: 450
+        repeat: false
+        onTriggered: {
+            if (!previewRoot.captureObject(
+                        previewRoot.qmlPreviewDubbingOverlay
+                            ? previewRoot.qmlPreviewDubbingOverlay() : null,
+                        previewRoot.outputPath("history")))
+                console.warn("Unable to capture Dubbing history overlay")
+            if (previewRoot.qmlPreviewCloseDubbingHistory)
+                previewRoot.qmlPreviewCloseDubbingHistory()
             ocrTimer.start()
         }
     }

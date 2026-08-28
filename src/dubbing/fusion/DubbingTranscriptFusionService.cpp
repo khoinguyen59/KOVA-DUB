@@ -76,7 +76,9 @@ QString DubbingTranscriptFusionService::normalizePolicy(const QString &policy)
         || normalized == QStringLiteral("ai")) {
         return QStringLiteral("ai-suggest");
     }
-    return QStringLiteral("ask");
+    if (normalized == QStringLiteral("ask"))
+        return QStringLiteral("ask");
+    return QStringLiteral("prefer-stt");
 }
 
 QVariantList DubbingTranscriptFusionService::normalizeOcrSegments(const QVariantList &ocrSegments)
@@ -190,7 +192,8 @@ QVariantList DubbingTranscriptFusionService::fuse(const QVariantList &sttSegment
                 segment.insert(QStringLiteral("fusionNeedsReview"), true);
                 segment.insert(QStringLiteral("state"), QStringLiteral("needs-review"));
             }
-        } else if (preferOcr) {
+        } else if (normalizedPolicy == QStringLiteral("prefer-ocr")
+                   || (normalizedPolicy == QStringLiteral("ask") && preferOcr)) {
             segment.insert(QStringLiteral("fusionChoice"), QStringLiteral("ocr"));
             segment.insert(QStringLiteral("fusionStatus"), QStringLiteral("matched"));
             segment.insert(QStringLiteral("fusionNeedsReview"), false);
@@ -203,6 +206,13 @@ QVariantList DubbingTranscriptFusionService::fuse(const QVariantList &sttSegment
         }
         result.append(segment);
     }
+
+    // OCR-only cues are useful evidence, but must not silently create new
+    // dubbing cues when STT exists. The default canonical script is STT when
+    // the two sources do not match. Explicit `ask` keeps those cues visible
+    // for a reviewer; explicit `prefer-ocr` promotes OCR by operator choice.
+    if (normalizedPolicy == QStringLiteral("prefer-stt") && !sttSegments.isEmpty())
+        return result;
 
     for (int index = 0; index < ocr.size(); ++index) {
         if (matchedOcr.contains(index)) continue;

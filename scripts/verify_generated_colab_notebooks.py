@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Fail when checked-in exact-model Colab notebooks drift from their generators.
 
-The generators remain the source of truth. This verifier imports each one,
-redirects its output to a temporary directory below out/, and compares every
-generated notebook byte-for-byte with the tracked notebook. It never writes to
-the source notebooks.
+The generated notebook cells and metadata remain the source of truth. This
+verifier imports each generator, redirects its output to a temporary directory
+below out/, and compares that generated core with the tracked notebook. The
+tracked notebook may contain append-only, user-facing helper cells (for
+example a local file-download widget); those cells are deliberately preserved
+and do not change the exact worker contract. The verifier never writes to the
+source notebooks.
 """
 
 from __future__ import annotations
@@ -66,14 +69,47 @@ def main() -> int:
             with redirect_stdout(io.StringIO()):
                 generator.main()
 
-        for generated in sorted(temporary_notebooks.glob("*.ipynb")):
+        # Generators keep the same capability subdirectories as the checked-in
+        # notebook tree (for example ``stt/`` and ``tts/``).  A flat glob makes
+        # this verifier report every exact notebook as missing even though the
+        # generated file exists one level below the temporary root.
+        for generated in sorted(temporary_notebooks.rglob("*.ipynb")):
             generated_names.add(generated.name)
-            tracked = NOTEBOOKS / generated.name
+            # Some generators emit a flat temporary directory while the
+            # checked-in tree groups notebooks by capability.  Match the
+            # generated artifact by its unique filename across that tree.
+            tracked_candidates = list(NOTEBOOKS.rglob(generated.name))
+            if len(tracked_candidates) > 1:
+                mismatches.append(
+                    f"tracked notebook filename is ambiguous: {generated.name}"
+                )
+                continue
+            tracked = tracked_candidates[0] if tracked_candidates else NOTEBOOKS / generated.name
             if not tracked.is_file():
                 mismatches.append(f"missing tracked notebook: {generated.name}")
                 continue
-            if generated.read_bytes() != tracked.read_bytes():
-                mismatches.append(f"notebook is stale; regenerate it: {generated.name}")
+            try:
+                generated_document = json.loads(generated.read_text(encoding="utf-8"))
+                tracked_document = json.loads(tracked.read_text(encoding="utf-8"))
+                generated_cells = generated_document.get("cells", [])
+                tracked_cells = tracked_document.get("cells", [])
+                generated_without_cells = {
+                    key: value for key, value in generated_document.items() if key != "cells"
+                }
+                tracked_without_cells = {
+                    key: value for key, value in tracked_document.items() if key != "cells"
+                }
+                generated_core_matches = (
+                    generated_without_cells == tracked_without_cells
+                    and tracked_cells[:len(generated_cells)] == generated_cells
+                    and len(tracked_cells) >= len(generated_cells)
+                )
+            except (OSError, json.JSONDecodeError, TypeError):
+                generated_core_matches = False
+            if not generated_core_matches:
+                mismatches.append(
+                    f"notebook core is stale; regenerate it without changing the generated cells: {generated.name}"
+                )
             try:
                 document = json.loads(generated.read_text(encoding="utf-8"))
                 metadata = document.get("metadata", {}).get("la_studio", {})

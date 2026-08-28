@@ -36,6 +36,37 @@ QVariantMap DubbingController::timingConfiguration() const
     return configuration;
 }
 
+QVariantMap DubbingController::audioMixConfiguration() const
+{
+    QVariantMap configuration = m_project.audioMixConfiguration;
+    configuration.insert(QStringLiteral("originalGainPercent"),
+                         qBound(0, configuration.value(QStringLiteral("originalGainPercent"), 0).toInt(), 100));
+    configuration.insert(QStringLiteral("dubbedGainPercent"),
+                         qBound(0, configuration.value(QStringLiteral("dubbedGainPercent"), 100).toInt(), 100));
+    return configuration;
+}
+
+bool DubbingController::setAudioMixLevels(int originalPercent, int dubbedPercent)
+{
+    if (processing()) {
+        setBusyError(QStringLiteral("Wait for the current Dubbing operation before changing audio levels."));
+        return false;
+    }
+    if (!hasProject()) {
+        setError(QStringLiteral("Open a Dubbing project before changing audio levels."));
+        return false;
+    }
+    m_project.audioMixConfiguration = {
+        {QStringLiteral("originalGainPercent"), qBound(0, originalPercent, 100)},
+        {QStringLiteral("dubbedGainPercent"), qBound(0, dubbedPercent, 100)}};
+    invalidateTimingOutputs();
+    clearError();
+    emit projectChanged();
+    emit workflowChanged();
+    persistAfterEdit();
+    return true;
+}
+
 QVariantList DubbingController::timingConflicts() const
 {
     const QVariantMap configuration = timingConfiguration();
@@ -241,6 +272,76 @@ void DubbingController::transcribeSource()
     m_runner->startTranscription(m_project.sourceLanguage, audioPath, QString(), configuration);
 }
 
+bool DubbingController::runSpeechToTextIndependently()
+{
+    if (m_dubbingEntryGateActive) {
+        setError(QStringLiteral("Choose an entry mode before running Speech-to-Text."));
+        return false;
+    }
+    if (!m_runner) {
+        setError(QStringLiteral("Speech-to-Text is unavailable in this application session."));
+        return false;
+    }
+    if (m_runner->processing()) {
+        setBusyError(QStringLiteral("Speech-to-Text is already running."));
+        return false;
+    }
+    if (processing() && !canRunIndependentAudioSttAlongsideCurrentWork()) {
+        setBusyError(QStringLiteral(
+            "Speech-to-Text can run beside Subtitle OCR only; wait for the current non-OCR Dubbing task to finish."));
+        return false;
+    }
+    const QVariantMap setupIssue = workflowNodeSetupIssue(QStringLiteral("transcribe"));
+    if (!setupIssue.isEmpty()) {
+        const QString message = setupIssue.value(QStringLiteral("message")).toString();
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Independent STT run paused for model setup: %1").arg(message));
+        emit workflowSetupRequired(
+            setupIssue.value(QStringLiteral("nodeId")).toString(),
+            setupIssue.value(QStringLiteral("setupKind")).toString(), message);
+        emit workflowChanged();
+        return false;
+    }
+    const QFileInfo source(m_project.sourceMediaPath);
+    if (!source.isFile() || source.size() <= 0) {
+        setError(QStringLiteral("Import a readable audio or video source before running Speech-to-Text."));
+        return false;
+    }
+    const QString audioPath = !m_project.vocalsAudioPath.isEmpty()
+        ? m_project.vocalsAudioPath
+        : (!m_project.analysisAudioPath.isEmpty() ? m_project.analysisAudioPath
+                                                  : m_project.masterAudioPath);
+    const QFileInfo audioInfo(audioPath);
+    if (audioPath.isEmpty() || !audioInfo.isFile() || audioInfo.size() <= 0) {
+        setError(QStringLiteral(
+            "Normalize the source audio before running Speech-to-Text. A separated Vocals stem is preferred, "
+            "but the normalized analysis track can be used as a fallback."));
+        return false;
+    }
+
+    QVariantMap configuration = effectiveTranscriptConfiguration(true);
+    QVariantMap parameters = configuration.value(QStringLiteral("parameters")).toMap();
+    // This card is an explicit STT action. Never let a persisted reconcile or
+    // OCR selection redirect it into another worker.
+    parameters.insert(QStringLiteral("transcriptSource"), QStringLiteral("stt"));
+    parameters.insert(QStringLiteral("ocrSourceMedia"), m_project.sourceMediaPath);
+    configuration.insert(QStringLiteral("parameters"), parameters);
+
+    clearError();
+    m_automaticEvents.clear();
+    setWorkflowMode(QStringLiteral("step"));
+    setCurrentStep(QStringLiteral("transcribe"));
+    setAutomaticStatus(QStringLiteral("Running manual node: Speech-to-Text"));
+    appendAutomaticEvent(QStringLiteral("Running manual node: Speech-to-Text"),
+                         QStringLiteral("running"), QStringLiteral("transcribe"));
+    persistAfterEdit();
+    Logger::info(QStringLiteral("DubbingController"),
+                 QStringLiteral("Starting independent Speech-to-Text language=%1 audio=%2")
+                     .arg(m_project.sourceLanguage, audioPath));
+    m_runner->startTranscription(m_project.sourceLanguage, audioPath, QString(), configuration);
+    return m_runner->processing();
+}
+
 bool DubbingController::runSubtitleOcrIndependently()
 {
     if (!m_subtitleOcr) {
@@ -253,6 +354,20 @@ bool DubbingController::runSubtitleOcrIndependently()
     }
     if (!canRunIndependentSubtitleOcrAlongsideCurrentWork()) {
         setBusyError(QStringLiteral("Subtitle OCR can run beside STT only; wait for the current non-STT Dubbing task to finish."));
+        return false;
+    }
+    // Setup is handled as a recoverable UI action.  Do not call setError here:
+    // that would enqueue the generic application error dialog before QML can
+    // open the exact OCR model/Colab setup surface.
+    const QVariantMap setupIssue = workflowNodeSetupIssueForUi(QStringLiteral("subtitle-ocr"));
+    if (!setupIssue.isEmpty()) {
+        const QString message = setupIssue.value(QStringLiteral("message")).toString();
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Independent OCR run paused for setup: %1").arg(message));
+        emit workflowSetupRequired(
+            setupIssue.value(QStringLiteral("nodeId")).toString(),
+            setupIssue.value(QStringLiteral("setupKind")).toString(), message);
+        emit workflowChanged();
         return false;
     }
     const QFileInfo source(m_project.sourceMediaPath);
@@ -326,7 +441,7 @@ bool DubbingController::reconcileTranscriptSources()
     }
 
     const QString policy = m_project.transcriptConfiguration
-                               .value(QStringLiteral("fusionPolicy"), QStringLiteral("ask")).toString();
+                               .value(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")).toString();
     const QVariantList reconciled = DubbingTranscriptFusionService::fuse(sttSegments, ocrSegments, policy);
     if (reconciled.isEmpty()) {
         setError(QStringLiteral("Reconcile produced no usable transcript segments. Keep the STT/OCR results and review their source timing."));
@@ -444,6 +559,13 @@ void DubbingController::cancelProcessing()
     if (m_translationFix) m_translationFix->cancel();
     if (m_workflowRunner && m_workflowRunner->running()) m_workflowRunner->cancel();
     m_runner->cancel();
+    if (m_subtitleOcr && subtitleOcrProcessing()) {
+        m_independentSubtitleOcrActive = false;
+        m_independentSubtitleOcrLoadingSource = false;
+        m_independentSubtitleOcrSourcePath.clear();
+        m_subtitleOcr->cancel();
+        emit subtitleOcrProcessingChanged();
+    }
     if (wasAutomatic) {
         setWorkflowMode(QStringLiteral("idle"));
         setAutomaticStatus(QStringLiteral("Automatic generation stopped"));

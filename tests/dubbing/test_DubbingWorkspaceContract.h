@@ -14,6 +14,13 @@ private slots:
     void remoteVoiceCloneRoutesAreExact();
     void missingSeparationStemCannotBecomeAHiddenFallback();
     void productionQmlExposesTheWorkspaceContract();
+    void colabSetupExposesUnifiedNotebookAndIndependentTtsOcrRoutes();
+    void verifiedDirectColabRunDoesNotReopenModelPicker();
+    void alignmentResultsExposeRunActions();
+    void historyIsAnOverlayAndMoreMenuStaysAnchored();
+    void exportOffersDirectCapCutOpenAndThumbnailStaysVisibleUntilPlayback();
+    void projectSetupResolvesQmlVariantListLanguageDefaults();
+    void packagingRequiresPreBuildReleaseGate();
 };
 
 } // namespace LAStudio

@@ -1,4 +1,67 @@
+# 2026-08-29 - Offline Dubbing artifact upload fix
+
+## 2026-08-29 - Setup preflight parity and mandatory cross-task recheck
+
+- `Run STT` and `Run OCR` now preflight through the controller before a worker
+  starts. Missing setup opens the correct STT picker or dedicated OCR
+  model/Colab dialog; it no longer becomes a generic on-screen error.
+- Technical/runtime failures remain in the log and retain actionable guidance.
+- `PRE_DELIVERY_CHECKLIST.md` now requires a cross-task regression sweep over
+  all 8 tasks for every bug fix, covering equivalent setup, error, state,
+  handoff and UI behavior. The workspace contract test asserts this rule.
+- Verification: 41/41 CTest PASS, QML lint PASS, prebuild gate 9/9, packaged
+  smoke 19 events. EXE SHA-256:
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+
+- Manual Dubbing output upload is now independent of Colab connection or prior
+  execution. The controller accepts exact local artifacts after validating
+  filename, extension, count, and content; Colab remains required only for
+  running a remote task.
+- Visible aliases are normalized before contract lookup, preventing the blank
+  upload dialog for `separate`, `stt`, `ocr`, `alignment`, and `export-output`.
+- Upload UI now states `Colab is optional` and shows required filenames and
+  allowed formats. Combined STT + OCR exposes separate STT and OCR artifacts.
+- Verification: QML lint, `git diff --check`, and Graphify update passed.
+  C++/CTest could not run because Qt 6 MSVC development files and a configured
+  test build tree are not installed on this machine.
+
 # Bao cao tong hop LA Studio
+
+## 2026-08-29 - Fusion STT/OCR, thứ tự workflow và Align audio
+
+- Khi có đủ cả STT và OCR, `Reconcile & Continue` tạo một script canonical
+  trước khi sang bước tiếp theo. Hai script không khớp mặc định dùng STT làm
+  nội dung/timeline chuẩn; OCR vẫn được lưu làm evidence, không tự đẩy cue
+  OCR-only vào script mặc định. Chỉ một nguồn vẫn được Continue.
+- Thứ tự giao diện/controller/graph đã đồng bộ: `1 Import`, `2 Normalize`,
+  `3 Separate (optional)`, `4 Transcribe`, `5 Translate`, `6 Synthesize`,
+  `7 Align`, `8 Mix & Export`. Automatic workflow không chặn bởi Separate.
+- Align có hai mức âm lượng độc lập `originalGainPercent` và
+  `dubbedGainPercent`, mặc định `0/100`; sidechain release tôn trọng mức tiếng
+  gốc đã cấu hình.
+- Project mới/migrate thiếu cấu hình mặc định `zh → vi`. Hai tài liệu hướng
+  dẫn agent về reconciliation và translation đã nêu rõ contract bất biến của
+  timeline, nội dung, speaker/role/context và giới hạn mật độ chữ.
+- Verification: **41/41 CTest PASS** trên Qt 6.9.3/MSVC, prebuild gate **9/9**
+  nhóm PASS, QML lint PASS, exact bindings 31/31, notebooks 32/32, remote
+  surface 8/8; packaged smoke có 19 interaction events.
+- Portable EXE `out/LA-Studio-0.0.8.7/LA-Studio-0.0.8.7.exe` đã xác minh
+  version `0.0.8.7`, layout phẳng không có `bin/`, SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+
+## 2026-08-29 - Tách card STT/OCR và handoff đúng worker
+
+- Transcribe production UI dùng hai card xếp dọc: STT và Subtitle OCR. Mỗi
+  card có Model, Colab, Upload và Run riêng; `Run STT` không còn bị mode OCR/
+  reconcile đã lưu chuyển hướng.
+- STT dùng `runSpeechToTextIndependently()` với `DubbingJobRunner`; OCR dùng
+  `SubtitleOcrController`. Chỉ hai worker này được chạy đồng thời. Chỉ cần
+  một nguồn có segment là Continue được; Reconcile vẫn là thao tác tùy chọn
+  sau khi cả hai nguồn đã lưu.
+- Upload và Cancel đã route-scope, không hủy nhầm worker đối diện. OCR scan
+  controls chỉ hiện tại Transcribe, không hiện ở review transcript.
+- QML lint và diff check pass. Chưa chạy được CTest/build do máy hiện tại
+  thiếu Qt 6 MSVC dev kit/build tree; thay đổi này không tạo EXE.
 
 ## 2026-08-24 - Sua handoff OCR Colab va chon transcript da review
 

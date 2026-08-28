@@ -257,9 +257,19 @@ bool DubbingSynthesisJob::start(const QVariantList &segments, const QString &pro
         return false;
     }
     if (m_useVoiceCloning && m_executionProvider == ExecutionProvider::LocalDev
-        && (!m_tts || !localTtsSupportsSavedVoiceProfile(m_tts->familyConfig()))) {
-        fail(QStringLiteral("The active local TTS runtime cannot reuse a saved voice profile. Load a Qwen3-TTS runtime with persistent saved-voice support, or choose Direct Colab. LA Studio will not clone the voice again for each segment."));
+        && (!m_tts || !localTtsSupportsReferenceClone(m_tts->familyConfig()))) {
+        fail(QStringLiteral("The active local TTS runtime cannot clone a reference voice. Load VieNeu, OmniVoice, or Qwen3-TTS, or choose Direct Colab."));
         return false;
+    }
+    if (m_useVoiceCloning && m_executionProvider == ExecutionProvider::LocalDev
+        && m_tts) {
+        const QString selectedTarget = settings.value(
+            QStringLiteral("voiceCloneModelId")).toString().trimmed();
+        if (!selectedTarget.isEmpty()
+            && !localTtsMatchesReferenceCloneTarget(m_tts->familyConfig(), selectedTarget)) {
+            fail(QStringLiteral("The selected clone target does not match the loaded local TTS runtime. Load the selected VieNeu or OmniVoice model, then run again."));
+            return false;
+        }
     }
     if (remote) {
         QString model = settings.value(QStringLiteral("modelId")).toString().trimmed().toLower();
@@ -379,16 +389,6 @@ bool DubbingSynthesisJob::start(const QVariantList &segments, const QString &pro
     m_settings.remove(QStringLiteral("savedTtsVoicePreset"));
     m_settings.remove(QStringLiteral("forceSegmentDuration"));
     m_settings.remove(QStringLiteral("familyId"));
-    if (m_useVoiceCloning && m_executionProvider == ExecutionProvider::LocalDev) {
-        // These values are transient execution data. The project keeps only
-        // ttsVoiceId; the backend receives the managed reference to prepare a
-        // session profile once and reuse it for all Dubbing segments.
-        m_settings.insert(QLatin1String(kTtsSavedVoiceId), m_cloneVoicePresetId);
-        m_settings.insert(QLatin1String(kTtsSavedVoiceReferencePath),
-                          m_voiceReference.audioPath);
-        m_settings.insert(QLatin1String(kTtsSavedVoiceReferenceText),
-                          m_voiceReference.referenceText);
-    }
     m_runId = runId;
     m_generationIndex = -1;
     m_synthesisTotal = 0;
@@ -474,10 +474,14 @@ void DubbingSynthesisJob::startCurrentChunk()
     }
     if (m_executionProvider == ExecutionProvider::LocalDev) {
         if (!m_tts) { fail(QStringLiteral("Local TTS engine is unavailable.")); return; }
-        // Saved Dubbing voices are regular TTS requests with a prepared
-        // backend profile. Never dispatch the Voice Cloning action here:
-        // doing so would recreate a profile for every chunk/segment.
-        m_tts->synthesize(text, 0, 1.0f, requestSettings);
+        if (m_useVoiceCloning) {
+            // VieNeu and OmniVoice are zero-shot reference-clone backends.
+            // Dispatch the real clone operation so every saved voice source
+            // is materialized by the selected target model for this chunk.
+            m_tts->cloneVoice(text, m_voiceReference.audioPath, requestSettings);
+        } else {
+            m_tts->synthesize(text, 0, 1.0f, requestSettings);
+        }
         return;
     }
     // A direct provider may only reply when an individual clip is finished.

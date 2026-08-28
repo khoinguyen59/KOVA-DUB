@@ -33,7 +33,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 1
                 Text {
-                    text: qsTr("10. XUẤT BẢN THÀNH PHẨM (EXPORT)")
+                    text: qsTr("8. MIX & EXPORT")
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true
@@ -79,13 +79,25 @@ Rectangle {
 
                 // Main Action Button
                 PrimaryButton {
-                    text: qsTr("🚀 Mở Hộp Thoại Xuất File (Export Dialog)")
+                    text: qsTr("Export")
                     iconName: "download"
                     buttonColor: Theme.accent
                     Layout.preferredHeight: 40
                     Layout.fillWidth: true
                     enabled: !root.dubbing.processing && (root.dubbing.sourceMediaPath || "").length > 0
                     onClicked: root.openExportDialogRequested()
+                }
+
+                PrimaryButton {
+                    objectName: "dubbingOpenCapCutDraftButton"
+                    visible: (root.dubbing.capCutDraftPath || "").length > 0
+                    text: qsTr("Open in CapCut")
+                    iconName: "external-link"
+                    quiet: true
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 38
+                    enabled: !root.dubbing.processing
+                    onClicked: root.dubbing.openCapCutDraft()
                 }
 
                 // Navigation Row

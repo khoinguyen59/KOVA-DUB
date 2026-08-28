@@ -19,7 +19,8 @@ public:
                             QAtomicInteger<bool> *cancel = nullptr);
     static bool mixSegments(const QVariantList &segments, const QString &outputPath,
                             const QString &backgroundPath, const QString &vocalOutputPath,
-                            QString *error = nullptr, QAtomicInteger<bool> *cancel = nullptr);
+                            QString *error = nullptr, QAtomicInteger<bool> *cancel = nullptr,
+                            const QVariantMap &mixConfiguration = QVariantMap());
 };
 
 } // namespace LAStudio

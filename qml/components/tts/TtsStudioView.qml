@@ -56,7 +56,7 @@ StudioShell {
                                                 : qsTr("Colab GPU"))
     property bool outputReady: remoteActive
                               ? remoteTts.lastSampleCount > 0
-                              : (AppController.tts.lastSampleCount > 0 && !AppController.tts.isCloneAction)
+                              : AppController.tts.lastSampleCount > 0
     property string lastSynthesizedText: ""
     property bool srtVoiceMode: false
     property real mainHorizontalInset: Theme.paddingXL
@@ -174,9 +174,18 @@ StudioShell {
         return "Default"
     }
 
+    function localCloneSelected() {
+        return settingsPanel && settingsPanel.localReferenceCloneActive
+               && settingsPanel.selectedReusableCloneVoice
+               && settingsPanel.selectedReusableCloneVoice() !== null
+    }
+
     function cloneTtsBlockReason() {
-        if (root.selectedRemoteProvider !== "clone") return ""
-        if (!settingsPanel.selectedReusableCloneVoice())
+        var cloneSelected = settingsPanel && settingsPanel.selectedReusableCloneVoice
+                ? settingsPanel.selectedReusableCloneVoice() : null
+        if (root.selectedRemoteProvider !== "clone" && !root.localCloneSelected())
+            return ""
+        if (!cloneSelected)
             return qsTr("Choose a saved cloned voice in TTS Settings.")
         if (!settingsPanel.reusableCloneConsent)
             return qsTr("Confirm permission to use the selected cloned voice for TTS.")
@@ -504,8 +513,13 @@ StudioShell {
                         Layout.preferredWidth: 180
                         Layout.preferredHeight: 42
                         visible: !root.inputsLocked
-                        enabled: (root.remoteActive && root.cloneTtsBlockReason() === ""
-                                  || (!root.remoteFirstMode && (root.studioController ? root.studioController.canProcess : false) && AppController.tts.modelLoaded))
+                        enabled: ((root.remoteActive && root.selectedRemoteProvider === "clone"
+                                   && root.cloneTtsBlockReason() === "")
+                                  || (root.localCloneSelected()
+                                      && root.cloneTtsBlockReason() === "")
+                                  || (!root.localCloneSelected() && !root.remoteFirstMode
+                                      && (root.studioController ? root.studioController.canProcess : false)
+                                      && AppController.tts.modelLoaded))
                                  && inputText.text.length > 0 && !root.inputsLocked
                         onClicked: {
                             root.lastSynthesizedText = inputText.text
@@ -519,6 +533,14 @@ StudioShell {
                                             savedVoice.id || "")
                             } else if (root.remoteActive) {
                                 root.remoteTts.synthesize(inputText.text.normalize("NFC"), 1.0)
+                            } else if (root.localCloneSelected()) {
+                                var localSavedVoice = settingsPanel.selectedReusableCloneVoice()
+                                if (!settingsPanel.reusableCloneConsent) return
+                                AppController.tts.cloneVoice(
+                                            inputText.text.normalize("NFC"),
+                                            localSavedVoice.audioPath || "",
+                                            settingsPanel.getSettingsObject(inputText.text,
+                                                                            localSavedVoice.referenceText || ""))
                             } else if (!root.remoteFirstMode) {
                                 var synSettings = settingsPanel.getSynthesisSettings()
                                 AppController.tts.synthesize(inputText.text.normalize("NFC"), 0, 1.0, synSettings)

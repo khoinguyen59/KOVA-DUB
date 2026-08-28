@@ -192,6 +192,48 @@ ColumnLayout {
 
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 4
+                visible: root.savedVoices.length > 0
+
+                Text {
+                    text: qsTr("Targets")
+                    color: Theme.textSecondary
+                    font.pixelSize: Theme.fontSmall
+                }
+
+                Rectangle {
+                    radius: 3
+                    implicitWidth: 52
+                    implicitHeight: 18
+                    color: "#065f46"
+                    border.color: "#34d399"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "VieNeu"
+                        color: "#d1fae5"
+                        font.pixelSize: 9
+                        font.bold: true
+                    }
+                }
+
+                Rectangle {
+                    radius: 3
+                    implicitWidth: 72
+                    implicitHeight: 18
+                    color: "#4c1d95"
+                    border.color: "#a78bfa"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "OmniVoice"
+                        color: "#ede9fe"
+                        font.pixelSize: 9
+                        font.bold: true
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
                 spacing: Theme.paddingSmall
 
                 PrimaryButton {

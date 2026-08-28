@@ -80,6 +80,10 @@ bool DubbingController::newProject(const QString &path)
                                        {QStringLiteral("style"), DubbingSubtitleService::defaultStyle()}};
     m_project.timingConfiguration = {{QStringLiteral("mode"), QStringLiteral("keep")},
                                      {QStringLiteral("minimumGapMs"), 80}};
+    m_project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
+                                         {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+    m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
+                                       {QStringLiteral("dubbedGainPercent"), 100}};
     m_timingResolutionPreview.clear();
     m_timingUndoSegments.clear();
     m_workflowNodeConfigurations.clear();
@@ -129,6 +133,16 @@ bool DubbingController::openProject(const QString &path)
     if (m_project.timingConfiguration.isEmpty()) {
         m_project.timingConfiguration = {{QStringLiteral("mode"), QStringLiteral("keep")},
                                          {QStringLiteral("minimumGapMs"), 80}};
+    }
+    if (m_project.transcriptConfiguration.isEmpty()) {
+        m_project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
+                                             {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+    } else if (!m_project.transcriptConfiguration.contains(QStringLiteral("fusionPolicy"))) {
+        m_project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"));
+    }
+    if (m_project.audioMixConfiguration.isEmpty()) {
+        m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
+                                           {QStringLiteral("dubbedGainPercent"), 100}};
     }
     m_timingResolutionPreview.clear();
     m_timingUndoSegments.clear();

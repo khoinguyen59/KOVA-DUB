@@ -51,6 +51,19 @@ function Assert-NotContains {
     if ($Text.Contains($Needle)) { throw "$Context must not duplicate '$Needle'." }
 }
 
+function Resolve-NotebookPath {
+    param([Parameter(Mandatory)][string] $FileName)
+    $notebookRoot = Join-Path $repoRoot 'notebooks'
+    $candidates = @(Get-ChildItem -LiteralPath $notebookRoot -Recurse -File -Filter $FileName)
+    if ($candidates.Count -gt 1) {
+        throw "Notebook filename is ambiguous: $FileName"
+    }
+    if ($candidates.Count -eq 1) {
+        return $candidates[0].FullName
+    }
+    return Join-Path $notebookRoot $FileName
+}
+
 $features = @(
     @{ id = 'stt'; qml = 'qml/components/stt/SttSettingsPanel.qml'; shell = 'qml/components/stt/SttStudioView.qml'; notebook = 'LA_STUDIO_STT_WHISPER_GPU.ipynb'; qmlNeedle = 'colabNotebookFile'; cudaGuard = 'torch.cuda.is_available()'; capability = 'MODEL_ID'; endpoint = '/v2/jobs/transcriptions'; url = 'LA_STUDIO_COLAB_STT_URL'; token = 'LA_STUDIO_COLAB_STT_TOKEN' },
     @{ id = 'tts'; qml = 'qml/components/tts/TtsSettingsPanel.qml'; shell = 'qml/components/tts/TtsStudioView.qml'; notebook = 'LA_STUDIO_TTS_KOKORO_GPU.ipynb'; qmlNeedle = 'colabNotebookFile'; cudaGuard = 'torch.cuda.is_available()'; capability = '"capability": "tts"'; endpoint = '/v1/audio/speech'; url = 'LA_STUDIO_COLAB_TTS_URL'; token = 'LA_STUDIO_COLAB_TTS_TOKEN' },
@@ -67,7 +80,7 @@ $features = @(
 )
 
 $notebookUrlHelper = Get-SourceText 'qml/components/base/colabNotebookUrls.js'
-Assert-Contains $notebookUrlHelper 'colab.research.google.com/github/khoinguyen59/kova-video-studio/blob/main/notebooks/' 'Shared Colab notebook URL helper'
+Assert-Contains $notebookUrlHelper 'colab.research.google.com/github/khoinguyen59/KOVA-DUB/blob/main/notebooks/' 'Shared Colab notebook URL helper'
 Assert-Contains $notebookUrlHelper 'function forNotebookFile(fileName)' 'Shared Colab notebook URL helper'
 
 # The app and the operational acceptance guides must name the same release
@@ -109,7 +122,7 @@ foreach ($pagePath in $modelSelectionPages) {
     $page = Get-SourceText $pagePath
     Assert-Contains $page 'colabNotebookUrls.js" as ColabNotebookUrls' "$pagePath"
     Assert-Contains $page 'ColabNotebookUrls.forNotebookFile' "$pagePath"
-    Assert-NotContains $page 'colab.research.google.com/github/khoinguyen59/kova-video-studio' "$pagePath"
+    Assert-NotContains $page 'colab.research.google.com/github/khoinguyen59/KOVA-DUB' "$pagePath"
 }
 
 # Dubbing connects each workflow node through the same asynchronous Colab
@@ -132,7 +145,7 @@ $passed = 0
 foreach ($feature in $features) {
     $panel = Get-SourceText $feature.qml
     $shell = Get-SourceText $feature.shell
-    $notebookPath = Join-Path $repoRoot (Join-Path 'notebooks' $feature.notebook)
+    $notebookPath = Resolve-NotebookPath $feature.notebook
     if (-not (Test-Path -LiteralPath $notebookPath)) { throw "$($feature.id): notebook is missing." }
     $notebook = Get-Content -LiteralPath $notebookPath -Raw
 
@@ -180,7 +193,7 @@ $sttNotebooks = @(
     @{ file = 'LA_STUDIO_STT_QWEN3_ASR_1_7B_GPU.ipynb'; model = 'qwen3-asr-1.7b' }
 )
 foreach ($entry in $sttNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "stt: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "stt notebook $($entry.file)"
@@ -204,7 +217,7 @@ $ttsNotebooks = @(
     @{ file = 'LA_STUDIO_TTS_VOXCPM2_GPU.ipynb'; model = 'voxcpm2' }
 )
 foreach ($entry in $ttsNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "tts: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "tts notebook $($entry.file)"
@@ -221,7 +234,7 @@ $voiceCloneNotebooks = @(
     @{ file = 'LA_STUDIO_VOICE_CLONE_VOXCPM2_GPU.ipynb'; model = 'voxcpm2' }
 )
 foreach ($entry in $voiceCloneNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "voice-cloning: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "voice-cloning notebook $($entry.file)"
@@ -235,7 +248,7 @@ $voiceDesignNotebooks = @(
     @{ file = 'LA_STUDIO_VOICE_DESIGN_VOXCPM2_GPU.ipynb'; model = 'voxcpm2' }
 )
 foreach ($entry in $voiceDesignNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "voice-design: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "voice-design notebook $($entry.file)"
@@ -250,7 +263,7 @@ $alignmentNotebooks = @(
     @{ file = 'LA_STUDIO_ALIGNMENT_QWEN3_0_6B_GPU.ipynb'; model = 'qwen3-forced-aligner-0.6b' }
 )
 foreach ($entry in $alignmentNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "forced-alignment: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "forced-alignment notebook $($entry.file)"
@@ -263,7 +276,7 @@ $separationNotebooks = @(
     @{ file = 'LA_STUDIO_SEPARATION_UVR_VOCALS_GPU.ipynb'; model = 'sherpa-onnx-uvr-vocals-ft' }
 )
 foreach ($entry in $separationNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "voice-isolation: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "voice-isolation notebook $($entry.file)"
@@ -293,7 +306,7 @@ $translationNotebooks = @(
     @{ file = 'LA_STUDIO_TRANSLATION_HY_MT2_1_8B_GPU.ipynb'; model = 'hy-mt2-1.8b' }
 )
 foreach ($entry in $translationNotebooks) {
-    $path = Join-Path $repoRoot (Join-Path 'notebooks' $entry.file)
+    $path = Resolve-NotebookPath $entry.file
     if (-not (Test-Path -LiteralPath $path)) { throw "translation: notebook is missing: $($entry.file)" }
     $source = Get-Content -LiteralPath $path -Raw
     Assert-Contains $source $entry.model "translation notebook $($entry.file)"
@@ -301,7 +314,7 @@ foreach ($entry in $translationNotebooks) {
     Assert-Contains $source 'LA_STUDIO_COLAB_TRANSLATION_MODEL' "translation notebook $($entry.file)"
 }
 
-$chatNotebook = Join-Path $repoRoot 'notebooks/LA_STUDIO_LLM_QWEN3_5_2B_GPU.ipynb'
+$chatNotebook = Resolve-NotebookPath 'LA_STUDIO_LLM_QWEN3_5_2B_GPU.ipynb'
 if (-not (Test-Path -LiteralPath $chatNotebook)) { throw 'chat: exact Qwen3.5 notebook is missing.' }
 $chatSource = Get-Content -LiteralPath $chatNotebook -Raw
 Assert-Contains $chatSource 'qwen3.5-2b' 'chat notebook'

@@ -32,6 +32,7 @@ Dialog {
     signal subtitleExportRequested(string format, bool useTargetText, string languageCode)
     signal packageExportRequested()
     signal capCutDraftExportRequested()
+    signal capCutDraftOpenRequested()
 
     function beginQmlSmokeExportRoutesCheck() {
         qmlSmokeExportRoutePhase = 0
@@ -286,8 +287,8 @@ Dialog {
                     objectName: "dubbingRenderedVideoExportPane"
                     title: qsTr("Rendered Video (MP4)")
                     description: root.videoSource
-                                 ? qsTr("Create a final MP4 by keeping the source video and rendering the reviewed dubbing mix into its audio.")
-                                 : qsTr("The current source is audio-only. Use the Audio tab for this project.")
+                                 ? qsTr("Final MP4")
+                                 : qsTr("Audio source")
                     detail: qsTr("MP4 · source video quality · AAC 192 kbps")
                     iconName: "dubbing"
                     actionText: qsTr("Export rendered MP4")
@@ -305,7 +306,7 @@ Dialog {
                         Layout.preferredHeight: 154
                         paneHeight: 154
                         title: qsTr("Full dubbing mix")
-                        description: qsTr("Export the timed generated voices together with the separated background track.")
+                        description: qsTr("Full mix")
                         detail: qsTr("WAV · lossless · ready for editing or mastering")
                         iconName: "waves"
                         actionText: qsTr("Export WAV")
@@ -323,7 +324,7 @@ Dialog {
                             Layout.fillHeight: true
                             paneHeight: 130
                             title: qsTr("Dubbed vocal")
-                            description: qsTr("Export only the generated translated voice stem.")
+                            description: qsTr("Voice stem")
                             detail: qsTr("WAV · lossless · independent stem")
                             iconName: "mic"
                             actionText: qsTr("Export vocal")
@@ -336,7 +337,7 @@ Dialog {
                             Layout.fillHeight: true
                             paneHeight: 130
                             title: qsTr("Background")
-                            description: qsTr("Export the separated background track without dubbing voices.")
+                            description: qsTr("Background stem")
                             detail: qsTr("WAV · lossless · independent stem")
                             iconName: "volume"
                             actionText: qsTr("Export background")
@@ -579,8 +580,8 @@ Dialog {
                     id: editableCapCutDraftPane
                     objectName: "dubbingEditableCapCutDraftPane"
                     title: qsTr("Editable CapCut Draft")
-                    description: qsTr("Create a draft folder with separate original media/audio, optional vocals/background, each generated voice clip, and editable subtitle text segments.")
-                    detail: qsTr("Draft folder · separate editable tracks · CapCut import unverified")
+                    description: qsTr("Editable timeline draft")
+                    detail: qsTr("Draft folder · separate tracks")
                     iconName: "folder"
                     actionText: qsTr("Export editable draft")
                     secondaryActionText: qsTr("Export review package")
@@ -608,12 +609,29 @@ Dialog {
             }
             Text {
                 text: root.capCutDraftPath !== ""
-                      ? qsTr("Editable CapCut Draft (manual import still required): %1").arg(root.capCutDraftPath)
-                      : qsTr("Exports stay on this device.")
-                color: root.capCutDraftPath !== "" ? Theme.warning : Theme.textSecondary
+                      ? qsTr("CapCut draft ready")
+                      : qsTr("Local output")
+                color: root.capCutDraftPath !== "" ? Theme.success : Theme.textSecondary
                 font.pixelSize: Theme.fontSmall
+                Layout.preferredWidth: 150
+                elide: Text.ElideMiddle
+            }
+            Text {
+                visible: root.capCutDraftWarning !== ""
+                text: root.capCutDraftWarning
+                color: Theme.warning
+                font.pixelSize: 10
                 Layout.fillWidth: true
                 elide: Text.ElideMiddle
+            }
+            PrimaryButton {
+                visible: root.capCutDraftPath !== ""
+                text: qsTr("Open in CapCut")
+                iconName: "external-link"
+                quiet: true
+                implicitWidth: 140
+                enabled: !root.busy
+                onClicked: root.capCutDraftOpenRequested()
             }
             PrimaryButton {
                 text: qsTr("Close")

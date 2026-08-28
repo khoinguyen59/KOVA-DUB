@@ -1,3 +1,5 @@
+#include <algorithm>
+
 namespace {
 
 bool readableDubbingArtifact(const QString &path)
@@ -81,27 +83,44 @@ QVariantList DubbingController::workflowNodes() const
                 QStringLiteral("ocrSegments")).toList();
             const QVariantList reconciledSegments = m_project.transcriptConfiguration.value(
                 QStringLiteral("reconciledSegments")).toList();
+            const bool hasAnyTranscript = !sttSegments.isEmpty()
+                || !ocrSegments.isEmpty() || !reconciledSegments.isEmpty()
+                || !m_project.segments.isEmpty();
             const bool ocrReady = m_subtitleOcr
                 && (m_subtitleOcr->executionRoute() == QStringLiteral("colab-gpu")
                     ? m_subtitleOcr->colabRouteReady() : m_subtitleOcr->localRouteReady());
-            const bool sourceReady = transcriptSource == QStringLiteral("ocr") ? hasMedia
-                : transcriptSource == QStringLiteral("reconcile")
-                    ? (!sttSegments.isEmpty() && !ocrSegments.isEmpty()) : audioReady;
-            const bool completed = transcriptSource == QStringLiteral("ocr") ? !ocrSegments.isEmpty()
-                : transcriptSource == QStringLiteral("reconcile") ? !reconciledSegments.isEmpty()
-                : !sttSegments.isEmpty();
+            const bool sourceReady = hasAnyTranscript
+                ? true
+                : transcriptSource == QStringLiteral("ocr") ? hasMedia
+                    : transcriptSource == QStringLiteral("reconcile")
+                        ? (!sttSegments.isEmpty() && !ocrSegments.isEmpty()) : audioReady;
+            const bool completed = hasAnyTranscript;
+            const int completedCount = !reconciledSegments.isEmpty() ? reconciledSegments.size()
+                : !sttSegments.isEmpty() ? sttSegments.size()
+                    : !ocrSegments.isEmpty() ? ocrSegments.size() : m_project.segments.size();
             state = completed ? QStringLiteral("completed")
                 : (!sourceReady || (transcriptSource == QStringLiteral("ocr") && !ocrReady)
                    ? QStringLiteral("blocked") : QStringLiteral("ready"));
-            detail = completed ? QStringLiteral("%1 segments").arg(
-                transcriptSource == QStringLiteral("ocr") ? ocrSegments.size()
-                : transcriptSource == QStringLiteral("reconcile") ? reconciledSegments.size()
-                : sttSegments.size())
-                : transcriptSource == QStringLiteral("ocr")
+            if (completed) {
+                if (!reconciledSegments.isEmpty()) {
+                    detail = QStringLiteral("Reconciled transcript (%1 segments)").arg(completedCount);
+                } else if (!sttSegments.isEmpty() && ocrSegments.isEmpty()) {
+                    detail = QStringLiteral("STT transcript saved (%1 segments)").arg(completedCount);
+                } else if (sttSegments.isEmpty() && !ocrSegments.isEmpty()) {
+                    detail = QStringLiteral("OCR transcript saved (%1 segments)").arg(completedCount);
+                } else if (!sttSegments.isEmpty() && !ocrSegments.isEmpty()) {
+                    detail = QStringLiteral("STT and OCR sources ready for reconciliation (%1 segments)")
+                        .arg(completedCount);
+                } else {
+                    detail = QStringLiteral("Transcript available (%1 segments)").arg(completedCount);
+                }
+            } else {
+                detail = transcriptSource == QStringLiteral("ocr")
                     ? QStringLiteral("Subtitle OCR transcript source")
                     : transcriptSource == QStringLiteral("reconcile")
                         ? QStringLiteral("Run or upload STT and OCR first, then reconcile")
                         : QStringLiteral("Speech-to-text source stage");
+            }
         } else if (definition.id == QStringLiteral("review-transcript")) {
             state = hasSegments ? QStringLiteral("completed") : QStringLiteral("blocked");
             detail = hasSegments ? QStringLiteral("Transcript available for review") : QStringLiteral("Transcribe source media first");
@@ -187,6 +206,8 @@ QVariantList DubbingController::workflowNodes() const
         if (definition.id == QStringLiteral("source-separate")) {
             item.insert(QStringLiteral("configurable"), true);
             item.insert(QStringLiteral("capabilityId"), QStringLiteral("voice-isolation"));
+            item.insert(QStringLiteral("optional"), true);
+            item.insert(QStringLiteral("canSkip"), true);
         } else if (definition.id == QStringLiteral("transcribe")) {
             item.insert(QStringLiteral("configurable"), true);
             item.insert(QStringLiteral("capabilityId"), QStringLiteral("stt"));
@@ -345,15 +366,15 @@ QVariantList DubbingController::workflowStages() const
         {"transcribe", "Transcribe/STT", "transcribe",
          "Create and review timed source text from STT, Subtitle OCR, or the reviewed STT + OCR mode.",
          {QStringLiteral("transcribe"), QStringLiteral("review-transcript")}},
-        {"alignment-subtitle", "Alignment/Subtitle", "fit-timing",
-         "Configure timing resolution and subtitle output without exposing internal timing nodes as separate user stages.",
-         {QStringLiteral("fit-timing"), QStringLiteral("review-conflicts")}},
         {"translate", "Translate", "translate",
          "Translate and review the timed target-language text.",
          {QStringLiteral("translate"), QStringLiteral("review-translation")}},
         {"tts", "TTS", "synthesize",
          "Assign a voice and synthesize the translated segments.",
          {QStringLiteral("assign-voices"), QStringLiteral("synthesize")}},
+        {"alignment-subtitle", "Alignment/Subtitle", "fit-timing",
+         "Match text to timing and resolve speech overlaps without changing the source media.",
+         {QStringLiteral("fit-timing"), QStringLiteral("review-conflicts")}},
         {"export", "Export/Output", "export",
          "Mix/render the verified dub and export media, subtitles, a package, or a CapCut Draft.",
          {QStringLiteral("mix"), QStringLiteral("export")}}
@@ -387,20 +408,39 @@ QVariantList DubbingController::workflowStages() const
             }
             active = active || activeNodeId == nodeId;
         }
-        // STT and Subtitle OCR are independent Dubbing operations. A saved
-        // STT transcript is evidence that the Transcribe/STT task completed,
-        // even when the optional STT + OCR reconciliation is still pending.
-        // A fresh STT run keeps its visible running state while it replaces an
-        // earlier transcript.
+        // STT and Subtitle OCR are independent Dubbing operations. Any saved
+        // transcript source is evidence that the Transcribe task has a usable
+        // result; reconciliation remains optional. A fresh worker keeps its
+        // visible running state while it replaces an earlier source.
         if (QString::fromLatin1(definition.id) == QStringLiteral("transcribe")
             && state != QStringLiteral("running")
             && state != QStringLiteral("waiting_for_input")) {
             const QVariantList savedSttSegments = m_project.transcriptConfiguration.value(
                 QStringLiteral("sttSegments")).toList();
-            if (!savedSttSegments.isEmpty()) {
+            const QVariantList savedOcrSegments = m_project.transcriptConfiguration.value(
+                QStringLiteral("ocrSegments")).toList();
+            const QVariantList savedReconciledSegments = m_project.transcriptConfiguration.value(
+                QStringLiteral("reconciledSegments")).toList();
+            if (!savedSttSegments.isEmpty() || !savedOcrSegments.isEmpty()
+                || !savedReconciledSegments.isEmpty() || !m_project.segments.isEmpty()) {
+                const int savedCount = !savedReconciledSegments.isEmpty()
+                    ? savedReconciledSegments.size()
+                    : !savedSttSegments.isEmpty() ? savedSttSegments.size()
+                        : !savedOcrSegments.isEmpty() ? savedOcrSegments.size()
+                            : m_project.segments.size();
                 state = QStringLiteral("completed");
-                detail = QStringLiteral("STT transcript saved (%1 segments); Subtitle OCR and reconciliation remain independent.")
-                    .arg(savedSttSegments.size());
+                if (!savedReconciledSegments.isEmpty()) {
+                    detail = QStringLiteral("Reconciled transcript (%1 segments)").arg(savedCount);
+                } else if (!savedSttSegments.isEmpty() && savedOcrSegments.isEmpty()) {
+                    detail = QStringLiteral("STT transcript saved (%1 segments)").arg(savedCount);
+                } else if (savedSttSegments.isEmpty() && !savedOcrSegments.isEmpty()) {
+                    detail = QStringLiteral("OCR transcript saved (%1 segments)").arg(savedCount);
+                } else if (!savedSttSegments.isEmpty() && !savedOcrSegments.isEmpty()) {
+                    detail = QStringLiteral("STT and OCR sources ready for reconciliation (%1 segments)")
+                        .arg(savedCount);
+                } else {
+                    detail = QStringLiteral("Transcript available (%1 segments)").arg(savedCount);
+                }
             }
         }
         if (detail.isEmpty()) detail = QString::fromLatin1(definition.description);
@@ -419,6 +459,8 @@ QVariantList DubbingController::workflowStages() const
         stage.insert(QStringLiteral("resourceText"), actionNode.value(QStringLiteral("resourceText")));
         stage.insert(QStringLiteral("resourceReason"), actionNode.value(QStringLiteral("resourceReason")));
         stage.insert(QStringLiteral("notebookFile"), actionNode.value(QStringLiteral("notebookFile")));
+        stage.insert(QStringLiteral("optional"), QString::fromLatin1(definition.id)
+                     == QStringLiteral("isolator"));
         result.append(stage);
     }
     return result;
@@ -462,11 +504,21 @@ bool DubbingController::workflowReady() const
     const bool ocrReady = m_subtitleOcr
         && (m_subtitleOcr->executionRoute() == QStringLiteral("colab-gpu")
             ? m_subtitleOcr->colabRouteReady() : m_subtitleOcr->localRouteReady());
-    const bool transcriptReady = transcriptSource == QStringLiteral("ocr") ? ocrReady
-        : transcriptSource == QStringLiteral("reconcile")
-            ? (!m_project.transcriptConfiguration.value(QStringLiteral("sttSegments")).toList().isEmpty()
-               && !m_project.transcriptConfiguration.value(QStringLiteral("ocrSegments")).toList().isEmpty())
-            : sttReady;
+    const bool hasAnyTranscript = !m_project.segments.isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("sttSegments"))
+                .toList().isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("ocrSegments"))
+                .toList().isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("reconciledSegments"))
+                .toList().isEmpty();
+    const bool transcriptReady = hasAnyTranscript
+        || (transcriptSource == QStringLiteral("ocr") ? ocrReady
+            : transcriptSource == QStringLiteral("reconcile")
+                ? (!m_project.transcriptConfiguration.value(QStringLiteral("sttSegments"))
+                       .toList().isEmpty()
+                   && !m_project.transcriptConfiguration.value(QStringLiteral("ocrSegments"))
+                       .toList().isEmpty())
+                : sttReady);
     const bool translationConfigured = !m_workflowNodeConfigurations.value(QStringLiteral("translate")).toMap().isEmpty();
     bool translatedArtifactReady = !m_project.segments.isEmpty();
     for (const QVariant &entry : m_project.segments) {
@@ -631,6 +683,15 @@ bool DubbingController::configureWorkflowNodeModel(const QString &nodeId,
     if (nodeId == QStringLiteral("synthesize") && isOmniVoice && supportsVoiceCloning) {
         if (!parameters.contains(QStringLiteral("forceSegmentDuration")))
             parameters.insert(QStringLiteral("forceSegmentDuration"), true);
+    }
+    // A saved reference voice is target-independent. When the user confirms
+    // a VieNeu/OmniVoice model in the model picker, make that exact target
+    // authoritative so an older voiceCloneModelId cannot route synthesis to
+    // a different backend on the next refresh.
+    if (nodeId == QStringLiteral("synthesize") && supportsVoiceCloning
+        && (familyId.compare(QStringLiteral("omnivoice"), Qt::CaseInsensitive) == 0
+            || familyId.startsWith(QStringLiteral("vieneu-tts"), Qt::CaseInsensitive))) {
+        parameters.insert(QStringLiteral("voiceCloneModelId"), familyId);
     }
     if (nodeId == QStringLiteral("synthesize")
         && !parameters.contains(QStringLiteral("lang"))) {
@@ -820,7 +881,7 @@ bool DubbingController::setWorkflowNodeParameters(const QString &nodeId, const Q
         const QString fusionPolicy = DubbingTranscriptFusionService::normalizePolicy(
             current.value(QStringLiteral("fusionPolicy"),
                           m_project.transcriptConfiguration.value(
-                              QStringLiteral("fusionPolicy"), QStringLiteral("ask"))).toString());
+                              QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"))).toString());
         current.insert(QStringLiteral("fusionPolicy"), fusionPolicy);
         m_project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), fusionPolicy);
         for (const QString &key : {QStringLiteral("ocrLanguage"), QStringLiteral("ocrExecutionRoute"),
@@ -947,6 +1008,54 @@ QVariantMap DubbingController::workflowNodeSetupIssue(const QString &nodeId) con
     return {};
 }
 
+QVariantMap DubbingController::workflowNodeSetupIssueForUi(const QString &nodeId) const
+{
+    QString normalized = nodeId.trimmed().toLower();
+    if (normalized == QStringLiteral("stt"))
+        normalized = QStringLiteral("transcribe");
+
+    if (normalized != QStringLiteral("subtitle-ocr"))
+        return workflowNodeSetupIssue(normalized);
+
+    const auto issue = [](const QString &message) {
+        return QVariantMap{
+            {QStringLiteral("nodeId"), QStringLiteral("subtitle-ocr")},
+            {QStringLiteral("setupKind"), QStringLiteral("subtitle-ocr-route")},
+            {QStringLiteral("message"), message}
+        };
+    };
+
+    if (!m_subtitleOcr)
+        return issue(QStringLiteral("Subtitle OCR is unavailable in this application session."));
+
+    const QString persistedRoute = m_project.transcriptConfiguration.value(
+        QStringLiteral("ocrExecutionRoute")).toString().trimmed().toLower();
+    const QString route = persistedRoute.isEmpty()
+        ? m_subtitleOcr->executionRoute().trimmed().toLower() : persistedRoute;
+
+    if (route == QStringLiteral("colab-gpu")) {
+        const QString persistedModel = m_project.transcriptConfiguration.value(
+            QStringLiteral("ocrColabModelId")).toString().trimmed().toLower();
+        const QString model = persistedModel.isEmpty()
+            ? m_subtitleOcr->colabModelId().trimmed().toLower() : persistedModel;
+        if (model.isEmpty() || !DubbingColabModelRoutes::supports(
+                QStringLiteral("subtitle-ocr"), model)) {
+            return issue(QStringLiteral("Choose an exact Colab Subtitle OCR model before running OCR."));
+        }
+        if (!m_subtitleOcr->colabRouteReady()) {
+            return issue(QStringLiteral("Connect and check the exact Colab Subtitle OCR worker before running OCR."));
+        }
+        return {};
+    }
+
+    if (route != QStringLiteral("local-cpu"))
+        return issue(QStringLiteral("Choose a Subtitle OCR execution route before running OCR."));
+    if (!m_subtitleOcr->localRouteReady()) {
+        return issue(QStringLiteral("Install or configure the local Subtitle OCR runtime, or choose its Colab route, before running OCR."));
+    }
+    return {};
+}
+
 
 bool DubbingController::runWorkflow(const QString &outputPath)
 {
@@ -975,6 +1084,19 @@ bool DubbingController::runWorkflow(const QString &outputPath)
     const QVariantMap transcriptConfiguration = effectiveTranscriptConfiguration(true);
     persistAfterEdit();
     WorkflowGraph graph = DubbingWorkflowDefinition::create();
+    // Separate is a manual optional enhancement. The automatic graph must be
+    // executable with only normalized analysis audio, so remove the optional
+    // node and its incident links from this run while retaining it in the
+    // canonical graph for explicit step-by-step use.
+    graph.nodes.erase(std::remove_if(graph.nodes.begin(), graph.nodes.end(),
+                                     [](const WorkflowGraphNode &node) {
+                                         return node.id == QStringLiteral("source-separate");
+                                     }), graph.nodes.end());
+    graph.edges.erase(std::remove_if(graph.edges.begin(), graph.edges.end(),
+                                     [](const WorkflowGraphEdge &edge) {
+                                         return edge.sourceNodeId == QStringLiteral("source-separate")
+                                             || edge.targetNodeId == QStringLiteral("source-separate");
+                                     }), graph.edges.end());
     QVariantMap effectiveDurationControl = m_project.durationControl;
     effectiveDurationControl.insert(
         QStringLiteral("autoRewrite"),
@@ -1029,6 +1151,7 @@ bool DubbingController::runWorkflow(const QString &outputPath)
             node.properties = node.parameters;
         } else if (node.id == QStringLiteral("mix")) {
             node.parameters.insert(QStringLiteral("projectPath"), m_project.projectPath);
+            node.parameters.insert(QStringLiteral("audioMixConfiguration"), audioMixConfiguration());
             node.properties = node.parameters;
         } else if (node.id == QStringLiteral("export")) {
             node.parameters.insert(QStringLiteral("destination"), PathUtils::urlToLocalPath(outputPath));
@@ -1118,7 +1241,7 @@ bool DubbingController::startAutomaticWorkflow(const QString &outputPath)
     m_automaticDownloadsQueued.clear();
     m_automaticDownloadKeys.clear();
     m_automaticConfiguredNodes.clear();
-    m_automaticSetupNodeId = QStringLiteral("source-separate");
+    m_automaticSetupNodeId = QStringLiteral("transcribe");
     setAutomaticStatus(QStringLiteral("Checking required models and runtimes"));
     appendAutomaticEvent(QStringLiteral("Checking required models and runtimes"),
                          QStringLiteral("running"));
@@ -1166,15 +1289,15 @@ void DubbingController::startStepByStep()
         clearError();
         return;
     }
-    const QString transcriptSource = normalizedTranscriptSource(
-        m_project.transcriptConfiguration.value(
-            QStringLiteral("transcriptSource"), QStringLiteral("stt")).toString());
+    const bool hasAnyTranscript = !m_project.segments.isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("sttSegments"))
+                .toList().isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("ocrSegments"))
+                .toList().isEmpty()
+        || !m_project.transcriptConfiguration.value(QStringLiteral("reconciledSegments"))
+                .toList().isEmpty();
     if (!readableDubbingArtifact(m_project.masterAudioPath)) setCurrentStep(QStringLiteral("ingest"));
-    else if ((!readableDubbingArtifact(m_project.vocalsAudioPath)
-              || !readableDubbingArtifact(m_project.backgroundAudioPath))
-             && transcriptSource == QStringLiteral("stt"))
-        setCurrentStep(QStringLiteral("source-separate"));
-    else if (m_project.segments.isEmpty()) setCurrentStep(QStringLiteral("transcribe"));
+    else if (!hasAnyTranscript) setCurrentStep(QStringLiteral("transcribe"));
     else {
         bool allTranslated = true;
         bool allGenerated = true;
@@ -1338,7 +1461,10 @@ bool DubbingController::runWorkflowNode(const QString &nodeId, const QString &ou
         || normalized == QStringLiteral("source-separate") || normalized == QStringLiteral("step-3")) {
         return rerunStep(QStringLiteral("source-separate"), outputPath);
     }
-    if (normalized == QStringLiteral("transcribe") || normalized == QStringLiteral("stt")
+    if (normalized == QStringLiteral("stt") || normalized == QStringLiteral("transcribe-stt")) {
+        return runSpeechToTextIndependently();
+    }
+    if (normalized == QStringLiteral("transcribe")
         || normalized == QStringLiteral("review-transcript") || normalized == QStringLiteral("step-4")) {
         return rerunStep(QStringLiteral("transcribe"), outputPath);
     }
@@ -1346,15 +1472,15 @@ bool DubbingController::runWorkflowNode(const QString &nodeId, const QString &ou
         return runSubtitleOcrIndependently();
     }
     if (normalized == QStringLiteral("translate") || normalized == QStringLiteral("review-translation")
-        || normalized == QStringLiteral("step-6")) {
+        || normalized == QStringLiteral("step-5")) {
         return rerunStep(QStringLiteral("translate"), outputPath);
     }
     if (normalized == QStringLiteral("synthesize") || normalized == QStringLiteral("tts")
-        || normalized == QStringLiteral("assign-voices") || normalized == QStringLiteral("step-7")) {
+        || normalized == QStringLiteral("assign-voices") || normalized == QStringLiteral("step-6")) {
         return rerunStep(QStringLiteral("synthesize"), outputPath);
     }
     if (normalized == QStringLiteral("fit-timing") || normalized == QStringLiteral("alignment-subtitle")
-        || normalized == QStringLiteral("review-conflicts") || normalized == QStringLiteral("step-5")) {
+        || normalized == QStringLiteral("review-conflicts") || normalized == QStringLiteral("step-7")) {
         return rerunStep(QStringLiteral("fit-timing"), outputPath);
     }
     if (normalized == QStringLiteral("mix")) {

@@ -33,6 +33,7 @@ private slots:
     void standardModesPreserveExplicitNodeModelsOnOpen();
     void sourceSeparationExposesModelSelection();
     void runWithoutSeparationSetupRequestsModelSelection();
+    void runSetupUiGateCoversSttAndOcrBeforeBackend();
     void importedVideoPublishesAsyncThumbnailUrl();
     void workflowStagesExposeEightUniquePresentationStages();
     void completedSttKeepsItsTaskBarCheckmarkWhenReconciliationIsPending();
@@ -44,16 +45,20 @@ private slots:
     void audioGenerationUsesSelectedVoiceForEverySegment();
     void selectsBestAutomaticVoiceReference();
     void audioGenerationUsesSavedCloneVoiceForEverySegment();
-    void localSavedVoiceRequiresPersistentProfile();
+    void localSavedVoiceUsesReferenceCloneForUniversalTargets();
+    void localSavedVoiceRejectsWrongCloneTargetRuntime();
     void zeroCloneVoicePresetBlocksSynthesisWithoutFallback();
     void cloneVoicePresetSelectionPersistsAndMissingPresetBlocks();
     void vieneuReferenceRoutesToOmniVoiceCloneWorker();
     void changingCloneVoicePresetAppliesToEntireNextRun();
     void voiceClonePresetLibraryPersistsAtomicallyAndProtectsSource();
     void voiceClonePresetLibraryMigratesLegacyArrayOnEdit();
+    void voiceTargetsAreSourceIndependentAndPersisted();
+    void dubbingUsesReferenceCloneForLocalVieNeuAndOmniVoice();
     void audioMixRunsAsynchronously();
     void audioMixCreatesIndependentVocalStem();
     void audioMixAppliesSidechainDuckingToBackground();
+    void audioMixHonorsOriginalAndDubbedLevels();
     void exportValidatesMuxedMediaBeforeCommit();
     void exportCommitsOnlyAfterMediaValidation();
     void exportValidationTimeoutStopsWithoutCommit();
@@ -103,7 +108,9 @@ private slots:
     void remoteDubbingWorkflowIsReadyWithoutLocalModels();
     void dubbingColabModelsMapToExactNotebooks();
     void dubbingManualArtifactSpecsExposeStrictColabContracts();
+    void manualArtifactUploadAcceptsPresentationStagesWithoutColab();
     void dubbingUiUsesExactModelWorkers();
+    void transcribeUiSeparatesSttAndOcrCards();
     void dubbingUiUsesSafePublicContractsAndArtifactGates();
     void dubbingEntryAndAutomaticSetupCannotBypassConfiguration();
     void dubbingTranscriptionWaitsForFreshDecodedAudio();
@@ -111,6 +118,7 @@ private slots:
     void transcriptOcrRunControlRemainsAvailableAlongsideStt();
     void normalizesOcrOnlyTranscriptWithProvenance();
     void fusesMatchingAndShiftedTranscriptWithoutDuplicates();
+    void defaultsToSttWhenSttAndOcrDoNotMatch();
     void exposesConflictEvidenceWithoutSilentChoice();
     void preservesFusionAndTranscriptSettingsAcrossProjectReload();
     void ocrOnlyTranscriptUsesTheSharedSubtitleOcrController();

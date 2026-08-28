@@ -60,7 +60,7 @@ def make_notebook() -> dict:
         worker_rows,
         "}",
         "for destination, (relative_path, expected_sha256) in WORKERS.items():",
-        '    url = f"https://raw.githubusercontent.com/khoinguyen59/kova-video-studio/{WORKER_COMMIT}/{relative_path}"',
+        '    url = f"https://raw.githubusercontent.com/khoinguyen59/KOVA-DUB/{WORKER_COMMIT}/{relative_path}"',
         "    payload = urlopen(url, timeout=60).read()",
         "    actual_sha256 = sha256(payload).hexdigest()",
         "    if actual_sha256 != expected_sha256:",

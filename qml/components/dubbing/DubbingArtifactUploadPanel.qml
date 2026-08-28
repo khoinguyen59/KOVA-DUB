@@ -5,9 +5,10 @@ import "../base"
 import "../shared"
 import LAStudio
 
-// Manual handoff for a completed Direct Colab task.  This is deliberately
-// separate from Import/Download: a worker output is accepted only by the
-// selected task's controller allow-list and is copied into the project cache.
+// Manual handoff for a completed workflow task.  This is deliberately
+// separate from Import/Download: a saved local output is accepted only by
+// the selected task's controller allow-list and is copied into the project
+// cache. Colab is optional for this path.
 Rectangle {
     id: root
 
@@ -75,7 +76,7 @@ Rectangle {
             root.uploadStatus = qsTr("This task is busy. Only its active worker output can be replaced.")
             return
         }
-        root.uploadStatus = qsTr("Select %1 saved from the completed Colab job.").arg(purpose)
+        root.uploadStatus = qsTr("Select the saved %1 file. Colab is optional.").arg(purpose)
         if (loader.active && loader.item)
             loader.item.open()
         else
@@ -115,7 +116,7 @@ Rectangle {
     Component {
         id: artifactDialogComponent
         FileDialog {
-            title: qsTr("Choose the Colab output for %1").arg(root.artifactSpec.title || root.nodeId)
+            title: qsTr("Choose the saved output for %1").arg(root.artifactSpec.title || root.nodeId)
             fileMode: FileDialog.OpenFile
             // FileDialog expects shell patterns ("*.srt"); the controller
             // remains the authority for filename and extension validation.
@@ -141,7 +142,7 @@ Rectangle {
     Component {
         id: vocalsDialogComponent
         FileDialog {
-            title: qsTr("Choose %1 from the completed Colab job").arg(root.isolationStemName("vocals"))
+            title: qsTr("Choose the saved %1 file").arg(root.isolationStemName("vocals"))
             fileMode: FileDialog.OpenFile
             nameFilters: [qsTr("Vocals output (%1)").arg(root.isolationStemName("vocals"))]
             Component.onCompleted: open()
@@ -165,7 +166,7 @@ Rectangle {
     Component {
         id: backgroundDialogComponent
         FileDialog {
-            title: qsTr("Choose %1 from the completed Colab job").arg(root.isolationStemName("background"))
+            title: qsTr("Choose the saved %1 file").arg(root.isolationStemName("background"))
             fileMode: FileDialog.OpenFile
             nameFilters: [qsTr("Background output (%1)").arg(root.isolationStemName("background"))]
             Component.onCompleted: open()
@@ -344,7 +345,7 @@ Rectangle {
             }
             Text {
                 Layout.fillWidth: true
-                text: qsTr("Selecting a file does not interrupt Colab. The automatic Cloudflare transfer stops only after you confirm this exact output.")
+            text: qsTr("Selecting a file does not start or stop a worker. If an automatic transfer is active, it stops only after you confirm this exact output.")
                 color: Theme.textSecondary
                 font.pixelSize: 10
                 wrapMode: Text.WordWrap
@@ -352,7 +353,7 @@ Rectangle {
         }
         Text {
             Layout.fillWidth: true
-            text: qsTr("Required name: %1\nAllowed format: %2")
+            text: qsTr("Required file name: %1\nAllowed format: %2")
                   .arg((root.artifactSpec.expectedFiles || []).join(", "))
                   .arg(root.allowedFilePatterns().join(", "))
             color: Theme.textSecondary

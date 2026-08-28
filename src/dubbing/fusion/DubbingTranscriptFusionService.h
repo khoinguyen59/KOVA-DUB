@@ -4,19 +4,19 @@
 
 namespace LAStudio {
 
-// Deterministic STT/OCR reconciliation.  It never calls a model and never
-// discards a conflicting observation: callers receive the evidence required
-// for a reviewer to choose the final text.
+// Deterministic STT/OCR reconciliation. It never calls a model. STT is the
+// safe canonical fallback when OCR cannot be matched; the original OCR
+// observations remain persisted separately for audit/review.
 class DubbingTranscriptFusionService final
 {
 public:
-    // `ask` is intentionally the default.  The deterministic fusion layer
-    // must not make a hidden confidence-based choice when observations differ.
+    // `prefer-stt` is the safe default for unmatched or conflicting sources.
+    // `ask` remains available when a UI explicitly requests a review gate.
     static QString normalizePolicy(const QString &policy);
     static QVariantList normalizeOcrSegments(const QVariantList &ocrSegments);
     static QVariantList fuse(const QVariantList &sttSegments,
                              const QVariantList &ocrSegments,
-                             const QString &policy = QStringLiteral("ask"));
+                             const QString &policy = QStringLiteral("prefer-stt"));
 };
 
 } // namespace LAStudio

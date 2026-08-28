@@ -18,6 +18,16 @@ Dialog {
     property string selectedSourceLanguage: ""
     property string selectedTargetLanguage: ""
     property string selectedQuality: "adaptive"
+    // Keep a deterministic Chinese -> Vietnamese fallback even when a
+    // packaged catalog is temporarily unavailable during application start.
+    // The project contract must never silently fall back to English -> English.
+    readonly property var fallbackLanguageCatalog: [
+        { text: qsTr("Chinese"), value: "zh", detail: qsTr("Language code: zh") },
+        { text: qsTr("Vietnamese"), value: "vi", detail: qsTr("Language code: vi") },
+        { text: qsTr("English"), value: "en", detail: qsTr("Language code: en") },
+        { text: qsTr("Japanese"), value: "ja", detail: qsTr("Language code: ja") },
+        { text: qsTr("Korean"), value: "ko", detail: qsTr("Language code: ko") }
+    ]
 
     signal configurationAccepted(string mode, bool continueWorkflow)
     signal configurationCancelled(bool continueWorkflow)
@@ -31,11 +41,43 @@ Dialog {
     x: parent ? Math.round((parent.width - width) / 2) : 0
     y: parent ? Math.round((parent.height - height) / 2) : 0
 
-    function languageIndex(value) {
-        if (!languageCatalog || !Array.isArray(languageCatalog) || languageCatalog.length === 0) return 0
-        for (var i = 0; i < languageCatalog.length; ++i)
-            if (languageCatalog[i] && languageCatalog[i].value === value) return i
+    function languageCatalogCount() {
+        var source = languageCatalog
+        if (!source || (typeof source.count !== "number" && typeof source.length !== "number"))
+            source = root.fallbackLanguageCatalog
+        if (!source)
+            return 0
+        if (typeof source.count === "number")
+            return source.count
+        if (typeof source.length === "number")
+            return source.length
         return 0
+    }
+
+    function languageCatalogItem(index) {
+        var source = languageCatalog
+        if (!source || (typeof source.count !== "number" && typeof source.length !== "number"))
+            source = root.fallbackLanguageCatalog
+        if (!source)
+            return null
+        if (typeof source.get === "function")
+            return source.get(index)
+        return source[index]
+    }
+
+    function languageIndex(value) {
+        var count = languageCatalogCount()
+        for (var i = 0; i < count; ++i) {
+            var item = languageCatalogItem(i)
+            if (item && (item.value === value || item.code === value))
+                return i
+        }
+        return 0
+    }
+
+    function syncLanguageSelection() {
+        sourceLanguageBox.currentIndex = languageIndex(selectedSourceLanguage)
+        targetLanguageBox.currentIndex = languageIndex(selectedTargetLanguage)
     }
 
     function openFor(mode, startAfterApply) {
@@ -44,9 +86,12 @@ Dialog {
         selectedSourceLanguage = (dubbing && dubbing.sourceLanguage) ? dubbing.sourceLanguage : "zh"
         selectedTargetLanguage = (dubbing && dubbing.targetLanguage) ? dubbing.targetLanguage : "vi"
         selectedQuality = (dubbing && dubbing.dubbingQuality) ? dubbing.dubbingQuality : "adaptive"
-        sourceLanguageBox.currentIndex = languageIndex(selectedSourceLanguage)
-        targetLanguageBox.currentIndex = languageIndex(selectedTargetLanguage)
+        syncLanguageSelection()
         open()
+        // A QVariantList can be exposed to QML after the dialog component has
+        // completed.  Reapply the values on the next event-loop turn so a new
+        // project never falls back to the first catalog entry.
+        Qt.callLater(syncLanguageSelection)
     }
 
     function applyConfiguration() {
@@ -128,26 +173,30 @@ Dialog {
                 AppComboBox {
                     id: sourceLanguageBox
                     Layout.fillWidth: true
-                    model: root.languageCatalog
+                    model: root.languageCatalogCount() > 0
+                           ? root.languageCatalog : root.fallbackLanguageCatalog
                     textRole: "text"
                     secondaryTextRole: "detail"
                     searchable: Boolean(model && model.length > 6)
                     onActivated: function(index) {
-                        if (model && index >= 0 && index < model.length)
-                            root.selectedSourceLanguage = model[index].value
+                        var item = root.languageCatalogItem(index)
+                        if (item)
+                            root.selectedSourceLanguage = item.value
                     }
                 }
                 LineIcon { name: "chevron-right"; color: Theme.textSecondary; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
                 AppComboBox {
                     id: targetLanguageBox
                     Layout.fillWidth: true
-                    model: root.languageCatalog
+                    model: root.languageCatalogCount() > 0
+                           ? root.languageCatalog : root.fallbackLanguageCatalog
                     textRole: "text"
                     secondaryTextRole: "detail"
                     searchable: Boolean(model && model.length > 6)
                     onActivated: function(index) {
-                        if (model && index >= 0 && index < model.length)
-                            root.selectedTargetLanguage = model[index].value
+                        var item = root.languageCatalogItem(index)
+                        if (item)
+                            root.selectedTargetLanguage = item.value
                     }
                 }
             }

@@ -88,7 +88,8 @@ DubbingExportJob::~DubbingExportJob()
 }
 
 bool DubbingExportJob::renderPreview(const QVariantList &segments, const QString &projectPath,
-                                     const QString &backgroundPath, const QString &path)
+                                     const QString &backgroundPath, const QString &path,
+                                     const QVariantMap &mixConfiguration)
 {
     if (m_running) { fail(QStringLiteral("Finish the active export operation first.")); return false; }
     QString outputPath = path;
@@ -109,10 +110,12 @@ bool DubbingExportJob::renderPreview(const QVariantList &segments, const QString
     const QString vocalStagingPath = m_renderVocalStagingPath;
     emit progressChanged(QStringLiteral("mix"), 0);
     m_renderWatcher->setFuture(QtConcurrent::run(
-        [segments, outputPath, stagingPath, backgroundPath, vocalOutputPath, vocalStagingPath, cancel]() {
+        [segments, outputPath, stagingPath, backgroundPath, vocalOutputPath, vocalStagingPath,
+         mixConfiguration, cancel]() {
         QString error;
         const bool mixed = AudioTimelineMixer::mixSegments(
-            segments, stagingPath, backgroundPath, vocalStagingPath, &error, cancel.get());
+            segments, stagingPath, backgroundPath, vocalStagingPath, &error, cancel.get(),
+            mixConfiguration);
         const bool vocalCommitted = mixed && !cancel->loadAcquire()
             && AtomicMediaCommit::commit(vocalStagingPath, vocalOutputPath, &error);
         const bool committed = vocalCommitted && !cancel->loadAcquire()

@@ -5,6 +5,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../base"
 import LAStudio
+import "../base/colabNotebookUrls.js" as ColabNotebookUrls
 
 // One Dubbing-only setup surface for temporary Direct Colab workers.  It is
 // intentionally a view over AppController's session objects: URL/token never
@@ -61,12 +62,115 @@ Dialog {
         draftTokens = next
     }
 
+    function isScopedToStages() {
+        return root.stageIds && root.stageIds.length > 0
+    }
+
+    function includesStage(stageId) {
+        return !root.isScopedToStages() || root.stageIds.indexOf(stageId) >= 0
+    }
+
+    function includesAnyStage(stageList) {
+        if (!root.isScopedToStages()) return true
+        for (var i = 0; i < stageList.length; ++i) {
+            if (root.stageIds.indexOf(stageList[i]) >= 0) return true
+        }
+        return false
+    }
+
+    function transcriptSourceMode() {
+        var source = root.dubbing && root.dubbing.transcriptConfiguration
+                ? root.dubbing.transcriptConfiguration.transcriptSource : "stt"
+        return source === "stt+ocr" ? "reconcile" : (source || "stt")
+    }
+
+    // Reconcile is an explicit two-worker action. It must never fall back to
+    // the single Unified URL field: STT and OCR have different capabilities,
+    // models and verification sessions.
+    function transcriptRoutesRequested() {
+        return root.transcriptSourceMode() === "reconcile"
+                || (root.isScopedToStages()
+                    && root.includesAnyStage(["transcribe", "subtitle-ocr"]))
+    }
+
+    function showUnifiedRoutePanel() {
+        return !root.transcriptRoutesRequested()
+    }
+
+    function showSttRoute() {
+        var mode = root.transcriptSourceMode()
+        return root.transcriptRoutesRequested()
+                && (mode === "stt" || mode === "reconcile"
+                    || (root.isScopedToStages() && root.includesStage("transcribe")))
+                && (!root.isScopedToStages()
+                    || root.includesStage("transcribe")
+                    || mode === "reconcile")
+    }
+
+    function showOcrRoute() {
+        var mode = root.transcriptSourceMode()
+        return root.transcriptRoutesRequested()
+                && (mode === "ocr" || mode === "reconcile"
+                    || (root.isScopedToStages() && root.includesStage("subtitle-ocr")))
+                && (!root.isScopedToStages()
+                    || root.includesStage("subtitle-ocr")
+                    || mode === "reconcile")
+    }
+
+    function hasSelectedStageOutsideScope() {
+        if (!root.isScopedToStages()) return false
+        var stages = dubbing ? (dubbing.colabSetupStages || []) : []
+        for (var i = 0; i < stages.length; ++i) {
+            if (stages[i].selectedForDirectColab
+                    && root.stageIds.indexOf(stages[i].id) < 0)
+                return true
+        }
+        return false
+    }
+
+    function checkVisibleStages() {
+        if (!root.isScopedToStages()) {
+            root.dubbing.validateAllWorkflowColabStages()
+            return
+        }
+        for (var i = 0; i < root.stageIds.length; ++i)
+            root.dubbing.checkWorkflowColabStage(root.stageIds[i])
+    }
+
+    function qmlSmokeScopedStageCheck(stageId) {
+        var previousStageIds = root.stageIds
+        root.stageIds = [stageId]
+        // Dialog content can remain unpolished while the popup is closed, so
+        // the smoke contract checks the same scope predicates used by the
+        // bindings instead of reading child Item.visible too early.
+        var transcriptVisible = root.includesAnyStage(["transcribe", "subtitle-ocr"])
+        var ttsVisible = root.includesStage("synthesize")
+        var ocrVisible = root.includesStage("subtitle-ocr")
+        var result = transcriptVisible === (stageId === "transcribe" || stageId === "subtitle-ocr")
+                && ttsVisible === (stageId === "synthesize")
+                && ocrVisible === (stageId === "subtitle-ocr")
+        root.stageIds = previousStageIds
+        return result
+    }
+
     function selectedDirectColabStageCount() {
         var stages = dubbing ? dubbing.colabSetupStages : []
         var count = 0
         for (var i = 0; i < stages.length; ++i)
-            if (stages[i].selectedForDirectColab) ++count
+            if (stages[i].selectedForDirectColab && root.includesStage(stages[i].id)) ++count
         return count
+    }
+
+    function stageForId(stageId) {
+        var stages = dubbing ? (dubbing.colabSetupStages || []) : []
+        for (var i = 0; i < stages.length; ++i)
+            if (stages[i].id === stageId) return stages[i]
+        return null
+    }
+
+    function stageModelForId(stageId) {
+        var stage = root.stageForId(stageId)
+        return stage ? (stage.modelId || "") : ""
     }
 
     background: Rectangle {
@@ -99,12 +203,6 @@ Dialog {
                     font.pixelSize: Theme.fontLarge
                     font.bold: true
                 }
-                Text {
-                    text: qsTr("Configure and verify GPU stages once. API Gateway remains a separate route; tokens stay only in this app session.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
             }
             Button {
                 implicitWidth: 32
@@ -118,9 +216,11 @@ Dialog {
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.surfaceAlt }
 
         Rectangle {
+            id: transcriptSourcePanel
             Layout.fillWidth: true
             Layout.margins: Theme.paddingLarge
             implicitHeight: transcriptSourceLayout.implicitHeight + Theme.paddingMedium * 2
+            visible: root.includesAnyStage(["transcribe", "subtitle-ocr"])
             radius: Theme.radiusSmall
             color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
             border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
@@ -164,22 +264,17 @@ Dialog {
                             })
                         }
                     }
-                    Text {
-                        Layout.fillWidth: true
-                        text: qsTr("STT and Subtitle OCR can always be configured and run independently below. Reconcile only combines saved results locally; it starts neither worker.")
-                        color: Theme.textSecondary
-                        font.pixelSize: Theme.fontSmall
-                        wrapMode: Text.WordWrap
-                    }
                 }
             }
         }
 
         Rectangle {
+            id: unifiedRoutePanel
             Layout.fillWidth: true
             Layout.leftMargin: Theme.paddingLarge
             Layout.rightMargin: Theme.paddingLarge
             implicitHeight: unifiedLayout.implicitHeight + Theme.paddingMedium * 2
+            visible: root.showUnifiedRoutePanel()
             radius: Theme.radiusSmall
             color: Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.06)
             border.color: Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.35)
@@ -196,25 +291,27 @@ Dialog {
                     color: Theme.textPrimary
                     font.bold: true
                 }
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
-                    text: qsTr("Run one Unified Colab coordinator, then enter its URL and token once. It connects only the %1 Dubbing stage(s) currently selected for Direct Colab. Existing individual Colab, API Gateway, and Local routes remain unchanged.")
-                        .arg(root.selectedDirectColabStageCount())
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
-                }
-                Text {
-                    Layout.fillWidth: true
-                    // A unified URL is an explicit worker contract, not an
-                    // alias for any one of the exact-model notebooks below.
-                    // Keep the established per-model notebook links intact
-                    // until the coordinator itself is available as a tested
-                    // artifact.
-                    text: qsTr("The unified worker must expose the selected stage routes under /v1/unified/&lt;capability&gt;/&lt;model&gt;. Use the existing exact-model notebook cards below when you do not run such a coordinator.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
+                    spacing: Theme.paddingSmall
+                    PrimaryButton {
+                        objectName: "dubbingOpenUnifiedColabButton"
+                        text: qsTr("Open Unified Colab")
+                        iconName: "cloud"
+                        implicitWidth: 180
+                        onClicked: Qt.openUrlExternally(
+                                       ColabNotebookUrls.forNotebookFile(
+                                           "LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb"))
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.selectedDirectColabStageCount() > 0
+                              ? qsTr("%1 selected").arg(root.selectedDirectColabStageCount())
+                              : qsTr("Unified route")
+                        color: Theme.textSecondary
+                        font.pixelSize: Theme.fontSmall
+                        elide: Text.ElideRight
+                    }
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -247,12 +344,293 @@ Dialog {
                         iconName: "link"
                         implicitWidth: 180
                         enabled: root.selectedDirectColabStageCount() > 0
+                                 && !root.hasSelectedStageOutsideScope()
                                  && unifiedUrlField.text.trim() !== ""
                                  && unifiedTokenField.text !== ""
                                  && !root.dubbing.colabSetupChecking
                         onClicked: {
                             if (root.dubbing.connectUnifiedWorkflowColab(unifiedUrlField.text.trim(), unifiedTokenField.text))
                                 root.unifiedToken = ""
+                        }
+                    }
+                }
+
+                GridLayout {
+                    id: workerRouteGrid
+                    Layout.fillWidth: true
+                    columns: 2
+                    rowSpacing: Theme.paddingSmall
+                    columnSpacing: Theme.paddingSmall
+
+                    Text {
+                        id: ttsRouteLabel
+                        visible: root.includesStage("synthesize")
+                        text: qsTr("TTS")
+                        color: Theme.textSecondary
+                        font.bold: true
+                        Layout.preferredWidth: 42
+                    }
+                    RowLayout {
+                        id: ttsRouteRow
+                        visible: root.includesStage("synthesize")
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        TextField {
+                            id: dubbingTtsWorkerUrlField
+                            objectName: "dubbingTtsWorkerUrlField"
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("TTS worker URL")
+                            text: root.draftUrl("synthesize", root.sessionForStage("synthesize"))
+                            selectByMouse: true
+                            onTextEdited: root.setDraftUrl("synthesize", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: dubbingTtsWorkerUrlField.activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        TextField {
+                            Layout.preferredWidth: 180
+                            placeholderText: qsTr("TTS token")
+                            text: root.draftToken("synthesize")
+                            echoMode: TextInput.Password
+                            selectByMouse: true
+                            onTextEdited: root.setDraftToken("synthesize", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        PrimaryButton {
+                            text: qsTr("Connect")
+                            iconName: "link"
+                            implicitWidth: 104
+                            enabled: dubbingTtsWorkerUrlField.text.trim() !== ""
+                                     && root.draftToken("synthesize") !== ""
+                                     && root.stageModelForId("synthesize") !== ""
+                                     && !root.dubbing.colabSetupChecking
+                            onClicked: {
+                                if (root.dubbing.connectWorkflowColabStage(
+                                        "synthesize", root.stageModelForId("synthesize"),
+                                        dubbingTtsWorkerUrlField.text.trim(),
+                                        root.draftToken("synthesize")))
+                                    root.setDraftToken("synthesize", "")
+                            }
+                        }
+                    }
+
+                    Text {
+                        id: ocrRouteLabel
+                        visible: root.includesStage("subtitle-ocr")
+                        text: qsTr("OCR")
+                        color: Theme.textSecondary
+                        font.bold: true
+                        Layout.preferredWidth: 42
+                    }
+                    RowLayout {
+                        id: ocrRouteRow
+                        visible: root.includesStage("subtitle-ocr")
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        TextField {
+                            id: dubbingOcrWorkerUrlField
+                            objectName: "dubbingOcrWorkerUrlField"
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("OCR worker URL")
+                            text: root.draftUrl("subtitle-ocr", root.sessionForStage("subtitle-ocr"))
+                            selectByMouse: true
+                            onTextEdited: root.setDraftUrl("subtitle-ocr", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: dubbingOcrWorkerUrlField.activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        TextField {
+                            Layout.preferredWidth: 180
+                            placeholderText: qsTr("OCR token")
+                            text: root.draftToken("subtitle-ocr")
+                            echoMode: TextInput.Password
+                            selectByMouse: true
+                            onTextEdited: root.setDraftToken("subtitle-ocr", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        PrimaryButton {
+                            text: qsTr("Connect")
+                            iconName: "link"
+                            implicitWidth: 104
+                            enabled: dubbingOcrWorkerUrlField.text.trim() !== ""
+                                     && root.draftToken("subtitle-ocr") !== ""
+                                     && root.stageModelForId("subtitle-ocr") !== ""
+                                     && !root.dubbing.colabSetupChecking
+                            onClicked: {
+                                if (root.dubbing.connectWorkflowColabStage(
+                                        "subtitle-ocr", root.stageModelForId("subtitle-ocr"),
+                                        dubbingOcrWorkerUrlField.text.trim(),
+                                        root.draftToken("subtitle-ocr")))
+                                    root.setDraftToken("subtitle-ocr", "")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // STT + OCR use separate workers and separate verification sessions.
+        // Keep this card compact so selecting reconciliation does not reserve
+        // the large green Unified Dubbing area for a route that is not used.
+        Rectangle {
+            id: transcriptWorkerRoutesPanel
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.paddingLarge
+            Layout.rightMargin: Theme.paddingLarge
+            implicitHeight: transcriptWorkerRoutesLayout.implicitHeight + Theme.paddingSmall * 2
+            visible: root.transcriptRoutesRequested()
+            radius: Theme.radiusSmall
+            color: Theme.surfaceAlt
+            border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
+            border.width: 1
+
+            ColumnLayout {
+                id: transcriptWorkerRoutesLayout
+                anchors.fill: parent
+                anchors.margins: Theme.paddingSmall
+                spacing: Theme.paddingSmall
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: qsTr("Transcript workers")
+                        color: Theme.textPrimary
+                        font.bold: true
+                    }
+                    Item { Layout.fillWidth: true }
+                    PrimaryButton {
+                        text: qsTr("Open STT Colab")
+                        iconName: "cloud"
+                        quiet: true
+                        visible: root.showSttRoute()
+                        onClicked: Qt.openUrlExternally(
+                                       ColabNotebookUrls.forNotebookFile(
+                                           root.dubbing.colabNotebookForNode(
+                                               "transcribe", root.stageModelForId("transcribe"))))
+                    }
+                    PrimaryButton {
+                        text: qsTr("Open OCR Colab")
+                        iconName: "cloud"
+                        quiet: true
+                        visible: root.showOcrRoute()
+                        onClicked: Qt.openUrlExternally(
+                                       ColabNotebookUrls.forNotebookFile(
+                                           root.dubbing.colabNotebookForNode(
+                                               "subtitle-ocr", root.stageModelForId("subtitle-ocr"))))
+                    }
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    rowSpacing: Theme.paddingSmall
+                    columnSpacing: Theme.paddingSmall
+
+                    Text {
+                        visible: root.showSttRoute()
+                        text: qsTr("STT")
+                        color: Theme.textSecondary
+                        font.bold: true
+                        Layout.preferredWidth: 42
+                    }
+                    RowLayout {
+                        visible: root.showSttRoute()
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        TextField {
+                            id: dubbingSttWorkerUrlField
+                            objectName: "dubbingSttWorkerUrlField"
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("STT worker URL")
+                            text: root.draftUrl("transcribe", root.sessionForStage("transcribe"))
+                            selectByMouse: true
+                            onTextEdited: root.setDraftUrl("transcribe", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: dubbingSttWorkerUrlField.activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        TextField {
+                            Layout.preferredWidth: 180
+                            placeholderText: qsTr("STT token")
+                            text: root.draftToken("transcribe")
+                            echoMode: TextInput.Password
+                            selectByMouse: true
+                            onTextEdited: root.setDraftToken("transcribe", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        PrimaryButton {
+                            text: qsTr("Connect")
+                            iconName: "link"
+                            implicitWidth: 104
+                            enabled: dubbingSttWorkerUrlField.text.trim() !== ""
+                                     && root.draftToken("transcribe") !== ""
+                                     && root.stageModelForId("transcribe") !== ""
+                                     && !root.dubbing.colabSetupChecking
+                            onClicked: {
+                                if (root.dubbing.connectWorkflowColabStage(
+                                        "transcribe", root.stageModelForId("transcribe"),
+                                        dubbingSttWorkerUrlField.text.trim(),
+                                        root.draftToken("transcribe")))
+                                    root.setDraftToken("transcribe", "")
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: root.showOcrRoute()
+                        text: qsTr("OCR")
+                        color: Theme.textSecondary
+                        font.bold: true
+                        Layout.preferredWidth: 42
+                    }
+                    RowLayout {
+                        visible: root.showOcrRoute()
+                        Layout.fillWidth: true
+                        spacing: Theme.paddingSmall
+                        TextField {
+                            id: dubbingTranscriptOcrWorkerUrlField
+                            objectName: "dubbingTranscriptOcrWorkerUrlField"
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("OCR worker URL")
+                            text: root.draftUrl("subtitle-ocr", root.sessionForStage("subtitle-ocr"))
+                            selectByMouse: true
+                            onTextEdited: root.setDraftUrl("subtitle-ocr", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: dubbingTranscriptOcrWorkerUrlField.activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        TextField {
+                            Layout.preferredWidth: 180
+                            placeholderText: qsTr("OCR token")
+                            text: root.draftToken("subtitle-ocr")
+                            echoMode: TextInput.Password
+                            selectByMouse: true
+                            onTextEdited: root.setDraftToken("subtitle-ocr", text)
+                            color: Theme.textPrimary
+                            placeholderTextColor: Theme.textSecondary
+                            background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.color: activeFocus ? Theme.accent : Theme.surfaceAlt; border.width: 1 }
+                        }
+                        PrimaryButton {
+                            text: qsTr("Connect")
+                            iconName: "link"
+                            implicitWidth: 104
+                            enabled: dubbingTranscriptOcrWorkerUrlField.text.trim() !== ""
+                                     && root.draftToken("subtitle-ocr") !== ""
+                                     && root.stageModelForId("subtitle-ocr") !== ""
+                                     && !root.dubbing.colabSetupChecking
+                            onClicked: {
+                                if (root.dubbing.connectWorkflowColabStage(
+                                        "subtitle-ocr", root.stageModelForId("subtitle-ocr"),
+                                        dubbingTranscriptOcrWorkerUrlField.text.trim(),
+                                        root.draftToken("subtitle-ocr")))
+                                    root.setDraftToken("subtitle-ocr", "")
+                            }
                         }
                     }
                 }
@@ -332,11 +710,10 @@ Dialog {
                                 Layout.fillWidth: true
                                 visible: stageCard.stageId === "transcribe" || stageCard.stageId === "subtitle-ocr"
                                 text: stageCard.modelData.requiredForCurrentTranscriptAction
-                                      ? qsTr("Required by the next transcript action.")
-                                      : qsTr("Available independently. Select its action when you are ready to run it.")
+                                      ? qsTr("Required")
+                                      : qsTr("Optional")
                                 color: Theme.textSecondary
-                                font.pixelSize: Theme.fontSmall
-                                wrapMode: Text.WordWrap
+                                font.pixelSize: 10
                             }
 
                             RowLayout {
@@ -456,16 +833,18 @@ Dialog {
             spacing: Theme.paddingMedium
             Text {
                 Layout.fillWidth: true
-                text: root.dubbing.colabSetupSummary === "" ? qsTr("Choose an exact model, then connect and verify its own notebook worker.") : root.dubbing.colabSetupSummary
+                text: root.dubbing.colabSetupSummary === "" ? qsTr("Select model and connect.") : root.dubbing.colabSetupSummary
                 color: root.dubbing.colabSetupChecking ? Theme.warning : Theme.textSecondary
                 font.pixelSize: Theme.fontSmall
                 wrapMode: Text.WordWrap
             }
             PrimaryButton {
-                text: root.dubbing.colabSetupChecking ? qsTr("Checking…") : qsTr("Check all selected")
+                text: root.dubbing.colabSetupChecking
+                      ? qsTr("Checking…")
+                      : (root.isScopedToStages() ? qsTr("Check current stage") : qsTr("Check all selected"))
                 iconName: "activity"
                 enabled: !root.dubbing.colabSetupChecking
-                onClicked: root.dubbing.validateAllWorkflowColabStages()
+                onClicked: root.checkVisibleStages()
             }
             PrimaryButton { text: qsTr("Close"); quiet: true; onClicked: root.close() }
         }

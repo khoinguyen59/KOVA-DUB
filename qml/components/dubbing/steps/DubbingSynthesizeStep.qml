@@ -28,6 +28,10 @@ Rectangle {
     // 3 Mode Switcher: "gallery" (Presets/Clones), "colab" (Colab GPU), "gateway" (API Gateway)
     property string activeTtsMode: "gallery"
     property string currentSamplePlayingPath: ""
+    readonly property var cloneTargetModels: [
+        { id: "vieneu-tts-v3-turbo", name: "VieNeu-TTS v3 Turbo" },
+        { id: "omnivoice", name: "OmniVoice" }
+    ]
 
     Layout.fillWidth: true
     Layout.fillHeight: true
@@ -81,18 +85,34 @@ Rectangle {
         if (!voiceId || !root.dubbing.selectTtsVoice(voiceId))
             return false
 
-        var item = typeof itemOrId === "string" ? null : itemOrId
-        var family = String(sourceFamily || (item ? (item.sourceModelFamily
-                || item.modelFamily || item.familyId || "") : "")).toLowerCase()
-        var worker = String(item ? (item.voiceCloneModelId || "") : "").toLowerCase()
-        // ViNeu references are valid inputs for the OmniVoice clone worker.
-        // Make that route visible immediately so the operator can confirm the
-        // exact model/runtime instead of mistaking a voice-only change for a
-        // synthesis configuration change.
-        if (worker === "omnivoice" || family === "omnivoice"
-                || family.indexOf("vieneu") === 0)
+        var item = typeof itemOrId === "string" ? root.getSelectedVoiceObject() : itemOrId
+        var isSavedClone = item && (item.kind === "saved-clone"
+                || (item.id && String(item.id).indexOf("builtin:") !== 0
+                    && (item.audioPath || item.referenceAudio)))
+        // Every saved reference is target-independent. Open the exact model
+        // picker for it instead of routing from the source family that created
+        // the preset.
+        if (isSavedClone)
             root.voiceModelRequested("synthesize")
         return true
+    }
+
+    function selectedCloneTargetIndex() {
+        var item = root.getSelectedVoiceObject()
+        var selected = item && item.voiceCloneModelId ? String(item.voiceCloneModelId).toLowerCase() : "omnivoice"
+        for (var i = 0; i < root.cloneTargetModels.length; ++i) {
+            if (root.cloneTargetModels[i].id === selected
+                    || (selected === "vieneu" && root.cloneTargetModels[i].id.indexOf("vieneu-") === 0))
+                return i
+        }
+        return 1
+    }
+
+    function selectCloneTarget(index) {
+        var item = root.getSelectedVoiceObject()
+        if (!item || item.kind !== "saved-clone" || !root.cloneTargetModels[index]) return
+        if (root.dubbing.selectCloneVoicePresetForTarget(item.id, root.cloneTargetModels[index].id))
+            root.voiceModelRequested("synthesize")
     }
 
     Connections {
@@ -132,17 +152,10 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 1
                 Text {
-                    text: qsTr("7. LỒNG TIẾNG AI (TTS & VOICE CLONE)")
+                    text: qsTr("6. LỒNG TIẾNG AI (TTS & VOICE CLONE)")
                     color: Theme.textPrimary
                     font.pixelSize: Theme.fontMedium
                     font.bold: true
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-                Text {
-                    text: qsTr("Choose a catalog voice, saved clone, Colab worker or API Gateway for this dub.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
@@ -317,6 +330,37 @@ Rectangle {
                         Layout.preferredHeight: 38
                         Layout.preferredWidth: 140
                         onClicked: dubbingVoiceGalleryDialog.open()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.paddingSmall
+                    visible: root.getSelectedVoiceObject()
+                             && root.getSelectedVoiceObject().kind === "saved-clone"
+
+                    Text {
+                        text: qsTr("Clone model")
+                        color: Theme.textSecondary
+                        font.pixelSize: Theme.fontSmall
+                    }
+
+                    ComboBox {
+                        id: dubbingCloneTargetSelector
+                        Layout.fillWidth: true
+                        model: root.cloneTargetModels
+                        textRole: "name"
+                        currentIndex: root.selectedCloneTargetIndex()
+                        enabled: !root.dubbing.processing
+                        onActivated: function(index) { root.selectCloneTarget(index) }
+                    }
+
+                    PrimaryButton {
+                        text: qsTr("Open model")
+                        iconName: "settings"
+                        quiet: true
+                        implicitWidth: 112
+                        onClicked: root.voiceModelRequested("synthesize")
                     }
                 }
 
@@ -552,12 +596,6 @@ Rectangle {
                     color: Theme.textPrimary
                     font.bold: true
                     font.pixelSize: Theme.fontSmall
-                }
-                Text {
-                    text: qsTr("Sử dụng endpoint API Gateway tốc độ cao để tạo giọng đọc tự động không cần GPU cục bộ.")
-                    color: Theme.textSecondary
-                    font.pixelSize: Theme.fontSmall
-                    wrapMode: Text.WordWrap
                 }
             }
         }

@@ -171,8 +171,8 @@ QtObject {
         property string exportPath: ""
         property string capCutDraftPath: ""
         property string capCutDraftWarning: ""
-        property string sourceLanguage: "vi"
-        property string targetLanguage: "en"
+        property string sourceLanguage: "zh"
+        property string targetLanguage: "vi"
         property var durationControl: ({ mode: "fit", minGapMs: 80 })
         property var speakers: []
         property var segments: [
@@ -193,12 +193,12 @@ QtObject {
 
         property var workflowNodes: [
             { id: "import", label: qsTr("Nguồn Media"), title: qsTr("Nguồn Media (Import)"), icon: "folder", state: "completed", completed: true, canRun: true, runReady: true, nextNodeId: "normalize", configurable: false },
-            { id: "normalize", label: qsTr("Chuẩn Hóa Âm Thanh"), title: qsTr("Chuẩn Hóa Âm Thanh (Normalize)"), icon: "waveform", state: "completed", completed: true, canRun: true, runReady: true, nextNodeId: "source-separate", configurable: true, capabilityId: "normalize" },
-            { id: "source-separate", label: qsTr("Tách Giọng & Nhạc Nền"), title: qsTr("Tách Giọng Nói & Nhạc Nền (Separate)"), icon: "separate", state: "ready", completed: false, canRun: true, runReady: true, nextNodeId: "transcribe", configurable: true, capabilityId: "isolation" },
-            { id: "transcribe", label: qsTr("Nhận Dạng Lời Thoại"), title: qsTr("Nhận Dạng Lời Thoại (Transcribe)"), icon: "mic", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "alignment-subtitle", configurable: true, capabilityId: "stt" },
-            { id: "alignment-subtitle", label: qsTr("Khớp Thời Gian & Căn Chỉnh"), title: qsTr("Khớp Thời Gian & Căn Chỉnh"), icon: "align", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "translate", configurable: true, capabilityId: "alignment" },
-            { id: "translate", label: qsTr("Dịch Thuật AI"), title: qsTr("Dịch Thuật AI (Translate)"), icon: "translate", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "synthesize", configurable: true, capabilityId: "translation" },
-            { id: "tts", label: qsTr("Lồng Tiếng AI"), title: qsTr("Lồng Tiếng AI (TTS)"), icon: "voice", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "mix", configurable: true, capabilityId: "tts" },
+            { id: "normalize", label: qsTr("Chuẩn Hóa Âm Thanh"), title: qsTr("Chuẩn Hóa Âm Thanh (Normalize)"), icon: "waveform", state: "completed", completed: true, canRun: true, runReady: true, nextNodeId: "transcribe", configurable: true, capabilityId: "normalize" },
+            { id: "source-separate", label: qsTr("Tách Giọng & Nhạc Nền"), title: qsTr("Tách Giọng Nói & Nhạc Nền (Separate)"), icon: "separate", state: "ready", completed: false, canRun: true, runReady: true, nextNodeId: "transcribe", configurable: true, capabilityId: "isolation", optional: true },
+            { id: "transcribe", label: qsTr("Nhận Dạng Lời Thoại"), title: qsTr("Nhận Dạng Lời Thoại (Transcribe)"), icon: "mic", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "translate", configurable: true, capabilityId: "stt" },
+            { id: "translate", label: qsTr("Dịch Thuật AI"), title: qsTr("Dịch Thuật AI (Translate)"), icon: "translate", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "tts", configurable: true, capabilityId: "translation" },
+            { id: "tts", label: qsTr("Lồng Tiếng AI"), title: qsTr("Lồng Tiếng AI (TTS)"), icon: "voice", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "alignment-subtitle", configurable: true, capabilityId: "tts" },
+            { id: "alignment-subtitle", label: qsTr("Khớp Chữ & Căn Chỉnh"), title: qsTr("Khớp Chữ & Căn Chỉnh (Align)"), icon: "align", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "export", configurable: true, capabilityId: "alignment" },
             { id: "export", label: qsTr("Xuất Bản Thành Phẩm"), title: qsTr("Xuất Bản Thành Phẩm (Export)"), icon: "export", state: "pending", completed: false, canRun: false, runReady: false, nextNodeId: "", configurable: false }
         ]
         property var workflowStages: [
@@ -206,13 +206,14 @@ QtObject {
             { id: "normalize", label: qsTr("2. Chuẩn Hóa Âm Thanh"), icon: "waveform", status: "completed", completed: true, active: false, actionNodeId: "normalize", canRunDirectly: true },
             { id: "isolator", label: qsTr("3. Tách Giọng Nói & Nhạc Nền"), icon: "separate", status: "ready", completed: false, active: true, actionNodeId: "source-separate", canRunDirectly: true },
             { id: "transcribe", label: qsTr("4. Nhận Dạng Lời Thoại"), icon: "mic", status: "pending", completed: false, active: false, actionNodeId: "transcribe", canRunDirectly: false },
-            { id: "alignment-subtitle", label: qsTr("5. Khớp Thời Gian & Căn Chỉnh"), icon: "align", status: "pending", completed: false, active: false, actionNodeId: "fit-timing", canRunDirectly: false },
-            { id: "translate", label: qsTr("6. Dịch Thuật AI"), icon: "translate", status: "pending", completed: false, active: false, actionNodeId: "translate", canRunDirectly: false },
-            { id: "tts", label: qsTr("7. Lồng Tiếng AI"), icon: "voice", status: "pending", completed: false, active: false, actionNodeId: "synthesize", canRunDirectly: false },
+            { id: "translate", label: qsTr("5. Dịch Thuật AI"), icon: "translate", status: "pending", completed: false, active: false, actionNodeId: "translate", canRunDirectly: false },
+            { id: "tts", label: qsTr("6. Lồng Tiếng AI"), icon: "voice", status: "pending", completed: false, active: false, actionNodeId: "synthesize", canRunDirectly: false },
+            { id: "alignment-subtitle", label: qsTr("7. Khớp Chữ & Căn Chỉnh"), icon: "align", status: "pending", completed: false, active: false, actionNodeId: "fit-timing", canRunDirectly: false },
             { id: "export", label: qsTr("8. Xuất Bản Thành Phẩm"), icon: "export", status: "pending", completed: false, active: false, actionNodeId: "export", canRunDirectly: false }
         ]
         property var workflowNodeConfigurations: ({})
-        property var transcriptConfiguration: ({ transcriptSource: "stt", fusionPolicy: "review" })
+        property var transcriptConfiguration: ({ transcriptSource: "stt", fusionPolicy: "prefer-stt" })
+        property var audioMixConfiguration: ({ originalGainPercent: 0, dubbedGainPercent: 100 })
         property int unresolvedTranscriptConflictCount: 0
         property bool subtitleOcrProcessing: false
         property bool sttCanRunAlongsideSubtitleOcr: true
@@ -262,7 +263,14 @@ QtObject {
         property string selectedTtsVoiceId: ""
         property bool ttsVoiceSelectionValid: true
         property string ttsVoiceSelectionError: ""
-        property var colabSetupStages: []
+        property var colabSetupStages: [
+            { id: "source-separate", title: "Isolator", modelId: "sherpa-onnx-spleeter-2stems-fp16", capability: "voice-isolation", notebookFile: "LA_STUDIO_SEPARATION_SPLEETER_2STEMS_GPU.ipynb", selectedForDirectColab: true, verified: false, requiredForCurrentTranscriptAction: false, diagnostic: "" },
+            { id: "transcribe", title: "STT", modelId: "whisper.cpp", capability: "stt", notebookFile: "LA_STUDIO_STT_WHISPER_GPU.ipynb", selectedForDirectColab: true, verified: false, requiredForCurrentTranscriptAction: true, diagnostic: "" },
+            { id: "subtitle-ocr", title: "Subtitle OCR", modelId: "paddleocr-v5", capability: "subtitle-ocr", notebookFile: "LA_STUDIO_SUBTITLE_OCR_PP_OCRV5_GPU.ipynb", selectedForDirectColab: false, verified: false, requiredForCurrentTranscriptAction: false, diagnostic: "" },
+            { id: "translate", title: "Translation", modelId: "hy-mt2-1.8b", capability: "translation", notebookFile: "LA_STUDIO_TRANSLATION_HY_MT2_1_8B_GPU.ipynb", selectedForDirectColab: false, verified: false, requiredForCurrentTranscriptAction: false, diagnostic: "" },
+            { id: "synthesize", title: "TTS", modelId: "omnivoice", capability: "tts", notebookFile: "LA_STUDIO_TTS_OMNIVOICE_GPU.ipynb", selectedForDirectColab: true, verified: false, requiredForCurrentTranscriptAction: false, diagnostic: "" },
+            { id: "alignment", title: "Alignment", modelId: "mms-forced-aligner-onnx", capability: "alignment", notebookFile: "LA_STUDIO_ALIGNMENT_MMS_ONNX_GPU.ipynb", selectedForDirectColab: false, verified: false, requiredForCurrentTranscriptAction: false, diagnostic: "" }
+        ]
         property bool colabSetupChecking: false
         property string colabSetupSummary: ""
 
@@ -314,8 +322,13 @@ QtObject {
         function startMediaQueue() { return true }
         function cancelMediaQueue() { mediaQueueDownloading = false; mediaQueueProcessing = false }
         function transcribeSource() { return true }
+        function runSpeechToTextIndependently() { return true }
         function runSubtitleOcrIndependently() { return true }
         function reconcileTranscriptSources() { return true }
+        function setAudioMixLevels(originalPercent, dubbedPercent) {
+            audioMixConfiguration = { originalGainPercent: originalPercent, dubbedGainPercent: dubbedPercent }
+            return true
+        }
         function translateSource() { return true }
         function generateAudio() { return true }
         function cancelProcessing() { processing = false; processingChanged() }
@@ -364,10 +377,21 @@ QtObject {
         function presetDubbingOcrLowerRegion() { return true }
         function resetDubbingOcrRoi() { return true }
         function previewDubbingOcrCrop() { return true }
-        function colabModelOptionsForNode() { return [] }
+        function colabModelOptionsForNode(nodeId) {
+            for (var i = 0; i < colabSetupStages.length; ++i) {
+                if (colabSetupStages[i].id === nodeId)
+                    return [{ modelId: colabSetupStages[i].modelId, displayName: colabSetupStages[i].modelId }]
+            }
+            return []
+        }
         function defaultColabModelForNode() { return "preview" }
         function colabNotebookForNode() { return "" }
         function selectWorkflowColabModel() { return true }
+        function connectUnifiedWorkflowColab() { return true }
+        function connectWorkflowColabStage() { return true }
+        function checkWorkflowColabStage() { return true }
+        function disconnectWorkflowColabStage() { return true }
+        function validateAllWorkflowColabStages() { return true }
         function fixTranslations() { return true }
         function fixTranslationSegment() { return true }
         function translationSegmentNeedsFix() { return false }
@@ -375,6 +399,7 @@ QtObject {
         function selectTtsVoice(id) { selectedTtsVoiceId = id || ""; return true }
         function refreshCloneVoicePresets() {}
         function defaultExportPath() { return projectPath.replace(/\.json$/i, "-dubbed.mp4") }
+        function openCapCutDraft() { return true }
     }
 
     readonly property QtObject workflows: QtObject {

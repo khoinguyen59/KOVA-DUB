@@ -44,8 +44,8 @@ void TestDubbingWorkspaceContract::workflowPresentationUsesStableStages()
     const QStringList expectedIds{
         QStringLiteral("import"), QStringLiteral("normalize"),
         QStringLiteral("isolator"), QStringLiteral("transcribe"),
-        QStringLiteral("alignment-subtitle"), QStringLiteral("translate"),
-        QStringLiteral("tts"), QStringLiteral("export")};
+        QStringLiteral("translate"), QStringLiteral("tts"),
+        QStringLiteral("alignment-subtitle"), QStringLiteral("export")};
     QStringList actualIds;
     for (const QVariant &entry : stages)
         actualIds.append(entry.toMap().value(QStringLiteral("id")).toString());
@@ -109,6 +109,8 @@ void TestDubbingWorkspaceContract::missingSeparationStemCannotBecomeAHiddenFallb
     const QVariantMap separation = findById(nodes, QStringLiteral("source-separate"));
     QVERIFY(!separation.isEmpty());
     QCOMPARE(separation.value(QStringLiteral("state")).toString(), QStringLiteral("missing"));
+    QVERIFY(separation.value(QStringLiteral("optional")).toBool());
+    QVERIFY(separation.value(QStringLiteral("canSkip")).toBool());
     QVERIFY(!controller.workflowRecovery().value(QStringLiteral("fallbackUsed"), false).toBool());
 
     const QString implementation = readSourceFile(
@@ -119,7 +121,7 @@ void TestDubbingWorkspaceContract::missingSeparationStemCannotBecomeAHiddenFallb
         QStringLiteral("src/controllers/dubbing/parts/DubbingController_Artifacts.cpp"));
     QVERIFY(artifacts.contains(QStringLiteral("Only the explicit")));
     QVERIFY(artifacts.contains(QStringLiteral("m_project.vocalsAudioPath")));
-    QVERIFY(artifacts.contains(QStringLiteral("Background stem is missing or unreadable")));
+    QVERIFY(artifacts.contains(QStringLiteral("Separate is optional")));
 }
 
 void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
@@ -142,6 +144,8 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
         QStringLiteral("qml/components/dubbing/steps/DubbingTranslateStep.qml"));
     const QString mix = readSourceFile(
         QStringLiteral("qml/components/dubbing/steps/DubbingMixStep.qml"));
+    const QString alignment = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingAlignmentStep.qml"));
 
     QVERIFY(page.contains(QStringLiteral("DubbingReviewPanel")));
     QVERIFY(page.contains(QStringLiteral("Right Pane: persistent task review and controls")));
@@ -175,11 +179,135 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
         "signal voiceSelected(string audioPath, string referenceText, string name, string familyId, string voiceId)")));
     QVERIFY(!readSourceFile(QStringLiteral(
         "qml/components/dubbing/steps/DubbingSynthesizeStep.qml")).contains(QStringLiteral("53+clone")));
+    QVERIFY(alignment.contains(QStringLiteral("dubbingOriginalAudioLevelSlider")));
+    QVERIFY(alignment.contains(QStringLiteral("dubbingDubbedAudioLevelSlider")));
+    QVERIFY(page.contains(QStringLiteral("5. Dịch Thuật AI")));
+    QVERIFY(page.contains(QStringLiteral("6. Lồng Tiếng AI")));
+    QVERIFY(page.contains(QStringLiteral("7. Khớp Chữ & Căn Chỉnh")));
 
     for (const QString &step : {separate, normalize, transcribe, translate, mix}) {
         QVERIFY(step.contains(QStringLiteral("signal runRequested")));
         QVERIFY(!step.contains(QStringLiteral("root.dubbing.runWorkflowNode")));
     }
+}
+
+void TestDubbingWorkspaceContract::colabSetupExposesUnifiedNotebookAndIndependentTtsOcrRoutes()
+{
+    const QString colab = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingColabSetupDialog.qml"));
+    QVERIFY(colab.contains(QStringLiteral("LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb")));
+    QVERIFY(colab.contains(QStringLiteral("Open Unified Colab")));
+    QVERIFY(colab.contains(QStringLiteral("dubbingTtsWorkerUrlField")));
+    QVERIFY(colab.contains(QStringLiteral("dubbingOcrWorkerUrlField")));
+    QVERIFY(colab.contains(QStringLiteral("dubbingSttWorkerUrlField")));
+    QVERIFY(colab.contains(QStringLiteral("dubbingTranscriptOcrWorkerUrlField")));
+    QVERIFY(colab.contains(QStringLiteral("showUnifiedRoutePanel")));
+    QVERIFY(colab.contains(QStringLiteral("connectWorkflowColabStage")));
+}
+
+void TestDubbingWorkspaceContract::verifiedDirectColabRunDoesNotReopenModelPicker()
+{
+    const QString page = readSourceFile(QStringLiteral("qml/pages/DubbingPage.qml"));
+    const int providerResolution = page.indexOf(
+        QStringLiteral("var providerId = config.executionProvider"));
+    const int remoteBranch = page.indexOf(
+        QStringLiteral("if (providerId === \"colab-direct\" || providerId === \"colab-gpu\")"));
+    const int familyGuard = page.indexOf(QStringLiteral("if (familyId === \"\")"));
+    QVERIFY(providerResolution >= 0);
+    QVERIFY(remoteBranch > providerResolution);
+    QVERIFY(familyGuard > remoteBranch);
+    QVERIFY(page.contains(QStringLiteral(
+        "if (providerId === \"colab-direct\" || providerId === \"colab-gpu\") {")));
+    QVERIFY(page.contains(QStringLiteral("return setupStages[i].verified !== true")));
+}
+
+void TestDubbingWorkspaceContract::alignmentResultsExposeRunActions()
+{
+    const QString reviewPanel = readSourceFile(
+        QStringLiteral("qml/components/dubbing/panels/DubbingReviewPanel.qml"));
+    const QString alignmentStep = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingAlignmentStep.qml"));
+    QVERIFY(!alignmentStep.isEmpty());
+    QVERIFY(reviewPanel.contains(QStringLiteral("DubbingAlignmentStep")));
+    QVERIFY(reviewPanel.contains(QStringLiteral("fit-timing")));
+    QVERIFY(reviewPanel.contains(QStringLiteral("review-conflicts")));
+    QVERIFY(alignmentStep.contains(QStringLiteral("signal runRequested")));
+    QVERIFY(alignmentStep.contains(QStringLiteral("runRequested(\"fit-timing\")")));
+}
+
+void TestDubbingWorkspaceContract::historyIsAnOverlayAndMoreMenuStaysAnchored()
+{
+    const QString page = readSourceFile(QStringLiteral("qml/pages/DubbingPage.qml"));
+    const QString header = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingWorkflowHeader.qml"));
+    QVERIFY(page.contains(QStringLiteral("DubbingHistoryOverlay")));
+    QVERIFY(page.contains(QStringLiteral("parent: Overlay.overlay")));
+    QVERIFY(!page.contains(QStringLiteral("// Left Pane 1: Dubbing History")));
+    QVERIFY(header.contains(QStringLiteral("moreActionsButton.mapToItem(null, 0, moreActionsButton.height)")));
+    QVERIFY(header.contains(QStringLiteral("root.width - actionMenu.width")));
+    QVERIFY(header.contains(QStringLiteral("actionMenu.y = anchor.y")));
+}
+
+void TestDubbingWorkspaceContract::exportOffersDirectCapCutOpenAndThumbnailStaysVisibleUntilPlayback()
+{
+    const QString controller = readSourceFile(
+        QStringLiteral("src/controllers/dubbing/DubbingController.h"));
+    const QString exportStep = readSourceFile(
+        QStringLiteral("qml/components/dubbing/steps/DubbingExportStep.qml"));
+    const QString exportDialog = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingExportDialog.qml"));
+    const QString preview = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingSourceMediaPanel.qml"));
+    QVERIFY(controller.contains(QStringLiteral("openCapCutDraft")));
+    QVERIFY(exportStep.contains(QStringLiteral("openCapCutDraft")));
+    QVERIFY(exportDialog.contains(QStringLiteral("Open in CapCut")));
+    QVERIFY(preview.contains(QStringLiteral(
+        "visible: root.isVideoSource && (!root.thumbnailReady")));
+}
+
+void TestDubbingWorkspaceContract::projectSetupResolvesQmlVariantListLanguageDefaults()
+{
+    const QString setup = readSourceFile(QStringLiteral(
+        "qml/components/dubbing/DubbingProjectSetupDialog.qml"));
+    QVERIFY(!setup.isEmpty());
+
+    // CatalogManager exposes QVariantList to QML.  The setup dialog must not
+    // require the value to be a JavaScript Array, otherwise both comboboxes
+    // silently fall back to index 0 (English) for a new zh -> vi project.
+    QVERIFY(!setup.contains(QStringLiteral("Array.isArray(languageCatalog)")));
+    QVERIFY(setup.contains(QStringLiteral("typeof source.length === \"number\"")));
+    QVERIFY(setup.contains(QStringLiteral("languageCatalogItem(index)")));
+    QVERIFY(setup.contains(QStringLiteral("return source[index]")));
+}
+
+void TestDubbingWorkspaceContract::packagingRequiresPreBuildReleaseGate()
+{
+    const QString gate = readSourceFile(QStringLiteral("scripts/prebuild_gate.ps1"));
+    const QString package = readSourceFile(QStringLiteral("scripts/package.ps1"));
+    const QString checklist = readSourceFile(QStringLiteral("PRE_DELIVERY_CHECKLIST.md"));
+
+    QVERIFY2(!gate.isEmpty(), "The mandatory pre-build release gate script is missing.");
+    QVERIFY2(!checklist.isEmpty(), "The mandatory delivery checklist is missing.");
+    QVERIFY(checklist.contains(QStringLiteral("cross-task regression sweep")));
+    QVERIFY(checklist.contains(QStringLiteral("đủ 8 task canonical")));
+    QVERIFY(checklist.contains(QStringLiteral("Error path")));
+    QVERIFY(checklist.contains(QStringLiteral("Chỉ kiểm tra riêng task bị báo lỗi")));
+    QVERIFY(gate.contains(QStringLiteral("PRE_DELIVERY_CHECKLIST.md")));
+    QVERIFY(gate.contains(QStringLiteral("[regex]::Matches")));
+    QVERIFY(gate.contains(QStringLiteral("highestIncidentNumber")));
+    QVERIFY(gate.contains(QStringLiteral("git diff --check")));
+    QVERIFY(gate.contains(QStringLiteral("lint_qml.ps1")));
+    QVERIFY(gate.contains(QStringLiteral("run_tests.ps1")));
+    QVERIFY(gate.contains(QStringLiteral("verify_remote_feature_surface.ps1")));
+    QVERIFY(gate.contains(QStringLiteral("verify_colab_model_bindings.py")));
+    QVERIFY(gate.contains(QStringLiteral("verify_generated_colab_notebooks.py")));
+    QVERIFY(gate.contains(QStringLiteral("verify_unified_dubbing_colab_notebook.py")));
+    QVERIFY(package.contains(QStringLiteral("prebuild_gate.ps1")));
+    QVERIFY(package.contains(QStringLiteral("Pre-build release gate failed")));
+    QVERIFY(package.contains(QStringLiteral("LASTUDIO_QML_SMOKE")));
+    QVERIFY(package.contains(QStringLiteral("$env:ComSpec")));
+    QVERIFY(package.contains(QStringLiteral("$LASTEXITCODE")));
+    QVERIFY(package.contains(QStringLiteral("package-smoke")));
 }
 
 } // namespace LAStudio

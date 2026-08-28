@@ -29,7 +29,7 @@ Item {
     property string observedCompletedStep: ""
     property string playingSeparationStem: ""
     property string playingVoiceClipPath: ""
-    property bool isHistoryOpen: false
+    readonly property bool isHistoryOpen: historyOverlay.opened
     property bool isNodeInspectorOpen: false
     property bool isAdvancedNodeInspectorOpen: false
     property bool isProjectStatusPanelOpen: false
@@ -37,7 +37,6 @@ Item {
     property int dubbingReviewActiveTab: 0
     property bool dubbingTimelineMinimized: false
 
-    property int dubbingHistoryPanelWidth: 260
     property int dubbingPreviewPanelWidth: 1040
     property int dubbingTimelinePanelHeight: 300
     property int dubbingStepPanelWidth: 360
@@ -47,10 +46,9 @@ Item {
     readonly property int minimumDubbingTimelinePanelHeight: 120
     readonly property int dubbingTimelineResizeHandleHeight: 28
     // These breakpoints are derived from the actual non-overlapping minima:
-    // optional history + preview 420 + right task panel 240 + two layout gaps.
+    // preview 420 + right task panel 240 + one layout gap. History is an
+    // overlay and therefore never participates in this width calculation.
     readonly property bool compactDubbingControls: dubbingWorkspaceScroller.width < 1450
-    // History is optional chrome.
-    readonly property bool compactDubbingHistory: dubbingWorkspaceScroller.width < 1080
 
     readonly property int maximumDubbingTimelinePanelHeight: Math.max(
                 minimumDubbingTimelinePanelHeight,
@@ -151,6 +149,14 @@ Item {
                 || dubbingStepReviewPanel.width > Math.max(320, Math.min(560, root.width * 0.46 + 1)))
             return fail("right panel bounds (page=" + root.width
                         + ", panel=" + dubbingStepReviewPanel.width + ")")
+        if (!dubbingColabSetupDialog.qmlSmokeScopedStageCheck
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("source-separate")
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("transcribe")
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("subtitle-ocr")
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("translate")
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("synthesize")
+                || !dubbingColabSetupDialog.qmlSmokeScopedStageCheck("alignment"))
+            return fail("Colab stage scope")
         return true
     }
 
@@ -171,6 +177,47 @@ Item {
         return root.isAdvancedNodeInspectorOpen ? dubbingNodeInspector : dubbingStepReviewPanel
     }
 
+    function qmlPreviewOpenDubbingColab() {
+        dubbingEntryGate.close()
+        // The preview harness captures the production page subtree. Mounting
+        // this dialog in that subtree keeps the smoke screenshot faithful to
+        // the rendered dialog while leaving the production Overlay parent
+        // unchanged.
+        dubbingColabSetupDialog.parent = root
+        dubbingColabSetupDialog.z = 10000
+        dubbingColabSetupDialog.stageIds = []
+        dubbingColabSetupDialog.open()
+        return true
+    }
+
+    function qmlPreviewCloseDubbingColab() {
+        dubbingColabSetupDialog.close()
+        return true
+    }
+
+    function qmlPreviewDubbingColabDialog() {
+        return dubbingColabSetupDialog
+    }
+
+    function qmlPreviewOpenDubbingHistory() {
+        dubbingEntryGate.close()
+        historyOverlay.open()
+        return true
+    }
+
+    function qmlPreviewCloseDubbingHistory() {
+        historyOverlay.close()
+        return true
+    }
+
+    function qmlPreviewDubbingHistoryOverlay() {
+        return historyOverlay
+    }
+
+    function qmlPreviewDubbingOverlay() {
+        return Overlay.overlay
+    }
+
     function qmlPreviewCloseContextDrawer() {
         root.isAdvancedNodeInspectorOpen = false
         return true
@@ -188,6 +235,14 @@ Item {
             dubbingColabSetupDialog.stageIds = [root.colabStageIdForNode(nodeId)]
         }
         dubbingColabSetupDialog.open()
+    }
+
+    function openTranscriptionConfiguration(nodeId) {
+        if (nodeId === "subtitle-ocr") {
+            root.openColabSetupForNode(nodeId)
+            return
+        }
+        nodeModelDialog.openFor(nodeId)
     }
 
     function chooseDubbingEntryMode(mode) {
@@ -217,9 +272,9 @@ Item {
     // Transcript Source and Reconciliation Contracts
     readonly property string dubbingTranscriptSourceMode: (dubbing && dubbing.transcriptConfiguration && dubbing.transcriptConfiguration.transcriptSource) ? dubbing.transcriptConfiguration.transcriptSource : "stt"
     function reconcileTranscriptAction(action) {
-        if (action === "stt") dubbing.runWorkflowNode("transcribe") // "Run STT now" "Chỉ STT"
-        else if (action === "ocr") dubbing.runWorkflowNode("subtitle-ocr") // "Run Subtitle OCR now" "Chỉ OCR"
-        else if (action === "reconcile") dubbing.reconcileTranscriptConflicts() // "Reconcile saved STT + OCR"
+        if (action === "stt") root.runStep("stt") // "Run STT now" "Chỉ STT"
+        else if (action === "ocr") root.runStep("ocr") // "Run Subtitle OCR now" "Chỉ OCR"
+        else if (action === "reconcile") dubbing.reconcileTranscriptSources() // "Reconcile saved STT + OCR"
     }
     function updateTranscriptPolicy(policy) {
         dubbing.setTranscriptFusionPolicy(policy)
@@ -269,14 +324,21 @@ Item {
             } else if (dubbing.lastCompletedStepId !== "" && dubbing.lastCompletedStepId !== root.observedCompletedStep) {
                 root.followRunningStep = true
                 root.observedCompletedStep = dubbing.lastCompletedStepId
-                root.reviewStepId = dubbing.lastCompletedStepId
+                // OCR is an independent source inside the Transcribe screen,
+                // not a separate visible workflow page. Keep both cards
+                // available after either worker completes.
+                root.reviewStepId = dubbing.lastCompletedStepId === "subtitle-ocr"
+                                    ? "transcribe" : dubbing.lastCompletedStepId
             }
         }
         function onWorkflowSetupRequired(nodeId, setupKind, message) {
-            root.reviewStepId = nodeId === "adaptive-llm" ? "translate" : nodeId
+            var visibleNodeId = nodeId === "subtitle-ocr" ? "transcribe" : nodeId
+            root.reviewStepId = visibleNodeId === "adaptive-llm" ? "translate" : visibleNodeId
             root.isAdvancedNodeInspectorOpen = false
             if (setupKind === "rewrite-model")
                 qualityDialog.openForMode("custom")
+            else if (nodeId === "subtitle-ocr" || setupKind === "subtitle-ocr-route")
+                root.openColabSetupForNode("subtitle-ocr")
             else
                 nodeModelDialog.openFor(nodeId)
         }
@@ -307,9 +369,9 @@ Item {
         if (stepId === "ingest" || stepId === "normalize") return qsTr("2. Chuẩn Hóa Âm Thanh (Normalize)")
         if (stepId === "source-separate" || stepId === "isolator") return qsTr("3. Tách Giọng Nói & Nhạc Nền (Separate)")
         if (stepId === "transcribe" || stepId === "review-transcript") return qsTr("4. Nhận Dạng Lời Thoại (Transcribe)")
-        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return qsTr("5. Khớp Thời Gian & Căn Chỉnh")
-        if (stepId === "translate" || stepId === "review-translation") return qsTr("6. Dịch Thuật AI (Translate)")
-        if (stepId === "synthesize" || stepId === "tts" || stepId === "assign-voices") return qsTr("7. Lồng Tiếng AI (TTS)")
+        if (stepId === "translate" || stepId === "review-translation") return qsTr("5. Dịch Thuật AI (Translate)")
+        if (stepId === "synthesize" || stepId === "tts" || stepId === "assign-voices") return qsTr("6. Lồng Tiếng AI (TTS)")
+        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return qsTr("7. Khớp Chữ & Căn Chỉnh (Align)")
         if (stepId === "mix" || stepId === "export") return qsTr("8. Xuất Bản Thành Phẩm (Export)")
         return qsTr("Hoàn Thành")
     }
@@ -319,9 +381,9 @@ Item {
         if (stepId === "ingest" || stepId === "normalize") return "2 Normalize"
         if (stepId === "source-separate" || stepId === "isolator") return "3 Separate"
         if (stepId === "transcribe" || stepId === "review-transcript") return "4 Transcribe"
-        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return "5 Align"
-        if (stepId === "translate" || stepId === "review-translation") return "6 Translate"
-        if (stepId === "synthesize" || stepId === "tts" || stepId === "assign-voices") return "7 Synthesize"
+        if (stepId === "translate" || stepId === "review-translation") return "5 Translate"
+        if (stepId === "synthesize" || stepId === "tts" || stepId === "assign-voices") return "6 Synthesize"
+        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return "7 Align"
         if (stepId === "mix" || stepId === "export") return "8 Mix & Export"
         return "9 Complete"
     }
@@ -331,9 +393,9 @@ Item {
         if (stepId === "ingest" || stepId === "normalize") return "Normalize (Chuẩn Hóa Âm Thanh)"
         if (stepId === "source-separate" || stepId === "isolator") return "Separate (Tách Giọng Nói & Nhạc Nền)"
         if (stepId === "transcribe" || stepId === "review-transcript") return "Transcribe (Nhận Dạng Lời Thoại)"
-        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return "Align (Khớp Thời Gian & Căn Chỉnh)"
         if (stepId === "translate" || stepId === "review-translation") return "Translate (Dịch Thuật AI)"
         if (stepId === "synthesize" || stepId === "tts" || stepId === "assign-voices") return "Synthesize (Lồng Tiếng AI)"
+        if (stepId === "fit-timing" || stepId === "review-conflicts" || stepId === "alignment-subtitle") return "Align (Khớp Chữ & Căn Chỉnh)"
         if (stepId === "mix" || stepId === "export") return "Mix & Export (Xuất Bản Thành Phẩm)"
         return "Complete (Hoàn Thành)"
     }
@@ -452,6 +514,16 @@ Item {
         return next && next.canRun && !next.completed
     }
 
+    function generatedClipCount() {
+        var count = 0
+        var segments = dubbing ? (dubbing.segments || []) : []
+        for (var i = 0; i < segments.length; ++i) {
+            if ((segments[i].clipPath || "").length > 0)
+                ++count
+        }
+        return count
+    }
+
     function selectStep(stepId) {
         root.followRunningStep = false
         root.reviewStepId = root.actionNodeForStage(stepId)
@@ -459,11 +531,15 @@ Item {
     }
 
     function goToNextStep(currentStepId) {
-        var order = ["import", "normalize", "source-separate", "transcribe", "review-transcript", "translate", "review-translation", "synthesize", "mix", "export"]
+        var order = ["import", "normalize", "source-separate", "transcribe", "translate", "synthesize", "alignment-subtitle", "export"]
         var sId = currentStepId || root.displayedStepId
         if (sId === "ingest") sId = "normalize"
         if (sId === "isolator") sId = "source-separate"
         if (sId === "tts") sId = "synthesize"
+        if (sId === "review-transcript") sId = "transcribe"
+        if (sId === "review-translation") sId = "translate"
+        if (sId === "fit-timing" || sId === "review-conflicts") sId = "alignment-subtitle"
+        if (sId === "mix") sId = "export"
         var idx = order.indexOf(sId)
         if (idx >= 0 && idx < order.length - 1) {
             root.selectStep(order[idx + 1])
@@ -471,11 +547,15 @@ Item {
     }
 
     function goToPreviousStep(currentStepId) {
-        var order = ["import", "normalize", "source-separate", "transcribe", "review-transcript", "translate", "review-translation", "synthesize", "mix", "export"]
+        var order = ["import", "normalize", "source-separate", "transcribe", "translate", "synthesize", "alignment-subtitle", "export"]
         var sId = currentStepId || root.displayedStepId
         if (sId === "ingest") sId = "normalize"
         if (sId === "isolator") sId = "source-separate"
         if (sId === "tts") sId = "synthesize"
+        if (sId === "review-transcript") sId = "transcribe"
+        if (sId === "review-translation") sId = "translate"
+        if (sId === "fit-timing" || sId === "review-conflicts") sId = "alignment-subtitle"
+        if (sId === "mix") sId = "export"
         var idx = order.indexOf(sId)
         if (idx > 0) {
             root.selectStep(order[idx - 1])
@@ -483,17 +563,27 @@ Item {
     }
 
     function nodeNeedsModelSelection(nodeId) {
+        var controllerIssue = root.workflowSetupIssueForNode(nodeId)
+        if (controllerIssue && controllerIssue.nodeId)
+            return true
+
         var node = root.workflowNode(nodeId)
         if (!node || node.configurable !== true)
             return false
         var config = (dubbing.workflowNodeConfigurations || {})[nodeId] || {}
-        var familyId = config.familyId || node.selectedFamilyId || ""
-        if (familyId === "")
-            return true
         var parameters = config.parameters || {}
         var providerId = config.executionProvider || node.executionProvider
                            || parameters.executionProvider || "local-dev"
+
+        // Direct Colab deliberately removes local-only family/runtime metadata
+        // when a remote model is selected. Resolve this route before checking
+        // familyId; otherwise a verified worker is mistaken for an
+        // unconfigured local model and every Run click reopens the picker.
         if (providerId === "colab-direct" || providerId === "colab-gpu") {
+            var remoteModelId = config.modelId || node.selectedModelId
+                                 || parameters.modelId || ""
+            if (remoteModelId === "")
+                return true
             var setupStageId = root.colabStageIdForNode(nodeId)
             var setupStages = dubbing.colabSetupStages || []
             for (var i = 0; i < setupStages.length; ++i) {
@@ -502,6 +592,10 @@ Item {
             }
             return true
         }
+
+        var familyId = config.familyId || node.selectedFamilyId || ""
+        if (familyId === "")
+            return true
         if (node.executionProvider === "local-dev"
                 && node.providerState !== "ready"
                 && node.state !== "completed")
@@ -509,28 +603,64 @@ Item {
         return node.requiresSetup === true
     }
 
+    function workflowSetupIssueForNode(nodeId) {
+        if (!dubbing || !dubbing.workflowNodeSetupIssueForUi)
+            return {}
+        var normalized = nodeId === "stt" ? "transcribe"
+                        : nodeId === "ocr" ? "subtitle-ocr" : nodeId
+        return dubbing.workflowNodeSetupIssueForUi(normalized)
+    }
+
+    function openSetupForNode(nodeId) {
+        var issue = root.workflowSetupIssueForNode(nodeId)
+        if (nodeId === "ocr" || nodeId === "subtitle-ocr"
+                || (issue && issue.setupKind === "subtitle-ocr-route")) {
+            root.contextDrawerId = "model"
+            root.openColabSetupForNode("subtitle-ocr")
+            return true
+        }
+        root.contextDrawerId = "model"
+        nodeModelDialog.openFor(nodeId === "stt" ? "transcribe" : nodeId)
+        return true
+    }
+
     function runStep(nodeId) {
-        var node = root.workflowNode(nodeId)
+        var runNodeId = nodeId === "stt" ? "transcribe"
+                        : nodeId === "ocr" ? "subtitle-ocr" : nodeId
+
+        // STT and OCR share the Transcribe screen but use independent
+        // controller/worker contracts. OCR is not a persisted graph node.
+        if (runNodeId === "subtitle-ocr") {
+            if (dubbing.processing && !dubbing.subtitleOcrCanRunAlongsideStt)
+                return false
+            if (root.workflowSetupIssueForNode(runNodeId).nodeId)
+                return root.openSetupForNode(runNodeId)
+            var acceptedOcr = dubbing.runWorkflowNode("subtitle-ocr")
+            if (!acceptedOcr && root.workflowSetupIssueForNode(runNodeId).nodeId)
+                root.openSetupForNode(runNodeId)
+            return acceptedOcr
+        }
+
+        var node = root.workflowNode(runNodeId)
         if (!node) return false
         // Synthesis is intentionally reachable before STT in the step UI, but
         // it cannot produce clips without translated/target segments. Route
         // that action to the first missing prerequisite instead of opening a
         // misleading model error dialog.
-        if ((nodeId === "synthesize" || nodeId === "tts")
+        if ((runNodeId === "synthesize" || runNodeId === "tts")
                 && (!dubbing.segments || dubbing.segments.length === 0)) {
             root.reviewStepId = "transcribe"
             root.followRunningStep = false
             root.contextDrawerId = "results"
             return true
         }
-        if (nodeNeedsModelSelection(nodeId)) {
-            root.contextDrawerId = "model"
-            nodeModelDialog.openFor(nodeId)
-            return true
+        if (nodeNeedsModelSelection(runNodeId)) {
+            return root.openSetupForNode(runNodeId)
         }
         var accepted = dubbing.runWorkflowNode(nodeId)
-        if (!accepted && node.configurable && !dubbing.workflowRecoveryAvailable)
-            nodeModelDialog.openFor(nodeId)
+        if (!accepted && node.configurable
+                && root.workflowSetupIssueForNode(runNodeId).nodeId)
+            root.openSetupForNode(runNodeId)
         return accepted
     }
 
@@ -597,7 +727,7 @@ Item {
                 root.reviewStepId = root.actionNodeForStage(stepId)
                 root.isAdvancedNodeInspectorOpen = false
             }
-            onHistoryToggled: root.isHistoryOpen = !root.isHistoryOpen
+            onHistoryToggled: historyOverlay.opened ? historyOverlay.close() : historyOverlay.open()
             onSettingsToggled: root.isAdvancedNodeInspectorOpen = !root.isAdvancedNodeInspectorOpen
             onProjectStatusToggled: projectSetupDialog.openFor(
                                         root.dubbing.workflowMode === "automatic" ? "automatic" : "step", false)
@@ -713,52 +843,6 @@ Item {
                     anchors.fill: parent
                     spacing: Theme.paddingMedium
 
-                    // Left Pane 1: Dubbing History
-                    DubbingHistoryPanel {
-                        id: historyPanel
-                        dubbing: root.dubbing
-                        enabled: !root.dubbing.processing
-                        panelWidth: root.dubbingHistoryPanelWidth
-                        expanded: root.isHistoryOpen && !root.previewFocusMode && !root.compactDubbingHistory
-                        onClearRequested: clearHistoryDialog.open()
-                        onDeleteRequested: function(historyId) {
-                            root.pendingHistoryDeleteId = historyId
-                            deleteHistoryDialog.open()
-                        }
-                        onProjectOpened: root.isHistoryOpen = false
-                        onExpandedChanged: root.isHistoryOpen = expanded
-                    }
-
-                    Rectangle {
-                        id: dubbingHistoryResizeHandle
-                        objectName: "dubbingHistoryResizeHandle"
-                        Layout.preferredWidth: 8
-                        Layout.fillHeight: true
-                        radius: 4
-                        color: historyResizeHover.hovered || historyResizeDrag.active
-                               ? Theme.accent : Qt.rgba(Theme.textSecondary.r, Theme.textSecondary.g, Theme.textSecondary.b, 0.28)
-                        visible: historyPanel.visible
-                        ToolTip.visible: historyResizeHover.hovered
-                        ToolTip.text: qsTr("Drag to resize Dubbing History")
-                        HoverHandler { id: historyResizeHover; cursorShape: Qt.SizeHorCursor }
-                        DragHandler {
-                            id: historyResizeDrag
-                            property int pressWidth: 0
-                            target: null
-                            xAxis.enabled: true
-                            yAxis.enabled: false
-                            onActiveChanged: {
-                                if (active)
-                                    pressWidth = root.dubbingHistoryPanelWidth
-                            }
-                            onTranslationChanged: {
-                                if (active)
-                                    root.dubbingHistoryPanelWidth = root.clampedDubbingPanelWidth(
-                                                pressWidth + translation.x, 240, 560)
-                            }
-                        }
-                    }
-
                     // Center Pane: Central Video/Media Canvas & Toolbar
                     Item {
                         id: dubbingPreviewWorkspace
@@ -773,8 +857,6 @@ Item {
                             dubbing: root.dubbing
                             previewFocusMode: root.previewFocusMode
                             showOcrTools: root.displayedStepId === "transcribe"
-                                           || root.displayedStepId === "review-transcript"
-                                           || root.displayedStepId === "subtitle-ocr"
                             onBrowseRequested: mediaFileDialog.open()
                             onManualMediaFilesRequested: queuedMediaFilesDialog.open()
                             onSegmentSelected: function(index) {
@@ -823,13 +905,14 @@ Item {
                         id: dubbingStepReviewPanel
                         dubbing: root.dubbing
                         displayedStepId: root.displayedStepId
-                        workflowNode: root.workflowNode(root.displayedStepId)
+                        workflowNode: root.workflowNode(root.actionNodeForStage(root.displayedStepId))
+                        actionNodeId: root.actionNodeForStage(root.displayedStepId)
                         stepTitle: root.stepTitle(root.displayedStepId)
-                        canRunStep: root.canRunStep(root.displayedStepId)
-                        canRerunStep: root.canRerunStep(root.displayedStepId)
-                        stepRunReady: root.stepRunReady(root.displayedStepId)
-                        nextNodeId: root.nextNodeId(root.displayedStepId)
-                        nextNodeReady: root.nextNodeReady(root.displayedStepId)
+                        canRunStep: root.canRunStep(root.actionNodeForStage(root.displayedStepId))
+                        canRerunStep: root.canRerunStep(root.actionNodeForStage(root.displayedStepId))
+                        stepRunReady: root.stepRunReady(root.actionNodeForStage(root.displayedStepId))
+                        nextNodeId: root.nextNodeId(root.actionNodeForStage(root.displayedStepId))
+                        nextNodeReady: root.nextNodeReady(root.actionNodeForStage(root.displayedStepId))
                         sourceMediaPanel: sourceMediaPanel
                         selectedSegment: root.selectedSegment
                         activeTab: root.dubbingReviewActiveTab
@@ -841,7 +924,7 @@ Item {
                         Layout.minimumWidth: root.compactDubbingControls ? 240 : 320
                         Layout.maximumWidth: 560
                         Layout.fillHeight: true
-                        onConfigureNodeRequested: function(nodeId) { nodeModelDialog.openFor(nodeId) }
+                        onConfigureNodeRequested: function(nodeId) { root.openTranscriptionConfiguration(nodeId) }
                         onVoiceModelRequested: function(nodeId) {
                             root.contextDrawerId = "model"
                             Qt.callLater(function() { nodeModelDialog.openFor(nodeId) })
@@ -852,7 +935,13 @@ Item {
                         onPreviousStepRequested: function(stepId) { root.goToPreviousStep(stepId) }
                         onFixRequested: translationFixDialog.openForAll()
                         onFixSegmentRequested: function(index) { translationFixDialog.openForSegment(index) }
-                        onArtifactUploadRequested: function(nodeId) { dubbingArtifactUploadDialog.openFor(nodeId) }
+                        onArtifactUploadRequested: function(nodeId) {
+                            // The visible shelf uses presentation ids
+                            // (isolator, tts, export). Resolve them to the
+                            // durable artifact node before opening Upload.
+                            dubbingArtifactUploadDialog.openFor(root.actionNodeForStage(nodeId))
+                        }
+                        onOpenColabSetupRequested: function(nodeId) { root.openColabSetupForNode(nodeId) }
                         onOpenOcrColabSetupRequested: root.openOcrColabSetup()
                         onOpenTranscriptEditorRequested: transcriptEditor.open()
                         onOpenSubtitleEditorRequested: subtitleEditor.open()
@@ -870,8 +959,8 @@ Item {
                     DubbingNodeInspector {
                         id: dubbingNodeInspector
                         dubbing: root.dubbing
-                        nodeId: root.displayedStepId
-                        node: root.workflowNode(root.displayedStepId)
+                        node: root.workflowNode(root.actionNodeForStage(root.displayedStepId))
+                        nodeId: root.actionNodeForStage(root.displayedStepId)
                         nodeTitle: root.stepTitle(root.displayedStepId)
                         visible: root.isAdvancedNodeInspectorOpen && !root.previewFocusMode
                         Layout.preferredWidth: root.dubbingStepPanelWidth
@@ -914,6 +1003,18 @@ Item {
     }
 
     // --- Dialogs ---
+    DubbingHistoryOverlay {
+        id: historyOverlay
+        parent: Overlay.overlay
+        dubbing: root.dubbing
+        panelWidth: Math.min(380, Math.max(320, root.width * 0.28))
+        onClearRequested: clearHistoryDialog.open()
+        onDeleteRequested: function(historyId) {
+            root.pendingHistoryDeleteId = historyId
+            deleteHistoryDialog.open()
+        }
+    }
+
     DubbingEntryGateDialog {
         id: dubbingEntryGate
         parent: Overlay.overlay
@@ -958,9 +1059,17 @@ Item {
         parent: Overlay.overlay
         projectName: (dubbing && dubbing.projectName) ? dubbing.projectName : "Untitled"
         videoSource: root.isVideoSource
+        busy: root.dubbing.processing
+        segmentCount: root.dubbing.segments.length
+        generatedClipCount: root.generatedClipCount()
+        sourceLanguageCode: root.dubbing.sourceLanguage
+        targetLanguageCode: root.dubbing.targetLanguage
+        capCutDraftPath: root.dubbing.capCutDraftPath
+        capCutDraftWarning: root.dubbing.capCutDraftWarning
         onVideoExportRequested: dubbing.exportFinalMedia(root.defaultExportPath(), burnSubtitles, subtitleStyle)
         onPackageExportRequested: packageExportFolderDialog.open()
         onCapCutDraftExportRequested: capCutDraftFolderDialog.open()
+        onCapCutDraftOpenRequested: root.dubbing.openCapCutDraft()
     }
 
     DubbingQualityDialog {

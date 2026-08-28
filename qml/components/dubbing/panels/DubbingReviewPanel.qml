@@ -11,6 +11,7 @@ Rectangle {
 
     required property var dubbing
     required property string displayedStepId
+    property string actionNodeId: displayedStepId
     required property var workflowNode
     required property string stepTitle
     required property bool canRunStep
@@ -36,6 +37,7 @@ Rectangle {
     signal fixRequested()
     signal fixSegmentRequested(int index)
     signal artifactUploadRequested(string nodeId)
+    signal openColabSetupRequested(string nodeId)
     signal openOcrColabSetupRequested()
     signal openTranscriptEditorRequested()
     signal openSubtitleEditorRequested()
@@ -187,7 +189,7 @@ Rectangle {
                 id: reviewNodeSettings
                 objectName: "reviewNodeSettings"
                 dubbing: root.dubbing
-                nodeId: root.displayedStepId
+                nodeId: root.actionNodeId
                 node: root.workflowNode
                 nodeTitle: root.stepTitle
                 canRun: root.canRunStep
@@ -198,14 +200,14 @@ Rectangle {
                 visible: node !== null
                 compact: true
                 Layout.fillWidth: true
-                onConfigureRequested: root.configureNodeRequested(nodeId)
-                onLoadRequested: root.dubbing.loadWorkflowNodeModel(nodeId)
-                onUnloadRequested: root.dubbing.unloadWorkflowNodeModel(nodeId)
-                onReloadRequested: root.dubbing.reloadWorkflowNodeModel(nodeId)
-                onRunRequested: root.runStepRequested(nodeId)
-                onNextRequested: root.nextStepRequested(nodeId)
+                onConfigureRequested: root.configureNodeRequested(root.actionNodeId)
+                onLoadRequested: root.dubbing.loadWorkflowNodeModel(root.actionNodeId)
+                onUnloadRequested: root.dubbing.unloadWorkflowNodeModel(root.actionNodeId)
+                onReloadRequested: root.dubbing.reloadWorkflowNodeModel(root.actionNodeId)
+                onRunRequested: root.runStepRequested(root.actionNodeId)
+                onNextRequested: root.nextStepRequested(root.actionNodeId)
                 onFixRequested: root.fixRequested()
-                onArtifactUploadRequested: root.artifactUploadRequested(nodeId)
+                onArtifactUploadRequested: root.artifactUploadRequested(root.actionNodeId)
             }
 
             Item { Layout.fillHeight: true }
@@ -218,124 +220,172 @@ Rectangle {
             spacing: Theme.paddingSmall
             visible: root.activeTab === 2
 
-            DubbingArtifactUploadPanel {
-                id: dubbingArtifactUploadPanelReview
+            ScrollView {
+                id: artifactHandoffScroll
                 objectName: "dubbingArtifactUploadPanelReview"
-                dubbing: root.dubbing
-                nodeId: root.displayedStepId
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                contentWidth: availableWidth
                 visible: ["ingest", "normalize", "transcribe", "review-transcript",
                           "fit-timing", "alignment-subtitle", "translate",
                           "review-translation"].indexOf(root.displayedStepId) >= 0
-                Layout.fillWidth: true
+
+                ColumnLayout {
+                    id: artifactHandoffList
+                    width: artifactHandoffScroll.availableWidth
+                    spacing: Theme.paddingSmall
+
+                    Repeater {
+                        model: root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
+                        delegate: DubbingArtifactUploadPanel {
+                            objectName: "dubbingArtifactUploadPanelReviewItem"
+                            dubbing: root.dubbing
+                            nodeId: modelData.nodeId || ""
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    Text {
+                        visible: root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId).length === 0
+                        Layout.fillWidth: true
+                        text: qsTr("No upload contract is available for this task.")
+                        color: Theme.warning
+                        wrapMode: Text.WordWrap
+                    }
+                }
             }
 
             Item { Layout.fillHeight: true }
         }
 
         // TAB 0: Main Step Output / Segments List
-        ColumnLayout {
+        ScrollView {
+            id: mainStepScroll
+            objectName: "dubbingMainStepScroll"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: Theme.paddingSmall
+            clip: true
             visible: root.activeTab === 0
+            contentWidth: availableWidth
 
-            // Specific Task View for steps
-            DubbingImportStep {
-                visible: root.displayedStepId === "import"
-                dubbing: root.dubbing
-                onNextStepRequested: root.nextStepRequested("import")
-            }
-
-            DubbingNormalizeStep {
-                visible: root.displayedStepId === "normalize" || root.displayedStepId === "ingest"
-                dubbing: root.dubbing
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                onPreviousStepRequested: root.previousStepRequested("normalize")
-                onNextStepRequested: root.nextStepRequested("normalize")
-            }
-
-            DubbingSeparateStep {
-                visible: root.displayedStepId === "source-separate" || root.displayedStepId === "isolator"
-                dubbing: root.dubbing
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                playingSeparationStem: root.playingSeparationStem
-                onPreviousStepRequested: root.previousStepRequested("source-separate")
-                onNextStepRequested: root.nextStepRequested("source-separate")
-                onPlaySeparationRequested: function(kind, path) {
-                    root.playSeparationRequested(kind, path)
-                }
-            }
-
-            DubbingTranscribeStep {
-                visible: root.displayedStepId === "transcribe"
-                dubbing: root.dubbing
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                ocrSetupEditable: root.ocrSetupEditable
-                onPreviousStepRequested: root.previousStepRequested("transcribe")
-                onNextStepRequested: root.nextStepRequested("transcribe")
-                onOpenOcrColabSetupRequested: root.openOcrColabSetupRequested()
-            }
-
-            DubbingTranscriptReviewStep {
-                visible: root.displayedStepId === "review-transcript"
-                dubbing: root.dubbing
-                onPreviousStepRequested: root.previousStepRequested("review-transcript")
-                onOpenTranscriptEditorRequested: root.openTranscriptEditorRequested()
-                onOpenAlignmentStudioRequested: root.openAlignmentStudioRequested()
-                onContinueRequested: root.nextStepRequested("review-transcript")
-            }
-
-            DubbingTranslateStep {
-                visible: root.displayedStepId === "translate"
-                dubbing: root.dubbing
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                onPreviousStepRequested: root.previousStepRequested("translate")
-                onNextStepRequested: root.nextStepRequested("translate")
-                onFixRequested: root.fixRequested()
-            }
-
-            DubbingTranslationReviewStep {
-                visible: root.displayedStepId === "review-translation"
-                dubbing: root.dubbing
-                onPreviousStepRequested: root.previousStepRequested("review-translation")
-                onOpenSubtitleEditorRequested: root.openSubtitleEditorRequested()
-                onContinueRequested: root.nextStepRequested("review-translation")
-            }
-
-            DubbingSynthesizeStep {
-                visible: root.displayedStepId === "synthesize" || root.displayedStepId === "tts"
-                dubbing: root.dubbing
-                sourceMediaPanel: root.sourceMediaPanel
-                playingVoiceClipPath: root.playingVoiceClipPath
-                generatedClipCount: root.generatedClipCount
-                synthesisComplete: root.synthesisComplete
-                onPreviousStepRequested: root.previousStepRequested("synthesize")
-                onNextStepRequested: root.nextStepRequested("synthesize")
-                onVoiceClipPlaybackRequested: function(path) {
-                    root.voiceClipPlaybackRequested(path)
-                }
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                onVoiceModelRequested: function(nodeId) { root.voiceModelRequested(nodeId) }
-                onSeparationPlaybackStopped: root.separationPlaybackStopped()
-            }
-
-            DubbingMixStep {
-                visible: root.displayedStepId === "mix"
-                dubbing: root.dubbing
-                onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
-                onPreviousStepRequested: root.previousStepRequested("mix")
-                onNextStepRequested: root.nextStepRequested("mix")
-            }
-
-            DubbingExportStep {
-                visible: root.displayedStepId === "export"
-                dubbing: root.dubbing
-                onPreviousStepRequested: root.previousStepRequested("export")
-                onOpenExportDialogRequested: root.openExportDialogRequested()
-            }
-
-            // Transcribe & Translate Segments Table
             ColumnLayout {
+                id: mainStepContent
+                width: mainStepScroll.availableWidth
+                spacing: Theme.paddingSmall
+
+                // Specific Task View for steps
+                DubbingImportStep {
+                    visible: root.displayedStepId === "import"
+                    dubbing: root.dubbing
+                    onNextStepRequested: root.nextStepRequested("import")
+                }
+
+                DubbingNormalizeStep {
+                    visible: root.displayedStepId === "normalize" || root.displayedStepId === "ingest"
+                    dubbing: root.dubbing
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onPreviousStepRequested: root.previousStepRequested("normalize")
+                    onNextStepRequested: root.nextStepRequested("normalize")
+                }
+
+                DubbingSeparateStep {
+                    visible: root.displayedStepId === "source-separate" || root.displayedStepId === "isolator"
+                    dubbing: root.dubbing
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    playingSeparationStem: root.playingSeparationStem
+                    onPreviousStepRequested: root.previousStepRequested("source-separate")
+                    onNextStepRequested: root.nextStepRequested("source-separate")
+                    onPlaySeparationRequested: function(kind, path) {
+                        root.playSeparationRequested(kind, path)
+                    }
+                }
+
+                DubbingTranscribeStep {
+                    visible: root.displayedStepId === "transcribe"
+                    dubbing: root.dubbing
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onConfigureRequested: function(nodeId) { root.configureNodeRequested(nodeId) }
+                    onOpenColabSetupRequested: function(nodeId) { root.openColabSetupRequested(nodeId) }
+                    onArtifactUploadRequested: function(nodeId) { root.artifactUploadRequested(nodeId) }
+                    ocrSetupEditable: root.ocrSetupEditable
+                    onPreviousStepRequested: root.previousStepRequested("transcribe")
+                    onNextStepRequested: root.nextStepRequested("transcribe")
+                }
+
+                DubbingTranscriptReviewStep {
+                    visible: root.displayedStepId === "review-transcript"
+                    dubbing: root.dubbing
+                    onPreviousStepRequested: root.previousStepRequested("review-transcript")
+                    onOpenTranscriptEditorRequested: root.openTranscriptEditorRequested()
+                    onOpenAlignmentStudioRequested: root.openAlignmentStudioRequested()
+                    onContinueRequested: root.nextStepRequested("review-transcript")
+                }
+
+                DubbingAlignmentStep {
+                    visible: root.displayedStepId === "alignment-subtitle"
+                             || root.displayedStepId === "fit-timing"
+                             || root.displayedStepId === "review-conflicts"
+                    dubbing: root.dubbing
+                    stepComplete: root.workflowNode
+                                  && (root.workflowNode.state === "completed" || root.workflowNode.completed === true)
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onOpenAlignmentStudioRequested: root.openAlignmentStudioRequested()
+                    onPreviousStepRequested: root.previousStepRequested("alignment-subtitle")
+                    onNextStepRequested: root.nextStepRequested("alignment-subtitle")
+                }
+
+                DubbingTranslateStep {
+                    visible: root.displayedStepId === "translate"
+                    dubbing: root.dubbing
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onPreviousStepRequested: root.previousStepRequested("translate")
+                    onNextStepRequested: root.nextStepRequested("translate")
+                    onFixRequested: root.fixRequested()
+                }
+
+                DubbingTranslationReviewStep {
+                    visible: root.displayedStepId === "review-translation"
+                    dubbing: root.dubbing
+                    onPreviousStepRequested: root.previousStepRequested("review-translation")
+                    onOpenSubtitleEditorRequested: root.openSubtitleEditorRequested()
+                    onContinueRequested: root.nextStepRequested("review-translation")
+                }
+
+                DubbingSynthesizeStep {
+                    visible: root.displayedStepId === "synthesize" || root.displayedStepId === "tts"
+                    dubbing: root.dubbing
+                    sourceMediaPanel: root.sourceMediaPanel
+                    playingVoiceClipPath: root.playingVoiceClipPath
+                    generatedClipCount: root.generatedClipCount
+                    synthesisComplete: root.synthesisComplete
+                    onPreviousStepRequested: root.previousStepRequested("synthesize")
+                    onNextStepRequested: root.nextStepRequested("synthesize")
+                    onVoiceClipPlaybackRequested: function(path) {
+                        root.voiceClipPlaybackRequested(path)
+                    }
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onVoiceModelRequested: function(nodeId) { root.voiceModelRequested(nodeId) }
+                    onSeparationPlaybackStopped: root.separationPlaybackStopped()
+                }
+
+                DubbingMixStep {
+                    visible: root.displayedStepId === "mix"
+                    dubbing: root.dubbing
+                    onRunRequested: function(nodeId) { root.runStepRequested(nodeId) }
+                    onPreviousStepRequested: root.previousStepRequested("mix")
+                    onNextStepRequested: root.nextStepRequested("mix")
+                }
+
+                DubbingExportStep {
+                    visible: root.displayedStepId === "export"
+                    dubbing: root.dubbing
+                    onPreviousStepRequested: root.previousStepRequested("export")
+                    onOpenExportDialogRequested: root.openExportDialogRequested()
+                }
+
+                // Transcribe & Translate Segments Table
+                ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: Theme.paddingSmall
@@ -376,7 +426,6 @@ Rectangle {
                         Layout.fillWidth: true
                         spacing: 1
                         Text { text: root.stepTitle.toUpperCase(); color: Theme.textPrimary; font.pixelSize: Theme.fontLarge; font.bold: true }
-                        Text { text: qsTr("Duyệt và chỉnh sửa phụ đề / lời thoại trước khi tiếp tục."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                     }
                 }
 
@@ -599,7 +648,6 @@ Rectangle {
                         spacing: Theme.paddingSmall
                         LineIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "mic"; color: Theme.accentLight; width: 32; height: 32 }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("Bản ghi lời thoại sẽ xuất hiện ở đây"); color: Theme.textPrimary; font.pixelSize: Theme.fontMedium; font.bold: true }
-                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("Chọn nguồn media, sau đó chạy nhận dạng."); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
                     }
                 }
 
@@ -645,6 +693,7 @@ Rectangle {
                             onClicked: root.nextStepRequested(root.displayedStepId)
                         }
                     }
+                }
                 }
             }
         }

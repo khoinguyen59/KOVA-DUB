@@ -1,3 +1,111 @@
+# AI agent response — offline Dubbing artifact upload
+
+## 2026-08-29 — setup preflight regression and cross-task recheck rule
+
+- Fixed the remaining Transcribe setup path: `Run STT` now uses the same
+  controller-backed preflight as the backend and opens the STT model picker
+  when setup is missing. `Run OCR` opens the dedicated Subtitle OCR
+  model/Colab setup surface, including the exact model and worker fields.
+- Missing setup is emitted as `workflowSetupRequired` and is not sent through
+  `setError`, so the user does not receive the generic Error Guidance modal.
+  Real runtime/input failures remain in the technical log and keep their
+  actionable guidance path.
+- Added a mandatory cross-task regression rule to
+  `PRE_DELIVERY_CHECKLIST.md`: every bug fix must be checked across all eight
+  canonical tasks and the equivalent entry, setup, error, state, handoff and
+  UI surfaces. A single-task check is not release evidence.
+- Added a source contract regression assertion so the checklist cannot lose
+  this requirement silently.
+
+### Verification for this correction
+
+- `run_tests.ps1`: **41/41 CTest PASS**; `TestDubbingProject` and
+  `TestDubbingWorkspaceContract` both pass.
+- QML lint: PASS. Prebuild release gate: PASS, all 9/9 groups; exact bindings
+  31/31; generated notebooks 32/32; remote surface 8/8.
+- Portable EXE rebuilt from the corrected source; packaged QML smoke PASS with
+  19 interaction events. File/Product version `0.0.8.7`, size `30,942,720`
+  bytes, SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+
+## 2026-08-29 — canonical STT/OCR handoff and workflow order
+
+- Khi cả `STT` và `OCR` cùng có output, `Reconcile & Continue` bắt buộc gọi
+  `DubbingController::reconcileTranscriptSources()` trước khi đi tiếp. Fusion
+  dùng `prefer-stt` làm mặc định: cue STT giữ timeline/nội dung chuẩn; OCR
+  được giữ trong provenance/evidence, không tự chèn OCR-only cue vào script
+  canonical. Nếu chỉ có một nguồn, Continue không yêu cầu nguồn còn lại.
+- Workflow production đã đồng bộ thành `1 Import → 2 Normalize → 3 Separate
+  (optional) → 4 Transcribe → 5 Translate → 6 Synthesize → 7 Align → 8 Mix &
+  Export`. Automatic run loại Separate khỏi graph thực thi; manual Separate
+  vẫn có thể chạy khi người dùng muốn tạo stems.
+- Align đã lưu mức `originalGainPercent` và `dubbedGainPercent`, mặc định
+  `0/100`, và truyền mức tiếng gốc xuyên suốt sidechain release để không làm
+  tiếng gốc quay lại sau khi ducking.
+- Project mới và project migrate thiếu giá trị dùng mặc định `zh → vi`; các
+  guide `AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md` và
+  `AI_AGENT_TRANSLATION_PROMPT.md` là hợp đồng IDE-agnostic cho agent xử lý
+  script/fusion/translation.
+
+### Verification boundary
+
+- `scripts/run_tests.ps1` trên Qt 6.9.3/MSVC đã chạy **41/41 CTest PASS**.
+- Packaged EXE smoke, QML lint, prebuild gate và artifact hash đã hoàn tất:
+  prebuild `9/9` nhóm PASS, CTest `41/41`, packaged smoke `19` interaction
+  events, FileVersion/ProductVersion `0.0.8.7`, portable root không có `bin/`.
+- Artifact: `out/LA-Studio-0.0.8.7/LA-Studio-0.0.8.7.exe`, SHA-256
+  `1DA7D21E5B17CB2BFB6C42CBE2093253A59C9A96A53A462529018CE4AF455909`.
+- Đây là bằng chứng build/startup/QML/local contract; không coi nó là bằng
+  chứng cho live Colab/GPU inference nếu chưa chạy worker thật với credential.
+
+## 2026-08-29 — independent STT/OCR cards and route-safe handoff
+
+- Replaced the single Transcribe source selector with two stacked production
+  cards: `STT · Speech-to-Text` and `OCR · Subtitle OCR`. Each card owns its
+  Model, Colab, Upload, and Run action; the visible `Run STT` and `Run OCR`
+  aliases no longer inherit a persisted combined/reconcile mode.
+- `runSpeechToTextIndependently()` now starts only the audio STT runner and
+  keeps the user on Transcribe after completion. OCR continues to use its
+  separate `SubtitleOcrController`. Either saved source is sufficient to
+  enable Continue; Reconcile remains optional and is shown only after both
+  sources exist.
+- The only permitted manual concurrency is STT with OCR. Artifact handoff and
+  cancellation are route-scoped: an STT upload/stop cannot cancel OCR, and an
+  OCR upload/stop cannot cancel STT. The shared Cancel action now also stops an
+  independent OCR run. OCR scan controls are limited to the Transcribe page.
+
+### Verification boundary
+
+- QML lint exited 0 and `git diff --check` completed without whitespace errors.
+- A source-level regression contract covers the two cards, node aliases,
+  independent completion, route-scoped artifact cancellation, and OCR-only
+  visibility. CTest/build was not rerun because this machine still lacks the
+  configured Qt 6 MSVC development tree; no EXE was built in this change.
+
+## 2026-08-29 — upload workflow output without Colab
+
+- Fixed the Dubbing artifact handoff so **Upload does not require a Colab
+  session, URL, token, model, or a previous Colab run**. The user can select
+  an output already saved on the computer and the existing controller still
+  validates the exact filename, extension, count, and subtitle/audio/video
+  content before importing it.
+- Normalized visible task aliases (`separate`, `stt`, `ocr`, `alignment`,
+  `export-output`) to their durable artifact contracts. The combined STT + OCR
+  handoff now exposes independent STT and OCR upload entries; reconciliation
+  remains a later operation.
+- Reworded the upload UI to state that Colab is optional and to show the
+  required filename and allowed format before selection. A missing contract is
+  now an explicit actionable message instead of a blank dialog.
+
+### Verification boundary
+
+- QML lint passed and `git diff --check` passed. Graphify was updated after
+  source edits.
+- A fresh C++/CTest run was attempted but could not start because this machine
+  currently has no Qt 6 MSVC development kit or configured test build tree;
+  therefore no new C++ test-pass claim or EXE build is made in this fix-only
+  pass.
+
 # AI agent response — local download and resumable Dubbing projects
 
 ## 2026-08-24 — completed: OCR Colab revision and reviewed-transcript upload

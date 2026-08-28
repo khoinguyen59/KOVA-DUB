@@ -23,13 +23,15 @@ float decibelsToLinear(float decibels)
     return std::pow(10.0f, decibels / 20.0f);
 }
 
-float sidechainBackgroundGain(float voiceSample, float currentGain, int sampleRate)
+float sidechainBackgroundGain(float voiceSample, float currentGain, int sampleRate,
+                              float configuredOriginalGain)
 {
     const float voiceDb = 20.0f * std::log10(qMax(std::abs(voiceSample), 1.0e-6f));
     const float overThreshold = qMax(0.0f, voiceDb - kSidechainThresholdDb);
     const float requestedDuckDb = qMin(kMaximumDuckDb,
                                        overThreshold * (1.0f - 1.0f / kSidechainRatio));
-    const float targetGain = kBaseBackgroundGain * decibelsToLinear(-requestedDuckDb);
+    const float targetGain = kBaseBackgroundGain * configuredOriginalGain
+                             * decibelsToLinear(-requestedDuckDb);
     const float timeConstantMs = targetGain < currentGain ? kAttackMs : kReleaseMs;
     const float coefficient = std::exp(-1000.0f
                                        / (timeConstantMs * static_cast<float>(sampleRate)));
@@ -69,12 +71,13 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
                                      const QString &backgroundPath, QString *error,
                                      QAtomicInteger<bool> *cancel)
 {
-    return mixSegments(segments, outputPath, backgroundPath, QString(), error, cancel);
+    return mixSegments(segments, outputPath, backgroundPath, QString(), error, cancel, QVariantMap());
 }
 
 bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString &outputPath,
                                      const QString &backgroundPath, const QString &vocalOutputPath,
-                                     QString *error, QAtomicInteger<bool> *cancel)
+                                     QString *error, QAtomicInteger<bool> *cancel,
+                                     const QVariantMap &mixConfiguration)
 {
     auto isCancelled = [cancel]() { return cancel && cancel->loadAcquire(); };
     if (isCancelled()) {
@@ -87,6 +90,12 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
     }
 
     constexpr int outputRate = 48000;
+    const float dubbedGain = qBound(0.0f,
+                                    mixConfiguration.value(QStringLiteral("dubbedGainPercent"), 100).toFloat(),
+                                    100.0f) / 100.0f;
+    const float originalGain = qBound(0.0f,
+                                      mixConfiguration.value(QStringLiteral("originalGainPercent"), 100).toFloat(),
+                                      100.0f) / 100.0f;
     qint64 outputSamples = 0;
     for (const QVariant &entry : segments) {
         if (isCancelled()) {
@@ -134,7 +143,8 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
         for (int i = 0; i < clipMono.size(); ++i) {
             const qint64 destination = startSample + static_cast<qint64>(i) * outputRate / clip.sampleRate;
             if (destination >= 0 && destination < mix.size()) {
-                mix[static_cast<int>(destination)] = qBound(-1.0f, mix[static_cast<int>(destination)] + clipMono.at(i), 1.0f);
+                mix[static_cast<int>(destination)] = qBound(
+                    -1.0f, mix[static_cast<int>(destination)] + clipMono.at(i) * dubbedGain, 1.0f);
             }
         }
     }
@@ -161,7 +171,7 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
                     backgroundMono[frame] = sum / static_cast<float>(background.channels);
                 }
             }
-            float backgroundGain = kBaseBackgroundGain;
+            float backgroundGain = kBaseBackgroundGain * originalGain;
             for (int i = 0; i < mix.size(); ++i) {
                 if ((i & 0x3fff) == 0 && isCancelled()) {
                     if (error) *error = QStringLiteral("Audio mix cancelled.");
@@ -169,7 +179,8 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
                 }
                 const int source = qMin(backgroundMono.size() - 1,
                                         static_cast<int>(static_cast<double>(i) * background.sampleRate / outputRate));
-                backgroundGain = sidechainBackgroundGain(mix.at(i), backgroundGain, outputRate);
+                backgroundGain = sidechainBackgroundGain(mix.at(i), backgroundGain, outputRate,
+                                                         originalGain);
                 mix[i] = qBound(-1.0f, mix.at(i) + backgroundMono.at(source) * backgroundGain, 1.0f);
             }
         }

@@ -1160,7 +1160,8 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("source.srt")));
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("translated.srt")));
     QVERIFY(dubbingQueueDialog.contains(QStringLiteral("Voice WAV")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingHistoryResizeHandle")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("DubbingHistoryOverlay")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("dubbingHistoryResizeHandle")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceResizeHandle")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingStepReviewPanel")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingNodeInspector")));
@@ -1171,7 +1172,7 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
     QVERIFY(dubbingPage.contains(QStringLiteral("isAdvancedNodeInspectorOpen")));
     QVERIFY(!dubbingPage.contains(QStringLiteral("Dubbing workbench shelf or full-width timeline is unavailable")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Layout.minimumWidth: root.compactDubbingControls ? 240 : 320")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing History")));
+    QVERIFY(!dubbingPage.contains(QStringLiteral("Drag to resize Dubbing History")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing Preview")));
     QVERIFY(dubbingPage.contains(QStringLiteral("Drag to resize Dubbing timeline")));
     QVERIFY(dubbingPage.contains(QStringLiteral("DragHandler")));
@@ -1214,9 +1215,9 @@ void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()
         QStringLiteral("text: root.compactActionCluster ? \"\" : qsTr(\"Workflow\")")));
     QVERIFY(dubbingHeader.contains(QStringLiteral("toolTip: qsTr(\"Open workflow\")")));
     QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceScroller.width < 1450")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("dubbingWorkspaceScroller.width < 1080")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("compactDubbingControls")));
     QVERIFY(dubbingPage.contains(QStringLiteral("actual non-overlapping minima")));
-    QVERIFY(dubbingPage.contains(QStringLiteral("readonly property bool compactDubbingHistory")));
+    QVERIFY(dubbingPage.contains(QStringLiteral("readonly property bool isHistoryOpen")));
     QVERIFY(dubbingPage.contains(QStringLiteral("A real 28 px hit target")));
     QVERIFY(main.contains(QStringLiteral("visible: stack.currentIndex === 13")));
     QVERIFY(popup.contains(QStringLiteral("AppController.downloads.allDownloads")));

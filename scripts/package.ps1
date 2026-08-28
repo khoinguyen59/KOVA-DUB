@@ -841,6 +841,102 @@ function Copy-VcpkgRuntimeLibraries {
     }
 }
 
+function Invoke-PackagedQmlSmoke {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ExecutablePath,
+        [Parameter(Mandatory = $true)]
+        [string] $RepositoryRoot,
+        [Parameter(Mandatory = $true)]
+        [string] $AppVersion
+    )
+
+    $smokeRoot = Join-Path $RepositoryRoot ("out\package-smoke\" + $AppVersion)
+    New-Item -ItemType Directory -Path $smokeRoot -Force | Out-Null
+    $stdoutPath = Join-Path $smokeRoot "stdout.log"
+    $stderrPath = Join-Path $smokeRoot "stderr.log"
+    $tracePath = Join-Path $smokeRoot "qml-interaction-trace.json"
+    $environmentNames = @(
+        "LASTUDIO_QML_SMOKE",
+        "LASTUDIO_DATA_DIR",
+        "LASTUDIO_QML_SMOKE_TRACE",
+        "QT_QPA_PLATFORM"
+    )
+    $previousEnvironment = @{}
+    foreach ($name in $environmentNames) {
+        $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+    }
+
+    try {
+        $env:LASTUDIO_QML_SMOKE = "1"
+        $env:LASTUDIO_DATA_DIR = Join-Path $smokeRoot "data"
+        $env:LASTUDIO_QML_SMOKE_TRACE = $tracePath
+        $env:QT_QPA_PLATFORM = "offscreen"
+
+        Write-Host ">> Running final packaged EXE QML smoke..." -ForegroundColor Cyan
+        # A GUI-subsystem executable does not reliably expose ExitCode through
+        # Start-Process on Windows PowerShell 5.1.  Launch it through cmd's
+        # `start /wait` so the launcher carries the real application status
+        # while still preserving stdout/stderr capture and a hard timeout.
+        $emptyWindowTitle = '""'
+        $quotedExecutable = '"' + $ExecutablePath + '"'
+        $cmdArguments = @(
+            "/d", "/c", "start", $emptyWindowTitle, "/wait", $quotedExecutable
+        )
+        Push-Location (Split-Path -Parent $ExecutablePath)
+        try {
+            # The application owns a 60-second LASTUDIO_QML_SMOKE watchdog.
+            # Invoking cmd directly preserves its real exit code in
+            # $LASTEXITCODE on both Windows PowerShell 5.1 and PowerShell 7.
+            & $env:ComSpec @cmdArguments 1> $stdoutPath 2> $stderrPath
+            $launchExitCode = [int]$LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($launchExitCode -ne 0) {
+            $errorOutput = if (Test-Path -LiteralPath $stderrPath) {
+                (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue).Trim()
+            } else { "" }
+            throw "Packaged EXE QML smoke exited with code $launchExitCode. $errorOutput"
+        }
+        if (-not (Test-Path -LiteralPath $tracePath -PathType Leaf)) {
+            throw "Packaged EXE QML smoke did not write its interaction trace: $tracePath"
+        }
+        try {
+            $trace = Get-Content -LiteralPath $tracePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        } catch {
+            throw "Packaged EXE QML smoke wrote invalid interaction JSON: $($_.Exception.Message)"
+        }
+        if (@($trace).Count -eq 0) {
+            throw "Packaged EXE QML smoke completed without any interaction trace events."
+        }
+        $diagnostics = @(
+            (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue),
+            (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue)
+        ) -join "`n"
+        foreach ($fatalPattern in @(
+            "QQmlApplicationEngine failed to load component",
+            "is not a type",
+            "Cannot assign double to int",
+            "STATUS_DLL_NOT_FOUND"
+        )) {
+            if ($diagnostics -match [regex]::Escape($fatalPattern)) {
+                throw "Packaged EXE QML smoke found fatal startup diagnostic '$fatalPattern'."
+            }
+        }
+        Write-Host (">> Packaged EXE QML smoke passed ({0} trace events): {1}" -f @($trace).Count, $tracePath) -ForegroundColor Green
+    } finally {
+        foreach ($name in $environmentNames) {
+            $value = $previousEnvironment[$name]
+            if ($null -eq $value) {
+                Remove-Item -LiteralPath ("Env:{0}" -f $name) -ErrorAction SilentlyContinue
+            } else {
+                Set-Item -Path ("Env:{0}" -f $name) -Value $value
+            }
+        }
+    }
+}
+
 Ensure-Command -Name "cmake" -FallbackPaths @(
     "C:\Qt\Tools\CMake_64\bin",
     "C:\Program Files\CMake\bin"
@@ -881,6 +977,27 @@ if ([string]::IsNullOrWhiteSpace($VcpkgRoot)) {
 }
 if ([string]::IsNullOrWhiteSpace($LlamaCppSourceDir)) {
     throw "llama.cpp b10036 headers not found. Pass -LlamaCppSourceDir, set LLAMA_CPP_SOURCE_DIR, or check out llama.cpp at '.deps\llama.cpp'."
+}
+
+$gatePowerShell = Get-Command "powershell.exe" -ErrorAction SilentlyContinue
+if ($null -eq $gatePowerShell) {
+    $gatePowerShell = Get-Command "pwsh.exe" -ErrorAction SilentlyContinue
+}
+if ($null -eq $gatePowerShell) {
+    throw "PowerShell executable was not found. The mandatory pre-build release gate cannot run."
+}
+$preBuildGateArguments = @(
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    (Join-Path $PSScriptRoot "prebuild_gate.ps1"),
+    "-Preset", $Preset,
+    "-QtRoot", $QtRoot,
+    "-VcpkgRoot", $VcpkgRoot,
+    "-MaxParallelJobs", $MaxParallelJobs
+)
+Write-Host ">> Running mandatory pre-build release gate..." -ForegroundColor Cyan
+& $gatePowerShell.Source @preBuildGateArguments
+if ($LASTEXITCODE -ne 0) {
+    throw "Pre-build release gate failed. Packaging stopped before CMake configure/build."
 }
 
 & (Join-Path $PSScriptRoot "verify_runtime_abi.ps1")
@@ -1006,6 +1123,7 @@ Assert-StagedEspeakNgRuntime -DeployRoot $deployRoot
 Assert-StagedMsvcRuntime -DeployRoot $deployRoot
 Assert-StagedRuntimeManifest -DeployRoot $deployRoot -ApplicationExecutableName $applicationExecutableName
 Assert-StagedLicenseManifest -StageRoot $stageDir
+Invoke-PackagedQmlSmoke -ExecutablePath $stagedExe -RepositoryRoot $RepoRoot -AppVersion $Version
 
 # 5. Build installer using Inno Setup
 if ($SkipInstaller) {

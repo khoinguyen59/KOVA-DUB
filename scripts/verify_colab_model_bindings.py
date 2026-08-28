@@ -126,7 +126,11 @@ def main() -> int:
             fail(errors, f"{binding.capability}: page bypasses the shared Colab URL helper")
 
         for model, notebook in mapped_pairs:
-            notebook_path = ROOT / "notebooks" / notebook
+            notebook_candidates = list((ROOT / "notebooks").rglob(notebook))
+            if len(notebook_candidates) > 1:
+                fail(errors, f"{binding.capability}/{model}: mapped notebook filename is ambiguous: {notebook}")
+                continue
+            notebook_path = notebook_candidates[0] if notebook_candidates else ROOT / "notebooks" / notebook
             if not notebook_path.is_file():
                 fail(errors, f"{binding.capability}/{model}: mapped notebook is missing: {notebook}")
                 continue

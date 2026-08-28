@@ -9,13 +9,13 @@ from textwrap import dedent
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOK = ROOT / "notebooks" / "LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb"
+NOTEBOOK = ROOT / "notebooks" / "pipelines" / "LA_STUDIO_UNIFIED_DUBBING_GPU.ipynb"
 COORDINATOR = ROOT / "notebooks" / "workers" / "LA_STUDIO_UNIFIED_DUBBING_COORDINATOR.py"
-SOURCE_REPOSITORY = "https://github.com/khoinguyen59/kova-video-studio.git"
+SOURCE_REPOSITORY = "https://github.com/khoinguyen59/KOVA-DUB.git"
 # The coordinator only needs the already-generated exact workers.  Keep their
 # source checkout immutable so regenerating this notebook never creates drift
 # simply because a later LA Studio commit exists.
-SOURCE_COMMIT = "96a2fe9"
+SOURCE_COMMIT = "305888f6612d8f1063ddc0a5c6ffe2ce3ab4f25b"
 
 
 def source_lines(source: str) -> list[str]:
@@ -96,6 +96,7 @@ def make_notebook() -> dict:
 
 
 def main() -> None:
+    NOTEBOOK.parent.mkdir(parents=True, exist_ok=True)
     NOTEBOOK.write_text(json.dumps(make_notebook(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(NOTEBOOK)
 

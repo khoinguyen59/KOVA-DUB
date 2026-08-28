@@ -129,8 +129,34 @@ Dialog {
         root.selectedAudioPath = resolveAudioPath(item)
         root.selectedReferenceText = item.referenceTranscript || item.referenceText || ""
         root.selectedVoiceName = (item.name || "").replace("CapCut: ", "").replace("OmniVoice: ", "")
-        root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText, item.name || root.selectedVoiceName, item.modelFamily || "", item.id || "")
+        root.voiceSelected(root.selectedAudioPath, root.selectedReferenceText,
+                           item.name || root.selectedVoiceName,
+                           item.sourceModelFamily || item.modelFamily || item.familyId || "",
+                           item.id || "")
         root.close()
+    }
+
+    function hasVoiceTarget(v, target) {
+        if (!v) return false
+        var requested = String(target || "").toLowerCase()
+        var targets = v.voiceModelTargets
+        if (!targets || typeof targets.length !== "number") return false
+        for (var i = 0; i < targets.length; ++i) {
+            var value = String(targets[i] || "").toLowerCase()
+            if (value === requested
+                    || (requested === "vieneu" && value.indexOf("vieneu-tts") === 0)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    function containsAny(value, candidates) {
+        var text = String(value || "").toLowerCase()
+        for (var i = 0; i < candidates.length; ++i) {
+            if (text.indexOf(candidates[i]) !== -1) return true
+        }
+        return false
     }
 
     function matchesCategory(v, cat) {
@@ -141,13 +167,22 @@ Dialog {
         var vCat = String(v.category || "").toLowerCase()
         var vTags = Array.isArray(v.tags) ? v.tags.join(" ").toLowerCase() : String(v.tags || "").toLowerCase()
         var isCustom = v.isUserPreset === true || v.canDelete === true || v.isBuiltin === false
+        var isVieNeu = hasVoiceTarget(v, "vieneu")
+                || vCat === "vieneu" || vFam === "vieneu-tts" || vFam.indexOf("vieneu-tts-") === 0
+                || vTags.indexOf("vieneu") !== -1
+        var regionText = vAccent + " " + vTags + " " + vName
 
         if (cat === "all") return true
         if (cat === "custom") return isCustom
         if (cat === "capcut") return vCat === "capcut" || vName.indexOf("capcut") !== -1 || vTags.indexOf("capcut") !== -1
-        if (cat === "vieneu_bac") return (vCat === "vieneu" || vFam === "vieneu-tts" || vTags.indexOf("vieneu") !== -1) && (vAccent.indexOf("bắc") !== -1 || vTags.indexOf("bắc") !== -1 || vName.indexOf("bắc") !== -1)
-        if (cat === "vieneu_nam") return (vCat === "vieneu" || vFam === "vieneu-tts" || vTags.indexOf("vieneu") !== -1) && (vAccent.indexOf("nam") !== -1 || vTags.indexOf("nam") !== -1 || vName.indexOf("nam") !== -1)
-        if (cat === "omnivoice") return vCat === "omnivoice" || vFam === "omnivoice" || vTags.indexOf("omnivoice") !== -1 || vName.indexOf("omnivoice") !== -1
+        if (cat === "vieneu_bac") return isVieNeu && containsAny(regionText, ["bắc", "bac", "north"])
+        if (cat === "vieneu_trung") return isVieNeu && containsAny(regionText, ["trung", "central", "middle"])
+        if (cat === "vieneu_nam") return isVieNeu && containsAny(regionText, ["nam", "south"])
+        // The target badge is authoritative for migrated and user-created
+        // records. Legacy source-family checks remain for old JSON records.
+        if (cat === "omnivoice") return hasVoiceTarget(v, "omnivoice")
+                || vCat === "omnivoice" || vFam === "omnivoice"
+                || vTags.indexOf("omnivoice") !== -1 || vName.indexOf("omnivoice") !== -1
         return false
     }
 
@@ -555,7 +590,10 @@ Dialog {
                         readonly property bool isPausedThis: root.isVoicePaused(modelData)
                         readonly property bool isCustomVoice: modelData.canDelete === true || modelData.isUserPreset === true || modelData.isBuiltin === false
                         readonly property bool isCapcut: (modelData.name || "").toLowerCase().indexOf("capcut") !== -1 || (Array.isArray(modelData.tags) && modelData.tags.indexOf("CapCut") !== -1)
-                        readonly property bool isVieNeu: (modelData.modelFamily === "vieneu-tts") || (Array.isArray(modelData.tags) && modelData.tags.indexOf("VieNeu-TTS") !== -1)
+                        readonly property bool isVieNeu: root.hasVoiceTarget(modelData, "vieneu")
+                                                         || String(modelData.modelFamily || "").toLowerCase().indexOf("vieneu-tts") === 0
+                                                         || String(modelData.category || "").toLowerCase() === "vieneu"
+                                                         || (Array.isArray(modelData.tags) && modelData.tags.indexOf("VieNeu-TTS") !== -1)
 
                         color: isPlayingThis ? "#231f38"
                                              : (cardHover.containsMouse ? "#27243c" : "#1b1929")
@@ -680,6 +718,40 @@ Dialog {
                                                                              : (cardRect.isCapcut ? "CapCut"
                                                                                                   : (cardRect.isVieNeu ? "VieNeu" : "OmniVoice"))
                                                 color: "#ffffff"
+                                                font.pixelSize: 9
+                                                font.bold: true
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            radius: 3
+                                            implicitWidth: vieNeuTargetText.implicitWidth + 8
+                                            implicitHeight: 18
+                                            color: "#065f46"
+                                            border.color: "#34d399"
+                                            border.width: 1
+                                            Text {
+                                                id: vieNeuTargetText
+                                                anchors.centerIn: parent
+                                                text: "VieNeu"
+                                                color: "#d1fae5"
+                                                font.pixelSize: 9
+                                                font.bold: true
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            radius: 3
+                                            implicitWidth: omniVoiceTargetText.implicitWidth + 8
+                                            implicitHeight: 18
+                                            color: "#4c1d95"
+                                            border.color: "#a78bfa"
+                                            border.width: 1
+                                            Text {
+                                                id: omniVoiceTargetText
+                                                anchors.centerIn: parent
+                                                text: "OmniVoice"
+                                                color: "#ede9fe"
                                                 font.pixelSize: 9
                                                 font.bold: true
                                             }

@@ -65,6 +65,7 @@ QVariantMap DubbingController::automaticPreflight() const
         const QVariantMap stage = value.toMap();
         const QString stageId = stage.value(QStringLiteral("id")).toString();
         const QString nodeId = stage.value(QStringLiteral("actionNodeId")).toString();
+        const bool optionalStage = nodeId == QStringLiteral("source-separate");
         QVariantMap configuration = m_workflowNodeConfigurations.value(nodeId).toMap();
         const QVariantMap parameters = configuration.value(QStringLiteral("parameters")).toMap();
         const QString providerId = configuration.value(
@@ -93,8 +94,10 @@ QVariantMap DubbingController::automaticPreflight() const
         if (nodeId == QStringLiteral("media-input")) {
             setupAction = QStringLiteral("source");
             setupHint = QStringLiteral("Choose source media on page 1");
-        } else if (nodeId == QStringLiteral("source-separate")
-                   || nodeId == QStringLiteral("transcribe")
+        } else if (nodeId == QStringLiteral("source-separate")) {
+            setupAction = QStringLiteral("optional");
+            setupHint = QStringLiteral("Optional; skip if separate stems are not needed");
+        } else if (nodeId == QStringLiteral("transcribe")
                    || nodeId == QStringLiteral("translate")
                    || nodeId == QStringLiteral("synthesize")) {
             setupAction = QStringLiteral("node-model");
@@ -115,7 +118,10 @@ QVariantMap DubbingController::automaticPreflight() const
             || nodeId == QStringLiteral("synthesize");
         QString preflightState = QStringLiteral("ready");
         QString preflightStateLabel = QStringLiteral("Ready");
-        if (nodeId == QStringLiteral("media-input") && !hasMedia) {
+        if (optionalStage) {
+            preflightState = QStringLiteral("optional-skipped");
+            preflightStateLabel = QStringLiteral("Optional · skipped");
+        } else if (nodeId == QStringLiteral("media-input") && !hasMedia) {
             preflightState = QStringLiteral("needs-input");
             preflightStateLabel = QStringLiteral("Needs input");
         } else if (stage.value(QStringLiteral("state")).toString() == QStringLiteral("missing")
@@ -142,7 +148,7 @@ QVariantMap DubbingController::automaticPreflight() const
             ? QStringLiteral("voice-cloning") : nodeId;
         const QString effectiveModelId = usesSavedCloneVoice
             ? savedCloneFamily : modelId;
-        if (modelStage && (configuration.isEmpty() || providerId.isEmpty()
+        if (modelStage && !optionalStage && (configuration.isEmpty() || providerId.isEmpty()
                            || effectiveModelId.isEmpty())) {
             preflightState = hasMedia ? QStringLiteral("needs-setup")
                                       : QStringLiteral("blocked-previous");
@@ -150,7 +156,7 @@ QVariantMap DubbingController::automaticPreflight() const
                                             : QStringLiteral("Blocked by source media");
             addIssue(stageId, QStringLiteral("Configure %1 with a route and an exact model/runtime.")
                 .arg(stage.value(QStringLiteral("title")).toString()));
-        } else if (modelStage && providerId == QStringLiteral("colab-direct")) {
+        } else if (modelStage && !optionalStage && providerId == QStringLiteral("colab-direct")) {
             const QVariantMap worker = directWorkers.value(nodeId);
             ColabSession *session = usesSavedCloneVoice
                 ? colabSessionForStage(QStringLiteral("voice-cloning"))
@@ -190,7 +196,7 @@ QVariantMap DubbingController::automaticPreflight() const
                 workerCard.insert(QStringLiteral("parentStageTitle"), stage.value(QStringLiteral("title")));
                 selectedWorkers.append(workerCard);
             }
-        } else if (modelStage && providerId == QStringLiteral("api-gateway")) {
+        } else if (modelStage && !optionalStage && providerId == QStringLiteral("api-gateway")) {
             const bool gatewayConfigured = m_settings && !m_settings->gatewayUrl().trimmed().isEmpty()
                 && m_settings->gatewayApiKeyConfigured();
             if (!gatewayConfigured) {
@@ -200,7 +206,7 @@ QVariantMap DubbingController::automaticPreflight() const
                          QStringLiteral("Configure API Gateway credentials before using %1.")
                              .arg(stage.value(QStringLiteral("title")).toString()));
             }
-        } else if (modelStage && providerId == QStringLiteral("local-dev")) {
+        } else if (modelStage && !optionalStage && providerId == QStringLiteral("local-dev")) {
             StudioConfiguration localConfiguration;
             localConfiguration.capabilityId = stage.value(QStringLiteral("capabilityId")).toString();
             localConfiguration.familyId = configuration.value(QStringLiteral("familyId")).toString();
@@ -216,7 +222,9 @@ QVariantMap DubbingController::automaticPreflight() const
             }
         }
 
-        QString configurationSummary = modelStage
+        QString configurationSummary = optionalStage
+            ? QStringLiteral("Optional separation; Normalize audio remains the fallback input for Transcribe and Mix.")
+            : modelStage
             ? (effectiveModelId.isEmpty()
                 ? QStringLiteral("No route and exact model/runtime have been confirmed.")
                 : usesSavedCloneVoice
@@ -282,7 +290,8 @@ QVariantMap DubbingController::automaticPreflight() const
             {QStringLiteral("setupAction"), setupAction},
             {QStringLiteral("setupHint"), setupHint},
             {QStringLiteral("configurationSummary"), configurationSummary},
-            {QStringLiteral("modelRequired"), modelStage},
+            {QStringLiteral("modelRequired"), modelStage && !optionalStage},
+            {QStringLiteral("optional"), optionalStage},
             {QStringLiteral("effectiveFormat"), nodeId == QStringLiteral("ingest") ? configurationSummary : QString()},
             {QStringLiteral("preflightState"), preflightState},
             {QStringLiteral("preflightStateLabel"), preflightStateLabel},
@@ -477,11 +486,12 @@ void DubbingController::setCurrentStep(const QString &stepId)
 
 void DubbingController::advanceManualStep(const QString &completedStepId)
 {
-    static const QHash<QString, QString> next{{QStringLiteral("ingest"), QStringLiteral("source-separate")},
+    static const QHash<QString, QString> next{{QStringLiteral("ingest"), QStringLiteral("transcribe")},
                                               {QStringLiteral("source-separate"), QStringLiteral("transcribe")},
                                               {QStringLiteral("transcribe"), QStringLiteral("translate")},
                                               {QStringLiteral("translate"), QStringLiteral("synthesize")},
-                                              {QStringLiteral("synthesize"), QStringLiteral("mix")},
+                                              {QStringLiteral("synthesize"), QStringLiteral("fit-timing")},
+                                              {QStringLiteral("fit-timing"), QStringLiteral("mix")},
                                               {QStringLiteral("mix"), QStringLiteral("export")},
                                               {QStringLiteral("export"), QStringLiteral("completed")}};
     if (next.contains(completedStepId)) setCurrentStep(next.value(completedStepId));
@@ -921,7 +931,7 @@ void DubbingController::advanceAutomaticSetup()
 {
     if (!m_automaticSetupActive) return;
     if (m_automaticSetupNodeId.isEmpty())
-        m_automaticSetupNodeId = QStringLiteral("source-separate");
+        m_automaticSetupNodeId = QStringLiteral("transcribe");
     // Remote-first automatic runs use the graph's explicit per-node routes.
     // They never probe, load, or download a local model as a fallback. A
     // missing Gateway model or Colab worker therefore fails at the selected
@@ -970,9 +980,7 @@ void DubbingController::advanceAutomaticSetup()
             return;
         }
     }
-    if (!ensureAutomaticModel(QStringLiteral("source-separate"),
-                              QStringLiteral("voice-isolation"), false)) return;
-    appendAutomaticEvent(QStringLiteral("Voice isolation model is ready"),
+    appendAutomaticEvent(QStringLiteral("Source separation is optional; using normalized analysis audio when skipped"),
                          QStringLiteral("completed"), QStringLiteral("source-separate"));
     const QString transcriptSource = normalizedTranscriptSource(m_project.transcriptConfiguration.value(
         QStringLiteral("transcriptSource"), QStringLiteral("stt")).toString());

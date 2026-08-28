@@ -61,6 +61,8 @@ QJsonObject DubbingProject::toJson() const
                 QJsonObject::fromVariantMap(subtitleConfiguration));
     json.insert(QStringLiteral("timingConfiguration"),
                 QJsonObject::fromVariantMap(timingConfiguration));
+    json.insert(QStringLiteral("audioMixConfiguration"),
+                QJsonObject::fromVariantMap(audioMixConfiguration));
     json.insert(QStringLiteral("customRewriteConfiguration"),
                 QJsonObject::fromVariantMap(customRewriteConfiguration));
     json.insert(QStringLiteral("speakers"), QJsonArray::fromVariantList(speakers));
@@ -132,6 +134,12 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
         project.transcriptConfiguration =
             json.value(QStringLiteral("transcriptConfiguration")).toObject().toVariantMap();
     }
+    if (project.transcriptConfiguration.isEmpty()) {
+        project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
+                                           {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+    } else if (!project.transcriptConfiguration.contains(QStringLiteral("fusionPolicy"))) {
+        project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"));
+    }
     if (version >= 10) {
         project.subtitleConfiguration =
             json.value(QStringLiteral("subtitleConfiguration")).toObject().toVariantMap();
@@ -139,6 +147,14 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
     if (version >= 11) {
         project.timingConfiguration =
             json.value(QStringLiteral("timingConfiguration")).toObject().toVariantMap();
+    }
+    if (version >= 15) {
+        project.audioMixConfiguration =
+            json.value(QStringLiteral("audioMixConfiguration")).toObject().toVariantMap();
+    }
+    if (project.audioMixConfiguration.isEmpty()) {
+        project.audioMixConfiguration = QVariantMap{{QStringLiteral("originalGainPercent"), 0},
+                                                     {QStringLiteral("dubbedGainPercent"), 100}};
     }
     project.speakers = json.value(QStringLiteral("speakers")).toArray().toVariantList();
     project.segments = json.value(QStringLiteral("segments")).toArray().toVariantList();
