@@ -12,8 +12,8 @@
 
 ## Global Constraints
 
-- Preserve source version `0.0.8.5` and package with the portable root layout used by 8.4.
-- Validate 1280×720, 1600×900, 1920×1080 and 4K desktop viewports.
+- Preserve the 8.4-compatible portable root layout; the earlier `0.0.8.5` package is the baseline and the final delivery artifact for this recheck is `0.0.8.6`.
+- Validate 1280×720, 1600×900, 1920×1080, 2560×1440 and 4K desktop viewports.
 - Keep the preview viewport 16:9 and render all source ratios with `VideoOutput.PreserveAspectFit`.
 - Keep OCR scan editing visible only for the Transcribe/OCR task.
 - Do not hard-code voice counts; filtered and headline counts must derive from the same catalog list.
@@ -258,7 +258,7 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 - [x] **Step 4: Run the full QtTest matrix.** Full matrix passes 41/41 and `git diff --check` is clean apart from normal Windows line-ending warnings.
 
-### Task 10: Build the 8.5 portable package, commit and push
+### Task 10: Build the 8.5 portable package, commit and push (baseline)
 
 **Files:**
 - Modify: no source files unless the verification matrix identifies a concrete failure
@@ -312,9 +312,28 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 Implementation evidence: watchdog hardening is committed as `c0713cc`; the refreshed Graphify artifacts and indexed report are delivered in the follow-up documentation commit.
 
+### Task 12: Recheck the final 0.0.8.6 artifact after the OCR ROI visual fix
+
+**Files:**
+- Modify: `qml/components/dubbing/DubbingSourceMediaPanel.qml`
+- Modify: `tests/dubbing/test_DubbingWorkspaceContract.cpp`
+- Modify: `docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md`
+- Generated: `out/ui-demo/dubbing-*-8.6-final-*`, `out/LA-Studio-0.0.8.6/`
+
+**Interfaces:**
+- Consumes: production `Main.qml`, the real fixture MP4, Qt 6.9.3/MSVC release toolchain and the existing portable package layout.
+- Produces: a verified 0.0.8.6 portable artifact in the 8.4 layout, visual evidence at the required viewport matrix, and an audit trail that distinguishes local contract proof from live Colab/GPU acceptance.
+
+- [x] **Step 1: Fix the discovered visual collision.** Clamp the OCR editor content rect above `previewControls`; keep subtitle text above the translucent ROI and handles above the text/ROI.
+- [x] **Step 2: Add a regression contract.** Assert the source content/safe-height calculation and the ROI-versus-playback boundary in `TestDubbingWorkspaceContract`.
+- [x] **Step 3: Re-run quality gates.** QML lint exits 0; the serial CTest matrix passes `41/41`.
+- [x] **Step 4: Re-run production visual smoke.** Capture `1280×720`, `1600×900`, `2560×1440` and `3840×2160` from the production shell; inspect the final OCR capture for clipping/collision.
+- [x] **Step 5: Rebuild and package 8.6.** `scripts/build.ps1` and `scripts/package.ps1` complete with `-Version '0.0.8.6'`, `-SkipInstaller`, `-PortableInternalLayout`; package smoke exits 0, version metadata is 0.0.8.6 and required runtime/model artifacts are present.
+- [x] **Step 6: Refresh Graphify and report evidence.** `graphify update`, clustering, HTML export and multigraph diagnosis complete with no dangling endpoint, self-loop or collapsed edge; report records the environment warnings and the remaining live-runtime boundary.
+
 ## Plan self-review
 
-- Spec coverage: all nine acceptance criteria are mapped to Tasks 1–11; no requirement is left only in prose.
+- Spec coverage: all nine acceptance criteria are mapped to Tasks 1–12; no requirement is left only in prose.
 - Placeholder scan: no prohibited placeholder token or unspecified handling step was found.
 - Type/contract consistency: the plan keeps existing controller methods as inputs and defines the only new QML signal (`contextRequested(string)`) and drawer property (`contextId`) before later tasks consume them.
 - Scope boundary: the plan does not delete user data, rewrite unrelated generated outputs, or turn the unsigned internal runtime into a public release.

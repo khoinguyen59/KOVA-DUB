@@ -218,6 +218,9 @@ Rectangle {
                     || subtitlePreviewOverlay.y + subtitlePreviewOverlay.height
                        <= previewFrame.y + previewFrame.height
                           - subtitlePreviewOverlay.lowerControlsClearance + 1)
+                && (!dubbingOcrRoiOverlay.visible
+                    || dubbingOcrRoiOverlay.y + dubbingOcrRoiOverlay.height
+                       <= previewControls.y - Theme.paddingSmall + 1)
                 && (!root.hasLoadedSource || !sourceSetupPanel.visible)
     }
 
@@ -591,10 +594,21 @@ Rectangle {
             Rectangle {
                 id: dubbingOcrRoiOverlay
                 objectName: "dubbingSubtitleOcrRoiOverlay"
-                readonly property rect content: Qt.rect(previewFrame.x + videoOutput.contentRect.x,
-                                                        previewFrame.y + videoOutput.contentRect.y,
-                                                        videoOutput.contentRect.width,
-                                                        videoOutput.contentRect.height)
+                // The source content rect is the coordinate space used by
+                // OCR metadata. The displayed editor rect reserves the
+                // playback controls so the ROI border, label and resize
+                // handles cannot be painted over the seek bar.
+                readonly property rect sourceContent: Qt.rect(
+                    previewFrame.x + videoOutput.contentRect.x,
+                    previewFrame.y + videoOutput.contentRect.y,
+                    videoOutput.contentRect.width,
+                    videoOutput.contentRect.height)
+                readonly property rect content: {
+                    var source = sourceContent
+                    var controlsTop = previewControls.y - Theme.paddingSmall
+                    var safeHeight = Math.max(0, Math.min(source.height, controlsTop - source.y))
+                    return Qt.rect(source.x, source.y, source.width, safeHeight)
+                }
                 visible: root.showOcrTools && root.isVideoSource && root.dubbing.dubbingOcrRoiVisible
                          && content.width > 0 && content.height > 0
                 x: content.x + root.draftOcrRoi.x * content.width
@@ -654,7 +668,7 @@ Rectangle {
                         x: modelData.x * parent.width - width / 2
                         y: modelData.y * parent.height - height / 2
                         color: Theme.primary; border.color: Theme.textPrimary; border.width: 1
-                        z: 2
+                        z: 10
                         MouseArea {
                             anchors.fill: parent
                             enabled: !root.dubbing.processing
@@ -701,10 +715,14 @@ Rectangle {
                    ? previewFrame.x + previewFrame.width * Number(root.subtitleStyle.positionX || 0.5) - width / 2
                    : previewFrame.x + (previewFrame.width - width) / 2
                 y: followsOcrRegion
-                  ? Math.min(
-                        dubbingOcrRoiOverlay.content.y + dubbingOcrRoiOverlay.content.height
-                            - height - Theme.paddingSmall,
-                        previewFrame.y + previewFrame.height - height - lowerControlsClearance)
+                  ? Math.max(
+                        previewFrame.y + Theme.paddingSmall,
+                        Math.min(
+                            dubbingOcrRoiOverlay.content.y
+                                + dubbingOcrRoiOverlay.content.height - height
+                                - Theme.paddingMedium,
+                            previewFrame.y + previewFrame.height
+                                - height - lowerControlsClearance))
                   : alignment === "top" ? previewFrame.y + previewFrame.height * safeMargin
                     : alignment === "custom" ? previewFrame.y + previewFrame.height * Number(root.subtitleStyle.positionY || 0.90) - height / 2
                                                : previewFrame.y + previewFrame.height - height
@@ -712,7 +730,9 @@ Rectangle {
                                                               lowerControlsClearance)
                 radius: Theme.radiusSmall
                 color: "transparent"
-                z: 2
+                // The caption stays above the translucent OCR editor fill;
+                // resize handles remain above both layers for editing.
+                z: 9
                 Rectangle {
                     anchors.fill: parent
                     radius: parent.radius

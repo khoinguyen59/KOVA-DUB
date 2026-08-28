@@ -26,16 +26,16 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 
 | Kiểm tra | Kết quả |
 |---|---|
-| Build source bằng Qt 6.9.3/MSVC release preset | PASS; `LA-Studio-0.0.8.5.exe` trong `out/build/windows-msvc-release` |
+| Build source bằng Qt 6.9.3/MSVC release preset | PASS; `LA-Studio-0.0.8.6.exe` trong `out/build/windows-msvc-release` |
 | CTest toàn bộ | PASS 41/41, 0 fail |
 | QML route/smoke contract | PASS trong CTest và preview harness |
-| QML preview capture | PASS; đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 1920×1080, 3840×2160 logical |
+| QML preview capture | PASS; production `Main.qml` đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 2560×1440 và 3840×2160 logical |
 | Media subprocess watchdog | PASS; `MediaIngestService`, `MediaToolService` và export `ffprobe` validation đều có single-shot deadline, kill/cleanup và regression test process treo |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
-| Graphify | PASS; cập nhật sau commit watchdog `c0713cc`; xem mục 9 |
+| Graphify | PASS; đã refresh sau thay đổi ROI/QML và report; xem mục 9 |
 | Live Colab GPU | Chưa chạy trong lần recheck |
 | Full media E2E 1→8 bằng model thật | Chưa chạy trong lần recheck |
-| Packaging/EXE mới | PASS; package 8.4-style tại `out/LA-Studio-0.0.8.5/`, EXE File/ProductVersion `0.0.8.5`, portable QML smoke exit 0 |
+| Packaging/EXE mới | PASS; package 8.4-style tại `out/LA-Studio-0.0.8.6/`, EXE File/ProductVersion `0.0.8.6`, portable QML smoke exit 0 |
 
 Điểm 10/10 trong bảng dưới là điểm đối soát contract/static regression của từng tài liệu, không phải cam kết rằng mọi remote runtime bên ngoài máy luôn sẵn sàng.
 
@@ -80,9 +80,9 @@ Kết quả visual preview 1280×720: task rail, shelf, video canvas, timeline v
 
 ### 4.3 Media preview và subtitle/OCR
 
-`qml/components/dubbing/DubbingSourceMediaPanel.qml:35` có `showOcrTools`; `DubbingPage.qml:832` chỉ bật nó cho `transcribe`, `review-transcript` và `subtitle-ocr`. `DubbingSourceMediaPanel.qml:567` có thumbnail poster `dubbingVideoThumbnail`, `VideoOutput.PreserveAspectFit` và `previewFrameAspectRatio` cố định 16:9. Source 9:16/1:1 vẫn nằm gọn trong viewport, không bị stretch/crop.
+`qml/components/dubbing/DubbingSourceMediaPanel.qml:35` có `showOcrTools`; `DubbingPage.qml:837-839` chỉ bật nó trong context STT/OCR (`transcribe`, `review-transcript`, `subtitle-ocr`). `DubbingSourceMediaPanel.qml:577` có thumbnail poster `dubbingVideoThumbnail`, `VideoOutput.PreserveAspectFit` và `previewFrameAspectRatio` cố định 16:9. Source 9:16/1:1 vẫn nằm gọn trong viewport, không bị stretch/crop.
 
-Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và được chuyển về shelf. Fallback/preset ROI của workspace đồng bộ với `SubtitleOcrPipeline` (`x=0.10, y=0.72, w=0.80, h=0.22`). Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle vào ROI nhưng vẫn có `lowerControlsClearance` để không chạm seek/playback controls. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
+Toolbar source chỉ giữ `Fit source`, `Original`, `Dubbed`; Browse/source management ẩn sau khi media đã load và được chuyển về shelf. Fallback/preset ROI của workspace đồng bộ với `SubtitleOcrPipeline` (`x=0.10, y=0.72, w=0.80, h=0.22`). Subtitle overlay mặc định nằm ở safe lower region; khi OCR bật, `followsOcrRegion` đưa subtitle vào ROI nhưng vẫn có `lowerControlsClearance` để không chạm seek/playback controls. ROI editor dùng `sourceContent` đã cắt theo mép trên playback controls, subtitle có z-order cao hơn ROI còn handle có z-order cao nhất; regression contract kiểm tra ROI không thể vượt `previewControls`. Editor chỉ mở khi user yêu cầu, không bắt setup từ đầu.
 
 ### 4.4 Voice catalog và OmniVoice/VieNeu
 
@@ -164,31 +164,32 @@ Preview harness: `scripts/preview_dubbing_ui.ps1 -Capture`.
 
 Ảnh đã tạo bằng fixture MP4 có thật (`out/dubbing-live-test/dubbing_live_walkthrough.mp4`):
 
-- `out/ui-demo/dubbing-preview-1280x720.png`
-- `out/ui-demo/dubbing-drawer-results-1280x720.png`
-- `out/ui-demo/dubbing-drawer-settings-1280x720.png`
-- `out/ui-demo/dubbing-transcribe-ocr-1280x720.png`
-- Các bản responsive tương ứng `dubbing-preview-*`, `dubbing-drawer-results-*`, `dubbing-drawer-settings-*`, `dubbing-transcribe-ocr-*` cho `1600x900`, `1920x1080`, `3840x2160`.
+- `out/ui-demo/dubbing-preview-8.6-final-1280x720.png`
+- `out/ui-demo/dubbing-drawer-results-8.6-final-1600x900.png`
+- `out/ui-demo/dubbing-transcribe-ocr-8.6-roi-final.png`
+- `out/ui-demo/dubbing-preview-8.6-final-3840x2160.png`
+- Các bản responsive tương ứng `dubbing-preview-8.6-final-*` cho `1600x900` và `2560x1440`.
+- `dubbing-qml-interaction-trace.json` ghi lại entry gate, source picker, Colab setup route và review state transition.
 
-Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, compact shelf, preview, timeline và drawer. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance và capture 1280×720 được chạy lại, không còn glyph bị che. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
+Các ảnh dùng full `Main.qml` production shell, có top tab/navigation, task rail, compact shelf, preview, timeline và drawer. Không dùng mock page rời nên kết quả phản ánh đúng composition của app. Lần capture OCR đầu phát hiện subtitle sát dải playback; source đã thêm clearance, safe ROI geometry và capture `dubbing-transcribe-ocr-8.6-roi-final.png` được chạy lại, không còn glyph bị che hay ROI chạm playback controls. Preview shim có thể in warning về property/signal C++ không có trong harness; đó là giới hạn shim, không phải QML lint/runtime contract của production build.
 
 ## 9. Graphify và release hygiene
 
-Graphify đã được cập nhật cho code graph sau commit watchdog `c0713cc`: 18.053 nodes, 31.495 edges sau clustering và 882 communities; `graph.html` aggregated có 882 community nodes và 2.010 cross-community edges (65 community mỏng được ẩn trong phần hiển thị). Graph health không có dangling/missing endpoint, self-loop hoặc collapsed edge; producer suppression vẫn được ghi chú bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
+Graphify đã được refresh sau thay đổi ROI/QML và report: `18.055` nodes, `31.497` edges sau clustering và `909` communities; `graph.html` aggregated có `909` community nodes và `2.169` cross-community edges. Graph health không có missing/dangling endpoint, self-loop hoặc collapsed edge; producer suppression có 12 site được ghi nhận bởi graphify và không được diễn giải thành lỗi code. Semantic extraction đầy đủ của docs/images không được chạy lại bằng LLM nên không được ghi đè vào graph; đây là giới hạn môi trường, không phải dữ liệu được giả vờ là đã phân tích. `graph.html` được sinh ở dạng aggregated community view vì graph vượt 5.000 nodes. Graphify còn cảnh báo môi trường: skill 0.9.11 khác package 0.9.49, thiếu `tree_sitter_sql`, và 38 file có syntax error/partial extraction; các cảnh báo này không tạo dangling edge nhưng cần xử lý riêng nếu muốn graph extraction hoàn chỉnh. Các file graph/cache là generated artifacts; khi commit cần giữ chúng đồng bộ cùng manifest/report hoặc áp dụng policy repository nếu project muốn bỏ generated output.
 
 Trước khi merge/push, chạy lại:
 
 ```powershell
-& '.\scripts\build.ps1' -Preset 'windows-msvc-release' -QtRoot '.tools\Qt\6.9.3' -Version '0.0.8.5' -MaxParallelJobs 4 -SkipDeploy -AllowUnsignedEspeakForInternalBuild
+& '.\scripts\build.ps1' -Preset 'windows-msvc-release' -QtRoot '.tools\Qt\6.9.3' -Version '0.0.8.6' -MaxParallelJobs 4 -SkipDeploy -AllowUnsignedEspeakForInternalBuild
     ctest --test-dir out\build\windows-msvc-release -C Release --output-on-failure
 & '.\scripts\preview_dubbing_ui.ps1' -Capture
 & '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 1600 -Height 900
-& '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 1920 -Height 1080
+& '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 2560 -Height 1440
 & '.\scripts\preview_dubbing_ui.ps1' -Capture -Width 3840 -Height 2160
 git diff --check
 ```
 
-Package verification PASS bằng `scripts/package.ps1` với `-SkipInstaller -PortableInternalLayout`: `out/LA-Studio-0.0.8.5/LA-Studio-0.0.8.5.exe` có File/ProductVersion `0.0.8.5`; `platforms/qwindows.dll`, `Qt6Core.dll`, `media-tools/ffmpeg.exe`, `subtitle-ocr/tesseract.exe`, notebook Colab và `data/presets/voice_clone_refs/vieneu_Minh_Đức.wav` đều tồn tại. Package script cũng xác nhận staging manifest/license manifest và portable QML smoke exit code 0. Đây là internal package vì lệnh cho phép eSpeak payload unsigned đã SHA-256-verify; live Colab E2E vẫn là release boundary bên ngoài môi trường này.
+Package verification PASS bằng `scripts/package.ps1` với `-SkipInstaller -PortableInternalLayout`: `out/LA-Studio-0.0.8.6/LA-Studio-0.0.8.6.exe` có File/ProductVersion `0.0.8.6`; `platforms/qwindows.dll`, `Qt6Core.dll`, `media-tools/ffmpeg.exe`, `subtitle-ocr/tesseract.exe`, notebook Colab và `data/presets/voice_clone_refs/vieneu_Minh_Đức.wav` đều tồn tại. Package script cũng xác nhận staging manifest/license manifest và portable QML smoke exit code 0. Đây là internal package vì lệnh cho phép eSpeak payload unsigned đã SHA-256-verify; live Colab E2E vẫn là release boundary bên ngoài môi trường này.
 
 GitHub delivery PASS: branch `main` đã push thành công tới `origin` (`https://github.com/khoinguyen59/KOVA-DUB.git`). Các commit chính của đợt này gồm implementation `c9c795d5`, release/graph evidence `0f7d726c` và `2207447101`, các docs delivery follow-up, cùng watchdog hardening `c0713cc`; graph refresh được commit cùng tài liệu này trước lần push cuối.
 
@@ -207,4 +208,8 @@ Chỉ đánh dấu release-ready sau khi tất cả điều kiện sau có log/a
 - 1280×720, 1920×1080, 2560×1440 và 3840×2160 không có clipping/collision;
 - raw log và user guidance cùng tồn tại trong một failure report.
 
-Trạng thái hiện tại: watchdog subprocess đã được harden và có regression test; việc còn cần cho production sign-off là live full E2E với runtime thật. Automatic review policy vẫn là P2 vận hành nên cần quyết định trước khi bật unattended production.
+Trạng thái hiện tại: bản portable `0.0.8.6` đã qua build, CTest, QML lint, visual matrix và package smoke; watchdog subprocess đã được harden và có regression test. Việc còn cần cho production sign-off là live full E2E với runtime thật (Colab/GPU và media/model thật), không phải lỗi contract local. Automatic review policy vẫn là P2 vận hành nên cần quyết định trước khi bật unattended production.
+
+## 11. Recheck release 0.0.8.6
+
+Sau khi sửa lỗi ROI editor có thể chạm playback controls, bản source hiện tại đã được build lại và kiểm thử lại: QML lint exit 0; CTest serial `41/41`; preview production `Main.qml` pass ở `1280×720`, `1600×900`, `2560×1440`, `3840×2160`; OCR preview final không còn ROI/subtitle chạm thanh playback; package smoke exit `0`; EXE File/ProductVersion `0.0.8.6`. Đây là bằng chứng cho toàn bộ contract/UI/workflow local trong phạm vi repo. Live Colab, GPU lease và một phiên dubbing đủ 8 task với model thật vẫn phải được nghiệm thu ở môi trường triển khai có credential/runtime tương ứng.

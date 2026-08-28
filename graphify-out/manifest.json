@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md": {
-    "mtime": 1787891805.8114727,
-    "seen": 1787892328.412836,
-    "ast_hash": "ca5467bb3ccc0e87efb7558c0c925662",
+    "mtime": 1787902805.0093615,
+    "seen": 1787902889.7082834,
+    "ast_hash": "2be907718bf1e681c0eb2dad9ed20a5b",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-unified-colab-10-10-plan.md": {
@@ -6912,9 +6912,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-28-dubbing-studio-workspace-overhaul-plan.md": {
-    "mtime": 1787891805.8114727,
-    "seen": 1787892328.4130018,
-    "ast_hash": "ff6c14de82f5ca45b912789ad514466c",
+    "mtime": 1787902825.837796,
+    "seen": 1787902889.7084615,
+    "ast_hash": "779cbef495dacac7c979849cc25d95bf",
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-08-27-unified-colab-10-10-design.md": {
@@ -7452,9 +7452,9 @@
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.cpp": {
-    "mtime": 1787866637.756724,
-    "seen": 1787867160.6954849,
-    "ast_hash": "74ed1d98952dfbe6033548ff681bfb10",
+    "mtime": 1787902087.8390765,
+    "seen": 1787902760.4396675,
+    "ast_hash": "afaec31c0a4425d01950e32ea18a9285",
     "semantic_hash": ""
   },
   "tests/dubbing/test_DubbingWorkspaceContract.h": {
@@ -7467,6 +7467,12 @@
     "mtime": 1787891309.2238564,
     "seen": 1787892328.3674457,
     "ast_hash": "17b34b30256d889c9ae85ea23b76a078",
+    "semantic_hash": ""
+  },
+  "dubbing-qml-interaction-trace.json": {
+    "mtime": 1787901866.6236598,
+    "seen": 1787902760.3892455,
+    "ast_hash": "b71cb3d3e224c0089f2485bdfd6264e4",
     "semantic_hash": ""
   }
 }

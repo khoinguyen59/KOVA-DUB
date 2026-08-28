@@ -142,6 +142,9 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
     QVERIFY(preview.contains(QStringLiteral("VideoOutput.PreserveAspectFit")));
     QVERIFY(preview.contains(QStringLiteral("Text.ElideMiddle")));
     QVERIFY(preview.contains(QStringLiteral("dubbingVideoThumbnail")));
+    QVERIFY(preview.contains(QStringLiteral("readonly property rect sourceContent")));
+    QVERIFY(preview.contains(QStringLiteral("var controlsTop = previewControls.y - Theme.paddingSmall")));
+    QVERIFY(preview.contains(QStringLiteral("dubbingOcrRoiOverlay.y + dubbingOcrRoiOverlay.height")));
     QVERIFY(shelf.contains(QStringLiteral("contextRequested")));
     QVERIFY(shelf.contains(QStringLiteral("runStepRequested")));
     QVERIFY(header.contains(QStringLiteral("shortTitle")));

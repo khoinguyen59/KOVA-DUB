@@ -1,0 +1,116 @@
+[
+    {
+        "action": "click",
+        "after": "source-language",
+        "before": "entry-gate",
+        "control": "dubbingEntryAutomaticButton"
+    },
+    {
+        "action": "click",
+        "after": "source-language-preflight",
+        "before": "automatic-project-setup",
+        "control": "dubbingProjectSetupContinue"
+    },
+    {
+        "action": "click",
+        "after": "source-page",
+        "before": "review-source-media-error",
+        "control": "dubbingPreflightFix_source-media"
+    },
+    {
+        "action": "click",
+        "after": "file-picker-requested",
+        "before": "source-empty",
+        "control": "dubbingPreflightSourceBrowseButton"
+    },
+    {
+        "action": "accept",
+        "after": "source-persisted",
+        "before": "source-empty",
+        "control": "file-picker-boundary"
+    },
+    {
+        "action": "click",
+        "after": "stages",
+        "before": "source-language",
+        "control": "dubbingPreflightNextButton"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_import"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_normalize"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_isolator"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_transcribe"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_alignment-subtitle"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_translate"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_tts"
+    },
+    {
+        "action": "click",
+        "after": "setup-open-requested",
+        "before": "stages",
+        "control": "dubbingPreflightConfigure_export"
+    },
+    {
+        "action": "apply",
+        "after": "direct",
+        "before": "local",
+        "control": "dubbingPreflightDirectColabSelection"
+    },
+    {
+        "action": "apply",
+        "after": "local",
+        "before": "direct",
+        "control": "dubbingPreflightLocalRouteRestore"
+    },
+    {
+        "action": "click",
+        "after": "colab-workers",
+        "before": "stages",
+        "control": "dubbingPreflightNextButton"
+    },
+    {
+        "action": "click",
+        "after": "review",
+        "before": "colab-workers-no-direct-worker",
+        "control": "dubbingPreflightNextButton"
+    },
+    {
+        "action": "verify",
+        "after": "review-visible",
+        "before": "colab-skipped",
+        "control": "dubbingPreflightReview"
+    }
+]
