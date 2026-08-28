@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QProcess>
 #include <QString>
+#include <QTimer>
 
 namespace LAStudio {
 
@@ -32,11 +33,14 @@ private slots:
     void onReadyReadStandardError();
     void onFinished(int exitCode, QProcess::ExitStatus status);
     void onProcessError(QProcess::ProcessError error);
+    void onProcessTimeout();
 
 private:
     QProcess m_process;
+    QTimer m_processTimeout;
     QString m_outputPath;
     QByteArray m_stderr;
+    bool m_processTimedOut = false;
 };
 
 } // namespace LAStudio

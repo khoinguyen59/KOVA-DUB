@@ -289,9 +289,30 @@ void DubbingWorkspaceContractTest::missingStemIsNotSilentFallback()
 
 - [x] **Step 5: Push the current branch to its configured GitHub remote.** `main` pushed successfully to `https://github.com/khoinguyen59/KOVA-DUB.git`; the implementation, graph evidence and documentation commits are listed in the report, with no push rejection.
 
+### Task 11: Close the media subprocess watchdog boundary
+
+**Files:**
+- Create: `src/dubbing/media/MediaProcessTimeout.h`
+- Modify: `src/dubbing/media/MediaIngestService.h/.cpp`
+- Modify: `src/dubbing/media/MediaToolService.h/.cpp`
+- Modify: `src/controllers/dubbing/DubbingExportJob.h/.cpp`
+- Modify: `tests/core/test_MediaIngestService.h/.cpp`
+- Modify: `tests/core/test_MediaToolService.h/.cpp`
+- Modify: `tests/dubbing/test_DubbingProject.h/.cpp`
+- Modify: `docs/superpowers/audits/2026-08-28-dubbing-workspace-overhaul-report.md`
+
+**Interfaces:**
+- Consumes: existing asynchronous `QProcess` boundaries and terminal error signals.
+- Produces: stage-aware single-shot deadlines, deterministic process termination, staging cleanup and one actionable timeout error while preserving raw diagnostics.
+
+- [x] **Step 1: Add failing timeout regressions.** Use a non-terminating batch helper to verify ingest, mux and export validation recover without duplicate terminal signals or committed output.
+- [x] **Step 2: Implement shared timeout policy.** `MediaProcessTimeout` provides 60-second probe/validation and 30-minute FFmpeg defaults; `LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS` is available only as a deterministic test/diagnostic override.
+- [x] **Step 3: Wire watchdog lifecycle.** Start each timer after process launch, stop on finish/error/cancel, kill on timeout and preserve stage-specific error text for the UI guidance catalog.
+- [x] **Step 4: Run focused and full verification.** New regressions and the complete CTest matrix pass `41/41`.
+
 ## Plan self-review
 
-- Spec coverage: all nine acceptance criteria are mapped to Tasks 1–10; no requirement is left only in prose.
+- Spec coverage: all nine acceptance criteria are mapped to Tasks 1–11; no requirement is left only in prose.
 - Placeholder scan: no prohibited placeholder token or unspecified handling step was found.
 - Type/contract consistency: the plan keeps existing controller methods as inputs and defines the only new QML signal (`contextRequested(string)`) and drawer property (`contextId`) before later tasks consume them.
 - Scope boundary: the plan does not delete user data, rewrite unrelated generated outputs, or turn the unsigned internal runtime into a public release.

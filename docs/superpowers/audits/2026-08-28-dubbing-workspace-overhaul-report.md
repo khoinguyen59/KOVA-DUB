@@ -30,6 +30,7 @@ Kết luận kỹ thuật: code contract và regression suite hiện đạt mứ
 | CTest toàn bộ | PASS 41/41, 0 fail |
 | QML route/smoke contract | PASS trong CTest và preview harness |
 | QML preview capture | PASS; đã chụp workspace, drawer Results/Settings và Transcribe/OCR ở 1280×720, 1600×900, 1920×1080, 3840×2160 logical |
+| Media subprocess watchdog | PASS; `MediaIngestService`, `MediaToolService` và export `ffprobe` validation đều có single-shot deadline, kill/cleanup và regression test process treo |
 | `git diff --check` | PASS; chỉ có cảnh báo chuyển LF/CRLF của Git trên Windows |
 | Graphify | cập nhật sau source/docs cuối cùng; xem mục 9 |
 | Live Colab GPU | Chưa chạy trong lần recheck |
@@ -106,7 +107,7 @@ Về clipping trong drawer: `DubbingSynthesizeStep` có `ScrollView`, `DubbingNo
 ### 4.6 Threading và audio lifecycle
 
 - UI chỉ gọi invokable/controller trên main thread; hash và artifact WAV validation dùng `QtConcurrent`/`QFutureWatcher`.
-- FFmpeg/FFprobe dùng `QProcess` asynchronous trên event loop; không có `waitForFinished()` trong ingest UI path, do đó không cần tạo worker thread riêng chỉ cho ffprobe.
+- FFmpeg/FFprobe dùng `QProcess` asynchronous trên event loop; không có `waitForFinished()` trong ingest UI path, do đó không cần tạo worker thread riêng chỉ cho ffprobe. Mỗi media process hiện có single-shot watchdog: probe/validation 60 giây, FFmpeg ingest/mux 30 phút; timeout kill process, dọn staging và chỉ phát một terminal error.
 - Controller chặn duplicate run, runner phát một terminal result, và cancel dọn staging output.
 - `AudioPlayer` có generation guard/stop path; `playFile`, decoded playback và PCM playback đều reject path/file/sample invalid trước khi tạo `QAudioSink`.
 - Preview stem chuyển đổi không nhận buffer rỗng; process cũ bị dừng theo session generation để tránh phát chồng.
@@ -129,11 +130,11 @@ Automatic mode có thể bỏ qua review gate theo policy unattended hiện tạ
 
 ## 6. Các vấn đề còn lại và đề xuất fix
 
-### P1 — Chưa có watchdog riêng cho mọi QProcess media
+### Đã xử lý — Watchdog riêng cho mọi QProcess media
 
-`MediaIngestService` đã async và cancel được, nhưng ffprobe/ffmpeg process không có timer deadline riêng; nếu executable treo ngoài dự kiến, UI sẽ chờ tới khi process tự kết thúc. Đây không phải lỗi “thiếu worker thread”, nhưng là hardening còn thiếu.
+`MediaIngestService`, `MediaToolService` và `DubbingExportJob` hiện dùng `MediaProcessTimeout` cùng một cấu hình deadline. `MediaIngestService` áp dụng 60 giây cho probe và 30 phút cho loudness/normalize/analysis; `MediaToolService` áp dụng 30 phút cho mux; `DubbingExportJob` áp dụng 60 giây cho source/export ffprobe validation. Timeout dừng timer, kill process, xóa staging và phát lỗi có cụm “timed out” để `AppErrorCatalog` đưa hướng dẫn sửa lỗi lên UI; log vẫn giữ lỗi kỹ thuật.
 
-Đề xuất: thêm `QTimer` single-shot theo stage (probe ngắn, loudness/encode dài hơn), dừng timer khi `finished/error`, kill process khi timeout, xóa staging và phát error code `media-process-timeout` kèm hướng dẫn retry/repair. Áp dụng tương tự cho validation process trong `DubbingExportJob` và FFmpeg process trong `MediaToolService`. Thêm regression test bằng helper process không thoát.
+Regression coverage: `TestMediaIngestService::mediaProcessTimeoutStopsAndCleansStaging`, `TestMediaToolService::timesOutHungProcessExactlyOnce` và `TestDubbingProject::exportValidationTimeoutStopsWithoutCommit` dùng batch-script không thoát; CTest xác nhận mỗi boundary kết thúc trong deadline, không phát duplicate signal và không commit output.
 
 ### P1 — Chưa có live external E2E trong bộ xác nhận hiện tại
 
@@ -206,4 +207,4 @@ Chỉ đánh dấu release-ready sau khi tất cả điều kiện sau có log/a
 - 1280×720, 1920×1080, 2560×1440 và 3840×2160 không có clipping/collision;
 - raw log và user guidance cùng tồn tại trong một failure report.
 
-Trạng thái hiện tại: code/test/UI contract đã được harden và tài liệu đã đồng bộ; hai việc còn cần cho production sign-off là watchdog subprocess và live full E2E với runtime thật.
+Trạng thái hiện tại: watchdog subprocess đã được harden và có regression test; việc còn cần cho production sign-off là live full E2E với runtime thật. Automatic review policy vẫn là P2 vận hành nên cần quyết định trước khi bật unattended production.

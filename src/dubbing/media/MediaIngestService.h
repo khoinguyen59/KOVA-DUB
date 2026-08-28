@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QFutureWatcher>
 #include <QProcess>
+#include <QTimer>
 #include <QVariantMap>
 
 namespace LAStudio {
@@ -28,6 +29,7 @@ private slots:
     void onHashFinished();
     void onProcessFinished(int exitCode, QProcess::ExitStatus status);
     void onProcessError(QProcess::ProcessError error);
+    void onProcessTimeout();
     void onReadyReadStandardError();
     void onArtifactValidationFinished();
 
@@ -57,6 +59,7 @@ private:
     QString ffprobePath() const;
 
     QProcess m_process;
+    QTimer m_processTimeout;
     QString m_inputPath;
     QString m_hash;
     QString m_workspace;

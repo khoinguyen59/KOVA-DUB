@@ -54,6 +54,7 @@ private slots:
     void audioMixAppliesSidechainDuckingToBackground();
     void exportValidatesMuxedMediaBeforeCommit();
     void exportCommitsOnlyAfterMediaValidation();
+    void exportValidationTimeoutStopsWithoutCommit();
     void commitsMediaExportAtomically();
     void sourceTextEditInvalidatesWordTiming();
     void unchangedTextEditPreservesTranslationMetadata();

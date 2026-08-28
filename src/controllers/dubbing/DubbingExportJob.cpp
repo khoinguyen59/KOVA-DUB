@@ -4,6 +4,7 @@
 #include "dubbing/exporters/DubbingSubtitleService.h"
 #include "dubbing/media/AtomicMediaCommit.h"
 #include "dubbing/media/MediaToolService.h"
+#include "dubbing/media/MediaProcessTimeout.h"
 #include "core/services/MediaRuntimeLocator.h"
 #include "audio/io/WavIO.h"
 
@@ -58,6 +59,7 @@ bool writeTargetSubtitles(const QVariantList &segments, const QString &path)
 DubbingExportJob::DubbingExportJob(QObject *parent)
     : QObject(parent)
 {
+    m_validationTimeout.setSingleShot(true);
     m_renderWatcher = new QFutureWatcher<QVariantMap>(this);
     connect(m_renderWatcher, &QFutureWatcher<QVariantMap>::finished,
             this, &DubbingExportJob::onRenderFinished);
@@ -72,6 +74,8 @@ DubbingExportJob::DubbingExportJob(QObject *parent)
             this, &DubbingExportJob::onValidationFinished);
     connect(&m_validationProcess, &QProcess::errorOccurred,
             this, &DubbingExportJob::onValidationError);
+    connect(&m_validationTimeout, &QTimer::timeout,
+            this, &DubbingExportJob::onValidationTimeout);
 }
 
 DubbingExportJob::~DubbingExportJob()
@@ -230,9 +234,10 @@ void DubbingExportJob::cancel()
     if (!m_running) return;
     if (m_renderCancel) m_renderCancel->storeRelease(true);
     if (m_mediaTools) m_mediaTools->cancel();
+    m_validationTimeout.stop();
+    m_validationStage = ValidationStage::None;
     if (m_validationProcess.state() != QProcess::NotRunning)
         m_validationProcess.kill();
-    m_validationStage = ValidationStage::None;
     m_validationOutput.clear();
     m_validationError.clear();
     QFile::remove(m_renderStagingPath);
@@ -311,6 +316,8 @@ void DubbingExportJob::startMediaValidation(const QString &path, ValidationStage
                                       QStringLiteral("-show_streams"), QStringLiteral("-show_format"),
                                       path});
     m_validationProcess.start();
+    m_validationTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kValidationTimeoutMs));
 }
 
 void DubbingExportJob::onValidationReadyReadStandardOutput()
@@ -331,6 +338,7 @@ void DubbingExportJob::onValidationFinished(int exitCode, QProcess::ExitStatus s
 {
     onValidationReadyReadStandardOutput();
     onValidationReadyReadStandardError();
+    m_validationTimeout.stop();
     if (!m_running || m_validationStage == ValidationStage::None) return;
     QString validationError;
     const ValidationStage stage = m_validationStage;
@@ -379,12 +387,35 @@ void DubbingExportJob::onValidationError(QProcess::ProcessError error)
 {
     if (error != QProcess::FailedToStart || !m_running
         || m_validationStage == ValidationStage::None) return;
+    m_validationTimeout.stop();
     QFile::remove(m_exportStagingPath);
     QFile::remove(m_exportSubtitlePath);
     clearExportPaths();
     m_validationStage = ValidationStage::None;
     m_running = false;
     fail(QStringLiteral("FFprobe could not be started: %1").arg(m_validationProcess.errorString()));
+}
+
+void DubbingExportJob::onValidationTimeout()
+{
+    if (!m_running || m_validationStage == ValidationStage::None
+        || m_validationProcess.state() == QProcess::NotRunning) return;
+    const QString stage = m_validationStage == ValidationStage::Source
+        ? QStringLiteral("source media") : QStringLiteral("exported media");
+    const int timeoutMilliseconds = m_validationTimeout.interval();
+    m_validationTimeout.stop();
+    m_validationStage = ValidationStage::None;
+    m_validationProcess.kill();
+    QFile::remove(m_exportStagingPath);
+    QFile::remove(m_exportSubtitlePath);
+    clearExportPaths();
+    m_sourceMediaPath.clear();
+    m_expectSubtitle = false;
+    m_sourceHasVideo = false;
+    m_sourceDurationMs = 0;
+    m_running = false;
+    fail(QStringLiteral("FFprobe validation timed out during %1 after %2 ms. Check the media runtime and try again.")
+             .arg(stage).arg(timeoutMilliseconds));
 }
 
 bool DubbingExportJob::validateProbeResult(const QByteArray &payload, ValidationStage stage,

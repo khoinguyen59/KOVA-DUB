@@ -1,6 +1,7 @@
 #include "dubbing/media/MediaToolService.h"
 
 #include "core/services/MediaRuntimeLocator.h"
+#include "dubbing/media/MediaProcessTimeout.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -23,12 +24,15 @@ QString escapedSubtitleFilterPath(const QString &path)
 MediaToolService::MediaToolService(QObject *parent)
     : QObject(parent)
 {
+    m_processTimeout.setSingleShot(true);
     connect(&m_process, &QProcess::readyReadStandardError,
             this, &MediaToolService::onReadyReadStandardError);
     connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
             this, &MediaToolService::onFinished);
     connect(&m_process, &QProcess::errorOccurred,
             this, &MediaToolService::onProcessError);
+    connect(&m_processTimeout, &QTimer::timeout,
+            this, &MediaToolService::onProcessTimeout);
 }
 
 QString MediaToolService::executablePath() const
@@ -65,6 +69,7 @@ void MediaToolService::muxVideoWithAudio(const QString &videoPath,
 
     m_outputPath = outputPath;
     m_stderr.clear();
+    m_processTimedOut = false;
     m_process.setProgram(executable);
     m_process.setWorkingDirectory(QFileInfo(executable).absolutePath());
     m_process.setProcessChannelMode(QProcess::SeparateChannels);
@@ -118,10 +123,14 @@ void MediaToolService::muxVideoWithAudio(const QString &videoPath,
     arguments.append(outputPath);
     m_process.setArguments(arguments);
     m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kFfmpegTimeoutMs));
 }
 
 void MediaToolService::cancel()
 {
+    m_processTimeout.stop();
+    m_processTimedOut = false;
     if (m_process.state() != QProcess::NotRunning) m_process.kill();
 }
 
@@ -134,9 +143,16 @@ void MediaToolService::onReadyReadStandardError()
 void MediaToolService::onFinished(int exitCode, QProcess::ExitStatus status)
 {
     if (m_outputPath.isEmpty()) return;
+    m_processTimeout.stop();
+    const bool timedOut = m_processTimedOut;
+    m_processTimedOut = false;
     const bool ok = status == QProcess::NormalExit && exitCode == 0 && QFileInfo(m_outputPath).isFile();
-    const QString error = ok ? QString() : QStringLiteral("FFmpeg export failed: %1")
-        .arg(QString::fromLocal8Bit(m_stderr).trimmed());
+    const QString error = ok ? QString()
+        : timedOut
+            ? QStringLiteral("FFmpeg export timed out after %1 ms. Check the media runtime and try again.")
+                  .arg(m_processTimeout.interval())
+            : QStringLiteral("FFmpeg export failed: %1")
+                  .arg(QString::fromLocal8Bit(m_stderr).trimmed());
     emit progress(ok ? 100 : 0);
     emit finished(ok, m_outputPath, error);
     m_outputPath.clear();
@@ -146,12 +162,21 @@ void MediaToolService::onFinished(int exitCode, QProcess::ExitStatus status)
 void MediaToolService::onProcessError(QProcess::ProcessError error)
 {
     if (error != QProcess::FailedToStart || m_outputPath.isEmpty()) return;
+    m_processTimeout.stop();
+    m_processTimedOut = false;
     const QString outputPath = m_outputPath;
     m_outputPath.clear();
     m_stderr.clear();
     emit progress(0);
     emit finished(false, outputPath,
                   QStringLiteral("FFmpeg could not be started: %1").arg(m_process.errorString()));
+}
+
+void MediaToolService::onProcessTimeout()
+{
+    if (m_outputPath.isEmpty() || m_process.state() == QProcess::NotRunning) return;
+    m_processTimedOut = true;
+    m_process.kill();
 }
 
 } // namespace LAStudio

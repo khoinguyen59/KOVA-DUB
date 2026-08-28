@@ -4311,6 +4311,41 @@ void TestDubbingProject::exportCommitsOnlyAfterMediaValidation()
     QVERIFY(!job.running());
 }
 
+void TestDubbingProject::exportValidationTimeoutStopsWithoutCommit()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const QString source = directory.filePath(QStringLiteral("source.mp4"));
+    const QString audio = directory.filePath(QStringLiteral("dub.wav"));
+    const QString output = directory.filePath(QStringLiteral("timed-out.mp4"));
+    const QString ffprobe = directory.filePath(QStringLiteral("hung-ffprobe.cmd"));
+    const QString ffmpeg = directory.filePath(QStringLiteral("unused-ffmpeg.cmd"));
+    QVERIFY(writeFixtureFile(source, QByteArrayLiteral("video fixture")));
+    const QVector<float> audioSamples(48000, 0.1F);
+    QVERIFY(WavIO::saveFloat(audio, audioSamples.constData(), audioSamples.size(), 48000));
+    QVERIFY(writeFixtureFile(ffprobe, QByteArrayLiteral(
+        "@echo off\r\n"
+        ":loop\r\n"
+        "goto loop\r\n")));
+    QVERIFY(writeFixtureFile(ffmpeg, QByteArrayLiteral("@echo off\r\nexit /b 0\r\n")));
+
+    const ScopedEnvironmentValue timeoutEnvironment("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS", QByteArrayLiteral("100"));
+    const ScopedEnvironmentValue ffprobeEnvironment("LASTUDIO_FFPROBE", ffprobe.toUtf8());
+    const ScopedEnvironmentValue ffmpegEnvironment("LASTUDIO_FFMPEG", ffmpeg.toUtf8());
+    DubbingExportJob job;
+    QSignalSpy exported(&job, &DubbingExportJob::exported);
+    QSignalSpy failed(&job, &DubbingExportJob::failed);
+
+    QVERIFY(job.startExport(source, audio, output));
+    QTRY_COMPARE_WITH_TIMEOUT(failed.count(), 1, 5000);
+    QCOMPARE(exported.count(), 0);
+    QVERIFY(failed.constFirst().at(0).toString().contains(QStringLiteral("timed out"), Qt::CaseInsensitive));
+    QVERIFY(!QFileInfo::exists(output));
+    QVERIFY(!job.running());
+    QTest::qWait(250);
+    QCOMPARE(failed.count(), 1);
+}
+
 void TestDubbingProject::commitsMediaExportAtomically()
 {
     QTemporaryDir dir;

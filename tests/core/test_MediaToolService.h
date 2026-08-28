@@ -12,6 +12,7 @@ private slots:
     void rejectsMissingMediaInputsExactlyOnce();
     void passesConfiguredFontDirectoryToBurnInFilter();
     void rendersLineSpacedAssWithStagedFfmpeg();
+    void timesOutHungProcessExactlyOnce();
 };
 
 } // namespace LAStudio

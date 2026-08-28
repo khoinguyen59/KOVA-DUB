@@ -13,6 +13,17 @@
 
 namespace LAStudio {
 
+namespace {
+
+bool writeFixtureFile(const QString &path, const QByteArray &contents)
+{
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly | QIODevice::Text)
+        && file.write(contents) == contents.size();
+}
+
+} // namespace
+
 void TestMediaToolService::rejectsMissingMediaInputsExactlyOnce()
 {
     MediaToolService service;
@@ -140,6 +151,47 @@ void TestMediaToolService::rendersLineSpacedAssWithStagedFfmpeg()
              qPrintable(finished.constFirst().at(2).toString()));
     QVERIFY(QFileInfo(outputPath).isFile());
     QVERIFY(QFileInfo(outputPath).size() > 0);
+}
+
+void TestMediaToolService::timesOutHungProcessExactlyOnce()
+{
+    QTemporaryDir temporaryDirectory;
+    QVERIFY(temporaryDirectory.isValid());
+    const QString videoPath = temporaryDirectory.filePath(QStringLiteral("source.mp4"));
+    const QString audioPath = temporaryDirectory.filePath(QStringLiteral("dubbed.wav"));
+    const QString outputPath = temporaryDirectory.filePath(QStringLiteral("timed-out.mp4"));
+    const QString ffmpegPath = temporaryDirectory.filePath(QStringLiteral("hung-ffmpeg.cmd"));
+    for (const QString &path : {videoPath, audioPath}) {
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write("fixture") > 0);
+    }
+    QVERIFY(writeFixtureFile(ffmpegPath, QByteArrayLiteral(
+        "@echo off\r\n"
+        ":loop\r\n"
+        "goto loop\r\n")));
+
+    const QByteArray previousTimeout = qgetenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
+    const bool hadTimeout = qEnvironmentVariableIsSet("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
+    qputenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS", QByteArrayLiteral("100"));
+    const QByteArray previousFfmpeg = qgetenv("LASTUDIO_FFMPEG");
+    const bool hadFfmpeg = qEnvironmentVariableIsSet("LASTUDIO_FFMPEG");
+    qputenv("LASTUDIO_FFMPEG", ffmpegPath.toUtf8());
+
+    MediaToolService service;
+    QSignalSpy finished(&service, &MediaToolService::finished);
+    service.muxVideoWithAudio(videoPath, audioPath, QString(), outputPath);
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+    QCOMPARE(finished.constFirst().at(0).toBool(), false);
+    QVERIFY(finished.constFirst().at(2).toString().contains(QStringLiteral("timed out"), Qt::CaseInsensitive));
+    QVERIFY(!QFileInfo::exists(outputPath));
+    QTest::qWait(250);
+    QCOMPARE(finished.count(), 1);
+
+    if (hadFfmpeg) qputenv("LASTUDIO_FFMPEG", previousFfmpeg);
+    else qunsetenv("LASTUDIO_FFMPEG");
+    if (hadTimeout) qputenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS", previousTimeout);
+    else qunsetenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
 }
 
 } // namespace LAStudio

@@ -3,6 +3,7 @@
 #include "core/services/MediaRuntimeLocator.h"
 #include "core/storage/PathUtils.h"
 #include "dubbing/media/AtomicMediaCommit.h"
+#include "dubbing/media/MediaProcessTimeout.h"
 #include "audio/io/WavIO.h"
 
 #include <QCryptographicHash>
@@ -32,6 +33,7 @@ bool readableAudioArtifact(const QString &path)
 MediaIngestService::MediaIngestService(QObject *parent)
     : QObject(parent)
 {
+    m_processTimeout.setSingleShot(true);
     connect(&m_hashWatcher, &QFutureWatcher<HashResult>::finished,
             this, &MediaIngestService::onHashFinished);
     connect(&m_artifactWatcher, &QFutureWatcher<bool>::finished,
@@ -45,6 +47,8 @@ MediaIngestService::MediaIngestService(QObject *parent)
     connect(&m_process, &QProcess::readyReadStandardOutput, this, [this]() {
         if (m_stage == Stage::Probe) m_probeOutput += m_process.readAllStandardOutput();
     });
+    connect(&m_processTimeout, &QTimer::timeout,
+            this, &MediaIngestService::onProcessTimeout);
 }
 
 QString MediaIngestService::ffmpegPath() const
@@ -137,6 +141,8 @@ void MediaIngestService::startProbe()
                             QStringLiteral("-show_format"), QStringLiteral("-show_streams"), m_inputPath});
     m_process.setProcessChannelMode(QProcess::SeparateChannels);
     m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kProbeTimeoutMs));
 }
 
 void MediaIngestService::startLoudnessMeasurement()
@@ -152,6 +158,8 @@ void MediaIngestService::startLoudnessMeasurement()
                             QStringLiteral("-f"), QStringLiteral("null"),
                             QStringLiteral("NUL")});
     m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kFfmpegTimeoutMs));
 }
 
 void MediaIngestService::startMaster()
@@ -173,6 +181,8 @@ void MediaIngestService::startMaster()
                             QStringLiteral("-af"), filter, QStringLiteral("-c:a"), QStringLiteral("pcm_f32le"),
                             m_masterStagingPath});
     m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kFfmpegTimeoutMs));
 }
 
 void MediaIngestService::startAnalysis()
@@ -185,11 +195,14 @@ void MediaIngestService::startAnalysis()
                             QStringLiteral("-vn"), QStringLiteral("-ac"), QStringLiteral("1"), QStringLiteral("-ar"), QStringLiteral("16000"),
                             QStringLiteral("-c:a"), QStringLiteral("pcm_s16le"), m_analysisStagingPath});
     m_process.start();
+    m_processTimeout.start(MediaProcessTimeout::configured(
+        MediaProcessTimeout::kFfmpegTimeoutMs));
 }
 
 void MediaIngestService::onProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
     if (m_terminal || m_stage == Stage::None) return;
+    m_processTimeout.stop();
     const bool ok = status == QProcess::NormalExit && exitCode == 0;
     if (!ok) {
         fail(QStringLiteral("Media import failed during %1: %2")
@@ -388,8 +401,26 @@ void MediaIngestService::finishAnalysis()
 void MediaIngestService::onProcessError(QProcess::ProcessError error)
 {
     if (m_terminal || m_stage == Stage::None || error == QProcess::UnknownError) return;
+    m_processTimeout.stop();
     const QString tool = m_stage == Stage::Probe ? QStringLiteral("FFprobe") : QStringLiteral("FFmpeg");
     fail(QStringLiteral("Could not run %1: %2").arg(tool, m_process.errorString()));
+}
+
+void MediaIngestService::onProcessTimeout()
+{
+    if (m_terminal || m_stage == Stage::None
+        || m_process.state() == QProcess::NotRunning) return;
+    const QString stage = m_stage == Stage::Probe
+        ? QStringLiteral("probe")
+        : m_stage == Stage::LoudnessMeasurement
+            ? QStringLiteral("EBU R128 loudness measurement")
+            : m_stage == Stage::Master
+                ? QStringLiteral("audio normalization")
+                : QStringLiteral("analysis audio generation");
+    const int timeoutMilliseconds = m_processTimeout.interval();
+    m_processTimeout.stop();
+    fail(QStringLiteral("Media import timed out during %1 after %2 ms. Check the media runtime and try again.")
+             .arg(stage).arg(timeoutMilliseconds));
 }
 
 void MediaIngestService::onReadyReadStandardError()
@@ -402,6 +433,7 @@ void MediaIngestService::fail(const QString &error)
 {
     if (m_terminal) return;
     m_terminal = true;
+    m_processTimeout.stop();
     if (m_process.state() != QProcess::NotRunning) m_process.kill();
     QFile::remove(m_masterStagingPath);
     QFile::remove(m_analysisStagingPath);
@@ -413,6 +445,7 @@ void MediaIngestService::fail(const QString &error)
 void MediaIngestService::cancel()
 {
     m_terminal = true;
+    m_processTimeout.stop();
     m_hashWatcher.cancel();
     m_artifactWatcher.cancel();
     if (m_process.state() != QProcess::NotRunning) m_process.kill();

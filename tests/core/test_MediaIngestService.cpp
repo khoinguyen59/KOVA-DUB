@@ -23,6 +23,13 @@
 namespace LAStudio {
 namespace {
 
+bool writeFixtureFile(const QString &path, const QByteArray &contents)
+{
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly | QIODevice::Text)
+        && file.write(contents) == contents.size();
+}
+
 class DirectMediaServer final : public QObject
 {
 public:
@@ -1020,6 +1027,50 @@ void TestMediaIngestService::ingestUsesTwoPassEbuR128AndValidatedCache()
     QVERIFY(source.contains(QStringLiteral("normalizationMethod")));
     QVERIFY(source.contains(QStringLiteral("ebur128-r128-2pass")));
     QVERIFY(source.contains(QStringLiteral("startLoudnessMeasurement()")));
+}
+
+void TestMediaIngestService::mediaProcessTimeoutStopsAndCleansStaging()
+{
+    QTemporaryDir temporaryDirectory;
+    QVERIFY(temporaryDirectory.isValid());
+    const QString inputPath = temporaryDirectory.filePath(
+        QStringLiteral("hung-ingest-%1.mp4").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+    const QString ffprobePath = temporaryDirectory.filePath(QStringLiteral("hung-ffprobe.cmd"));
+    const QString ffmpegPath = temporaryDirectory.filePath(QStringLiteral("hung-ffmpeg.cmd"));
+    QVERIFY(writeFixtureFile(inputPath, QByteArrayLiteral("media fixture")));
+    const QByteArray hungScript = QByteArrayLiteral(
+        "@echo off\r\n"
+        ":loop\r\n"
+        "goto loop\r\n");
+    QVERIFY(writeFixtureFile(ffprobePath, hungScript));
+    QVERIFY(writeFixtureFile(ffmpegPath, hungScript));
+
+    const QByteArray previousTimeout = qgetenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
+    const bool hadTimeout = qEnvironmentVariableIsSet("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
+    qputenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS", QByteArrayLiteral("100"));
+    const QByteArray previousFfmpeg = qgetenv("LASTUDIO_FFMPEG");
+    const bool hadFfmpeg = qEnvironmentVariableIsSet("LASTUDIO_FFMPEG");
+    qputenv("LASTUDIO_FFMPEG", ffmpegPath.toUtf8());
+    const QByteArray previousFfprobe = qgetenv("LASTUDIO_FFPROBE");
+    const bool hadFfprobe = qEnvironmentVariableIsSet("LASTUDIO_FFPROBE");
+    qputenv("LASTUDIO_FFPROBE", ffprobePath.toUtf8());
+
+    MediaIngestService service;
+    QSignalSpy finished(&service, &MediaIngestService::finished);
+    service.ingest(inputPath);
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+    QCOMPARE(finished.constFirst().at(0).toBool(), false);
+    QVERIFY(finished.constFirst().at(2).toString().contains(QStringLiteral("timed out"), Qt::CaseInsensitive));
+    QVERIFY(finished.constFirst().at(1).toMap().isEmpty());
+    QTest::qWait(250);
+    QCOMPARE(finished.count(), 1);
+
+    if (hadFfprobe) qputenv("LASTUDIO_FFPROBE", previousFfprobe);
+    else qunsetenv("LASTUDIO_FFPROBE");
+    if (hadFfmpeg) qputenv("LASTUDIO_FFMPEG", previousFfmpeg);
+    else qunsetenv("LASTUDIO_FFMPEG");
+    if (hadTimeout) qputenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS", previousTimeout);
+    else qunsetenv("LASTUDIO_MEDIA_PROCESS_TIMEOUT_MS");
 }
 
 void TestMediaIngestService::downloadRouteAndDubbingLinkControlAreWired()

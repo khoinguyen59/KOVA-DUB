@@ -4,6 +4,7 @@
 #include <QFutureWatcher>
 #include <QAtomicInteger>
 #include <QProcess>
+#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 #include <memory>
@@ -40,6 +41,7 @@ private slots:
     void onValidationReadyReadStandardError();
     void onValidationFinished(int exitCode, QProcess::ExitStatus status);
     void onValidationError(QProcess::ProcessError error);
+    void onValidationTimeout();
 
 private:
     enum class ValidationStage { None, Source, Export };
@@ -67,6 +69,7 @@ private:
     std::shared_ptr<QAtomicInteger<bool>> m_renderCancel;
     MediaToolService *m_mediaTools = nullptr;
     QProcess m_validationProcess;
+    QTimer m_validationTimeout;
     QByteArray m_validationOutput;
     QByteArray m_validationError;
     ValidationStage m_validationStage = ValidationStage::None;
