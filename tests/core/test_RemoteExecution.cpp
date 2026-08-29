@@ -1460,8 +1460,10 @@ void TestRemoteExecution::colabNotebooksAdvertiseCapabilityContractVersion()
         for (const QJsonValue &workerTemplate : laStudioMetadata
                                                     .value(QStringLiteral("worker_templates"))
                                                     .toArray()) {
-            QFile worker(sourceRoot.filePath(QStringLiteral("notebooks/")
-                                              + workerTemplate.toString()));
+            QString workerPath = workerTemplate.toString();
+            if (!workerPath.startsWith(QStringLiteral("notebooks/")))
+                workerPath.prepend(QStringLiteral("notebooks/"));
+            QFile worker(sourceRoot.filePath(workerPath));
             QVERIFY2(worker.open(QIODevice::ReadOnly), qPrintable(worker.fileName()));
             source += '\n' + worker.readAll();
         }

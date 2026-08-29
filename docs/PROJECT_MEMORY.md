@@ -1,6 +1,28 @@
 # Tri nho du an LA Studio
 
-## 2026-08-29 - Colab worker pin integrity
+## 2026-08-29 - Self-contained Spleeter Colab worker integrity
+
+- Model provenance and application-code provenance are separate. The model is
+  `k2-fsa/sherpa-onnx-spleeter-2stems-fp16`; the worker/launcher belong to LA
+  Studio and must be embedded into the notebook from local templates.
+- `scripts/generate_spleeter_safe_colab_notebook.py` owns the canonical
+  Spleeter notebook and embeds both files from `notebooks/workers/`, with
+  normalized SHA-256 values checked in the notebook before files are written.
+- `scripts/generate_alignment_separation_colab_notebooks.py` delegates its
+  Spleeter entry to the safe generator, preventing a duplicate generator from
+  restoring the old remote-fetch design.
+- `scripts/verify_colab_worker_pins.py` is an offline source-parity gate. It
+  rejects personal GitHub worker URLs and obsolete `WORKER_REPOSITORY`/
+  `WORKER_COMMIT` markers, and still verifies the official model release URL.
+- Run `python scripts/test_colab_worker_pins.py` before commit and
+  `python scripts/verify_colab_worker_pins.py` before push/build. Regenerate
+  after every worker change; never edit the generated notebook manually.
+- Latest source-only verification: embedded tests **5/5**, local bundle
+  verification **2/2**, generated notebooks **32/32**, full prebuild gate
+  **10/10**, CTest **41/41**, exact bindings **31/31**, and remote feature
+  surface **8/8**. No EXE build is implied by this notebook-source fix.
+
+## Historical note - previous Colab worker pin integrity
 
 - Spleeter worker notebooks must use one immutable repository/commit pair;
   current source of truth is `khoinguyen59/KOVA-DUB` at commit

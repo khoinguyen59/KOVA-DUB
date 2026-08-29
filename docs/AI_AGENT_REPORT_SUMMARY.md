@@ -1,4 +1,24 @@
-# 2026-08-29 - Immutable Colab worker pin gate
+# 2026-08-29 - Self-contained Spleeter Colab worker gate
+
+- The public `k2-fsa/sherpa-onnx-spleeter-2stems-fp16` repository supplies the
+  model artifact only. LA Studio's worker and launcher are now embedded from
+  `notebooks/workers/` into the generated notebook, so Colab no longer depends
+  on `khoinguyen59/KOVA-DUB` or any project GitHub commit at runtime.
+- The generated notebook verifies embedded SHA-256 payloads before writing
+  `/content/la_studio_separation_worker.py` and
+  `/content/la_studio_separation_launcher.py`. The duplicate alignment/
+  separation generator delegates Spleeter generation to the safe generator.
+- `test_colab_worker_pins.py` and `verify_colab_worker_pins.py` now perform
+  deterministic offline source-parity checks. They are wired into hooks,
+  prebuild, CI, and Windows release.
+
+Verification: embedded worker tests **5/5 PASS**, local embedded bundle
+verification **2/2 PASS**, generated notebooks **32/32 PASS**, full prebuild
+gate **10/10 PASS**, CTest **41/41 PASS**, exact bindings **31/31 PASS**, and
+remote feature surface **8/8 PASS**. No EXE was packaged in this source-only
+fix.
+
+## Historical note — previous immutable pin gate
 
 - Fixed the Spleeter notebook's stale 404 pin after the repository migration:
   it now uses immutable commit `3f194b9155e7c2fcdd8eed4ac5fa980e6084417e`,

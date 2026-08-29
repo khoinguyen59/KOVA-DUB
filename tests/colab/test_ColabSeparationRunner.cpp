@@ -386,20 +386,24 @@ void TestColabSeparationRunner::separationNotebookMatchesDirectColabContract()
             const QJsonArray lines = cellValue.toObject().value(QStringLiteral("source")).toArray();
             for (const QJsonValue &line : lines) source += line.toString();
         }
-        for (const QJsonValue &workerTemplate : metadata.value(QStringLiteral("worker_templates")).toArray()) {
-            QFile worker(resolveNotebookFile(QDir(QStringLiteral(LASTUDIO_SOURCE_DIR)), workerTemplate.toString()));
-            QVERIFY2(worker.open(QIODevice::ReadOnly), qPrintable(worker.fileName()));
-            source += QString::fromUtf8(worker.readAll());
+        if (expected.model != QStringLiteral("sherpa-onnx-spleeter-2stems-fp16")) {
+            for (const QJsonValue &workerTemplate : metadata.value(QStringLiteral("worker_templates")).toArray()) {
+                QFile worker(resolveNotebookFile(QDir(QStringLiteral(LASTUDIO_SOURCE_DIR)), workerTemplate.toString()));
+                QVERIFY2(worker.open(QIODevice::ReadOnly), qPrintable(worker.fileName()));
+                source += QString::fromUtf8(worker.readAll());
+            }
         }
         QVERIFY2(source.contains(expected.adapterNeedle), qPrintable(expected.notebook));
         QVERIFY2(source.contains(expected.artifactUrl), qPrintable(expected.notebook));
         QVERIFY(source.contains(QStringLiteral("MODEL_ID = \"%1\"").arg(expected.model)));
         if (expected.model == QStringLiteral("sherpa-onnx-spleeter-2stems-fp16")) {
-            const QRegularExpression pinnedWorkerCommit(
-                QStringLiteral(R"(WORKER_COMMIT = "[0-9a-f]{40}")"));
-            QVERIFY2(pinnedWorkerCommit.match(source).hasMatch(),
-                     "The Spleeter notebook must download audited worker files from an immutable commit.");
-            QVERIFY(!source.contains(QStringLiteral("WORKER_COMMIT = \"main\"")));
+            QCOMPARE(metadata.value(QStringLiteral("worker_source")).toString(),
+                     QStringLiteral("embedded-local"));
+            QVERIFY(source.contains(QStringLiteral("EMBEDDED_WORKERS")));
+            QVERIFY(source.contains(QStringLiteral("Path('/content', destination).write_text")));
+            QVERIFY(!source.contains(QStringLiteral("WORKER_REPOSITORY")));
+            QVERIFY(!source.contains(QStringLiteral("WORKER_COMMIT")));
+            QVERIFY(!source.contains(QStringLiteral("raw.githubusercontent.com/khoinguyen59/KOVA-DUB")));
             QVERIFY(source.contains(QStringLiteral("CUDAExecutionProvider")));
         } else {
             QVERIFY(source.contains(QStringLiteral("provider=\"cuda\"")));
@@ -423,7 +427,8 @@ void TestColabSeparationRunner::separationNotebookMatchesDirectColabContract()
                      "The launcher must diagnose the public quick-tunnel endpoint before reporting its URL.");
             QVERIFY2(source.contains(QStringLiteral("Verified the public Cloudflare tunnel against this exact CUDA worker.")),
                      "The launcher must report a successful Colab-side public health verification when it occurs.");
-            QVERIFY2(source.contains(QStringLiteral("The desktop's Check Colab action is")),
+            QVERIFY2(source.contains(QStringLiteral("The desktop's Check Colab action is"))
+                         || source.contains(QStringLiteral("The desktop\\'s Check Colab action is")),
                      "A Colab DNS failure must be handed to the desktop's authenticated endpoint verifier, not treated as a CUDA-worker failure.");
             QVERIFY2(source.contains(QStringLiteral("last_tunnel_error.startswith(\"public /health is not reachable:\")")),
                      "Only a transient Colab-side public reachability failure may hand off a Quick Tunnel candidate.");

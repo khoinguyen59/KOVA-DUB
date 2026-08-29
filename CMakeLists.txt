@@ -1084,10 +1084,9 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/notebooks/"
     FILES_MATCHING PATTERN "*.ipynb"
 )
 
-# Notebooks that load a reviewed worker template by immutable Git revision
-# must still carry that template in the portable support bundle. This keeps
-# the shipped notebook/documentation auditable even though a Colab session
-# downloads the exact pinned revision at execution time.
+# Notebooks that embed a reviewed worker template must still carry the source
+# template in the portable support bundle. This keeps the shipped notebook and
+# its provenance auditable without requiring a Colab session to fetch app code.
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/notebooks/workers/"
     DESTINATION "docs/colab-notebooks/workers"
     FILES_MATCHING PATTERN "*.py"

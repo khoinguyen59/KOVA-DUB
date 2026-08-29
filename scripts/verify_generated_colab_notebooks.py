@@ -176,11 +176,15 @@ def main() -> int:
                             f"STT worker still overwrites cloudflared on every rerun: {generated.name}"
                         )
                 elif model == "sherpa-onnx-spleeter-2stems-fp16":
-                    if not re.search(r'WORKER_COMMIT = "[0-9a-f]{40}"', worker_source) \
-                            or 'WORKER_COMMIT = "main"' in worker_source \
-                            or "la_studio_separation_launcher.py" not in worker_source:
+                    if metadata.get("worker_source") != "embedded-local" \
+                            or "EMBEDDED_WORKERS" not in worker_source \
+                            or "Path('/content', destination).write_text" not in worker_source \
+                            or "la_studio_separation_launcher.py" not in worker_source \
+                            or "WORKER_REPOSITORY" in worker_source \
+                            or "WORKER_COMMIT" in worker_source \
+                            or "raw.githubusercontent.com/khoinguyen59/KOVA-DUB" in worker_source:
                         mismatches.append(
-                            f"Spleeter notebook has no immutable, checked worker launcher: {generated.name}"
+                            f"Spleeter notebook is not self-contained with an embedded worker launcher: {generated.name}"
                         )
                     launcher = ROOT / "notebooks" / "workers" / "LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py"
                     try:

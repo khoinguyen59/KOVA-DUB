@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Generate the hardened, pinned Spleeter Direct-Colab notebook.
+"""Generate the self-contained Spleeter Direct-Colab notebook.
 
-The Spleeter CUDA worker is intentionally fetched from one immutable Git
-revision and checked by SHA-256.  Keeping that small notebook in a generator
-prevents the checked-in notebook from silently drifting away from its lock.
+The official Spleeter model remains downloaded from the upstream k2-fsa
+release.  LA Studio's worker and launcher are application code, so they are
+embedded from the checked-in local templates instead of being fetched from a
+personal GitHub repository at notebook runtime.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from textwrap import dedent
@@ -23,20 +25,31 @@ ARTIFACT_URL = (
     "source-separation-models/sherpa-onnx-spleeter-2stems-fp16.tar.bz2"
 )
 
-# This lock is updated only after the referenced worker templates have been
-# committed.  The notebook must never download a moving branch such as main.
-WORKER_REPOSITORY = "khoinguyen59/KOVA-DUB"
-WORKER_COMMIT = "3f194b9155e7c2fcdd8eed4ac5fa980e6084417e"
+# These are application-owned sources.  The generated notebook carries their
+# exact normalized text, so a Colab runtime has no dependency on this project's
+# GitHub repository or on a moving branch/commit.
 WORKERS = {
-    "la_studio_separation_worker.py": (
-        "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py",
-        "307861926e13ff9849b04594074b573b1da063b1791c56dc2f502ab64991c5af",
+    "la_studio_separation_worker.py": Path(
+        "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py"
     ),
-    "la_studio_separation_launcher.py": (
-        "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py",
-        "9ca893f8e06826bb875e68a7e364cdb43be515882b8438f01eb71465874375d1",
+    "la_studio_separation_launcher.py": Path(
+        "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py"
     ),
 }
+
+
+def normalize_text_bytes(payload: bytes) -> bytes:
+    return payload.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
+def worker_payloads() -> dict[str, tuple[str, str]]:
+    payloads: dict[str, tuple[str, str]] = {}
+    for destination, relative_path in WORKERS.items():
+        path = ROOT / relative_path
+        source = normalize_text_bytes(path.read_bytes()).decode("utf-8")
+        digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
+        payloads[destination] = (digest, source)
+    return payloads
 
 
 def source_lines(source: str) -> list[str]:
@@ -44,31 +57,24 @@ def source_lines(source: str) -> list[str]:
 
 
 def make_notebook() -> dict:
-    worker_rows = "\n".join(
-        f'    "{destination}": (\n'
-        f'        "{relative_path}",\n'
-        f'        "{checksum}"),'
-        for destination, (relative_path, checksum) in WORKERS.items()
+    embedded = worker_payloads()
+    worker_rows = ",\n".join(
+        f"    {destination!r}: ({checksum!r}, {source!r})"
+        for destination, (checksum, source) in embedded.items()
     )
-    worker_download = "\n".join((
+    worker_embedding = "\n".join((
         "from hashlib import sha256",
         "from pathlib import Path",
-        "from urllib.request import urlopen",
         "",
-        f'MODEL_ID = "{MODEL_ID}"',
-        f'WORKER_REPOSITORY = "{WORKER_REPOSITORY}"',
-        f'WORKER_COMMIT = "{WORKER_COMMIT}"  # audited exact worker revision',
-        "WORKERS = {",
+        "EMBEDDED_WORKERS = {",
         worker_rows,
         "}",
-        "for destination, (relative_path, expected_sha256) in WORKERS.items():",
-        '    url = f"https://raw.githubusercontent.com/{WORKER_REPOSITORY}/{WORKER_COMMIT}/{relative_path}"',
-        "    payload = urlopen(url, timeout=60).read()",
-        "    actual_sha256 = sha256(payload).hexdigest()",
+        "for destination, (expected_sha256, source) in EMBEDDED_WORKERS.items():",
+        "    actual_sha256 = sha256(source.encode('utf-8')).hexdigest()",
         "    if actual_sha256 != expected_sha256:",
-        '        raise RuntimeError(f"Worker integrity check failed for {relative_path}: {actual_sha256}")',
-        "    Path('/content', destination).write_bytes(payload)",
-        "print('Downloaded verified exact-model CUDA worker templates.')",
+        "        raise RuntimeError(f'Embedded worker integrity check failed for {destination}: {actual_sha256}')",
+        "    Path('/content', destination).write_text(source, encoding='utf-8')",
+        "print('Embedded verified exact-model CUDA worker and launcher templates.')",
     ))
     return {
         "cells": [
@@ -79,7 +85,7 @@ def make_notebook() -> dict:
                     f'''
                     # LA Studio voice-isolation - Spleeter 2-stem FP16
 
-                    This notebook runs exactly `{MODEL_ID}` from the declared k2-fsa artifact on the temporary **Colab GPU worker**. It never uses API Gateway or a local LA Studio model.
+                    This notebook runs exactly `{MODEL_ID}` from the declared k2-fsa artifact on the temporary **Colab GPU worker**. The LA Studio worker and launcher are embedded in this notebook; no LA Studio GitHub repository or repository token is required at runtime.
 
                     The worker performs a CUDA startup probe before it prints a URL. It also sends long audio as bounded, overlapping segments, so the Spleeter FP16 CUDA convolution plan remains within the verified shape.
 
@@ -114,7 +120,7 @@ def make_notebook() -> dict:
                 "execution_count": None,
                 "metadata": {},
                 "outputs": [],
-                "source": source_lines(worker_download),
+                "source": source_lines(worker_embedding),
             },
             {
                 "cell_type": "code",
@@ -137,10 +143,16 @@ def make_notebook() -> dict:
                 "device": "cuda",
                 "cpu_fallback": False,
                 "worker_contract": "spleeter-cuda-safe-20260816.1",
+                "worker_source": "embedded-local",
+                # Keep project-relative provenance paths explicit; runtime
+                # still uses only the embedded payload.
                 "worker_templates": [
-                    "workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py",
-                    "workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py",
+                    "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py",
+                    "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_LAUNCHER.py",
                 ],
+                "embedded_worker_sha256": {
+                    destination: checksum for destination, (checksum, _) in embedded.items()
+                },
                 "artifact_url": ARTIFACT_URL,
             },
         },
@@ -152,7 +164,10 @@ def make_notebook() -> dict:
 def main() -> None:
     NOTEBOOKS.mkdir(parents=True, exist_ok=True)
     target = NOTEBOOKS / NOTEBOOK
-    target.write_text(json.dumps(make_notebook(), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    target.write_text(
+        json.dumps(make_notebook(), indent=1, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     print(target.relative_to(ROOT))
 
 

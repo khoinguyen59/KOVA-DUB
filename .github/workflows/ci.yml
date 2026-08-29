@@ -84,7 +84,7 @@ jobs:
         shell: pwsh
         run: .\scripts\verify_remote_feature_surface.ps1
 
-      - name: Verify immutable Colab worker pins
+      - name: Verify embedded Colab worker payloads
         shell: pwsh
         run: |
           python scripts/test_colab_worker_pins.py

@@ -203,11 +203,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Generated Colab notebook contract failed." }
     }
 
-    Invoke-GateStep -Name "Pinned Colab worker payload integrity" -Action {
+    Invoke-GateStep -Name "Embedded Colab worker payload integrity" -Action {
         & $python.command @($python.arguments) (Join-Path $PSScriptRoot "test_colab_worker_pins.py")
-        if ($LASTEXITCODE -ne 0) { throw "Colab worker pin unit tests failed." }
+        if ($LASTEXITCODE -ne 0) { throw "Embedded Colab worker unit tests failed." }
         & $python.command @($python.arguments) (Join-Path $PSScriptRoot "verify_colab_worker_pins.py")
-        if ($LASTEXITCODE -ne 0) { throw "Pinned Colab worker payload integrity failed." }
+        if ($LASTEXITCODE -ne 0) { throw "Embedded Colab worker payload integrity failed." }
     }
 
     Invoke-GateStep -Name "Unified Dubbing Colab contract" -Action {

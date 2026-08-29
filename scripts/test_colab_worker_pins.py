@@ -1,96 +1,89 @@
 #!/usr/bin/env python3
-"""Unit tests for the immutable Colab worker pin validator."""
+"""Regression tests for the self-contained Spleeter Colab worker bundle."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from urllib.error import HTTPError
 
 from verify_colab_worker_pins import (
     GENERATOR,
     NOTEBOOK,
-    WorkerPin,
-    load_pins,
-    notebook_matches_generator,
-    validate_pin,
+    embedded_sources_from_notebook,
+    load_workers,
     local_sha256,
+    notebook_matches_generator,
 )
 
 
-class ColabWorkerPinTests(unittest.TestCase):
-    def test_project_generator_declares_an_immutable_repository_and_workers(self) -> None:
-        pins = load_pins(GENERATOR)
+ROOT = GENERATOR.parents[1]
 
-        self.assertEqual("khoinguyen59/KOVA-DUB", pins[0].repository)
-        self.assertEqual(2, len(pins))
-        self.assertTrue(all(len(pin.commit) == 40 for pin in pins))
 
-    def test_checked_in_spleeter_notebook_matches_its_generator_pin(self) -> None:
-        pins = load_pins(GENERATOR)
+class ColabWorkerBundleTests(unittest.TestCase):
+    def test_generator_declares_local_worker_sources_without_personal_repository(self) -> None:
+        workers = load_workers(GENERATOR)
+        generator_source = GENERATOR.read_text(encoding="utf-8")
 
-        self.assertEqual([], notebook_matches_generator(NOTEBOOK, pins))
-
-    def test_rejects_a_missing_remote_commit(self) -> None:
-        pin = WorkerPin(
-            destination="worker.py",
-            repository="owner/repo",
-            commit="a" * 40,
-            relative_path="workers/worker.py",
-            expected_sha256="0" * 64,
-        )
-
-        def fetcher(url: str, timeout: float) -> bytes:
-            raise HTTPError(url, 404, "Not Found", {}, None)
-
-        result = validate_pin(pin, fetcher=fetcher, sleep=lambda _: None)
-
-        self.assertFalse(result.ok)
-        self.assertIn("HTTP 404", result.message)
-
-    def test_rejects_a_remote_sha256_mismatch(self) -> None:
-        payload = b"worker payload"
-        pin = WorkerPin(
-            destination="worker.py",
-            repository="owner/repo",
-            commit="b" * 40,
-            relative_path="workers/worker.py",
-            expected_sha256=hashlib.sha256(b"different payload").hexdigest(),
-        )
-
-        result = validate_pin(
-            pin,
-            fetcher=lambda url, timeout: payload,
-            sleep=lambda _: None,
-        )
-
-        self.assertFalse(result.ok)
-        self.assertIn("SHA-256 mismatch", result.message)
-
-    def test_accepts_an_exact_remote_payload(self) -> None:
-        payload = b"worker payload"
-        pin = WorkerPin(
-            destination="worker.py",
-            repository="owner/repo",
-            commit="c" * 40,
-            relative_path="workers/worker.py",
-            expected_sha256=hashlib.sha256(payload).hexdigest(),
-        )
-
-        result = validate_pin(
-            pin,
-            fetcher=lambda url, timeout: payload,
-            sleep=lambda _: None,
-        )
-
-        self.assertTrue(result.ok)
         self.assertEqual(
-            result.url,
-            "https://raw.githubusercontent.com/owner/repo/"
-            "cccccccccccccccccccccccccccccccccccccccc/workers/worker.py",
+            {
+                "la_studio_separation_worker.py",
+                "la_studio_separation_launcher.py",
+            },
+            {worker.destination for worker in workers},
         )
+        self.assertTrue(all(worker.relative_path.startswith("notebooks/workers/") for worker in workers))
+        self.assertNotIn("WORKER_REPOSITORY", generator_source)
+        self.assertNotIn("WORKER_COMMIT", generator_source)
+
+    def test_checked_in_notebook_contains_the_exact_local_worker_bundle(self) -> None:
+        workers = load_workers(GENERATOR)
+
+        self.assertEqual([], notebook_matches_generator(NOTEBOOK, workers))
+        embedded = embedded_sources_from_notebook(NOTEBOOK)
+        self.assertEqual({worker.destination for worker in workers}, set(embedded))
+        for worker in workers:
+            source = (ROOT / worker.relative_path).read_text(encoding="utf-8")
+            self.assertEqual(source.replace("\r\n", "\n"), embedded[worker.destination][1])
+
+    def test_rejects_a_notebook_that_fetches_worker_from_personal_github(self) -> None:
+        document = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+        document["cells"].append(
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "from urllib.request import urlopen\n",
+                    "urlopen('https://raw.githubusercontent.com/khoinguyen59/KOVA-DUB/main/worker.py')\n",
+                ],
+            }
+        )
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / NOTEBOOK.name
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+            issues = notebook_matches_generator(path, load_workers(GENERATOR))
+
+        self.assertTrue(any("personal GitHub" in issue for issue in issues))
+
+    def test_rejects_an_embedded_worker_hash_mismatch(self) -> None:
+        document = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+        for cell in document["cells"]:
+            source = "".join(cell.get("source", []))
+            if "EMBEDDED_WORKERS" in source:
+                cell["source"] = [source.replace("307861926e13ff9849b04594074b573b1da063b1791c56dc2f502ab64991c5af", "0" * 64)]
+                break
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / NOTEBOOK.name
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+            issues = notebook_matches_generator(path, load_workers(GENERATOR))
+
+        self.assertTrue(any("SHA-256" in issue for issue in issues))
 
     def test_local_text_worker_hash_is_stable_across_windows_line_endings(self) -> None:
         payload = b"first line\nsecond line\n"

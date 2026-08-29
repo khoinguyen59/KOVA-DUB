@@ -1,5 +1,31 @@
 # AI agent response — offline Dubbing artifact upload
 
+## 2026-08-29 — Spleeter Colab made self-contained
+
+- Root cause was separated correctly: `k2-fsa/sherpa-onnx-spleeter-2stems-fp16`
+  is the public model source, while the FastAPI worker and tunnel launcher are
+  LA Studio application code. The notebook must not fetch the latter from a
+  personal GitHub repository.
+- `scripts/generate_spleeter_safe_colab_notebook.py` now embeds the exact local
+  worker and launcher templates into `EMBEDDED_WORKERS`, verifies their
+  normalized SHA-256 values inside Colab, and writes them to `/content`.
+  `scripts/generate_alignment_separation_colab_notebooks.py` reuses the same
+  safe Spleeter generator so duplicate generation cannot overwrite it with an
+  older remote-worker design.
+- `scripts/verify_colab_worker_pins.py` is now an offline embedded-bundle
+  validator. It rejects `KOVA-DUB`, `WORKER_REPOSITORY`, `WORKER_COMMIT`, and
+  runtime worker downloads, while still checking the official upstream model
+  release and exact local source parity.
+- The pre-commit/pre-push hooks, prebuild gate, CI, release workflow, CMake
+  packaging comments, CTest contract, checklist, incident log, and agent
+  memory now describe and enforce the self-contained design.
+
+Verification for this change: embedded worker tests **5/5 PASS**, embedded
+bundle validator **2/2 PASS**, generated notebook integrity **32/32 PASS**,
+full prebuild gate **10/10 PASS**, CTest **41/41 PASS**, exact bindings
+**31/31 PASS**, and remote feature surface **8/8 PASS**. No EXE was built as
+part of this source-only fix.
+
 ## 2026-08-29 — immutable Colab worker pin regression fixed
 
 - Reproduced the Colab `HTTP Error 404` in the Spleeter notebook. The generator

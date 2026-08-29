@@ -2,7 +2,9 @@
 
 Each notebook loads one catalog family on CUDA, advertises only that family,
 and returns HTTP 409 if LA Studio requests a different model.  Direct Colab
-workers are deliberately independent from API Gateway.
+workers are deliberately independent from API Gateway.  Spleeter is owned by
+the dedicated safe generator, which embeds the application worker/launcher so
+the two generators cannot produce different notebooks for the same filename.
 """
 
 from __future__ import annotations
@@ -937,6 +939,8 @@ def make_notebook(spec: dict[str, str], capability: str, common: str, worker_nam
 
 def main() -> None:
     NOTEBOOKS.mkdir(parents=True, exist_ok=True)
+    from generate_spleeter_safe_colab_notebook import make_notebook as make_spleeter_notebook
+
     for spec in alignment_specs():
         target = NOTEBOOKS / spec["file"]
         target.write_text(
@@ -954,15 +958,15 @@ def main() -> None:
         print(target.relative_to(ROOT))
     for spec in separation_specs():
         target = NOTEBOOKS / spec["file"]
-        target.write_text(
-            json.dumps(
-                make_notebook(
-                    spec, "voice-isolation", SEPARATION_COMMON,
-                    "la_studio_separation_worker.py",
-                ),
-                indent=1,
-                ensure_ascii=False,
+        if spec["family_id"] == "sherpa-onnx-spleeter-2stems-fp16":
+            notebook = make_spleeter_notebook()
+        else:
+            notebook = make_notebook(
+                spec, "voice-isolation", SEPARATION_COMMON,
+                "la_studio_separation_worker.py",
             )
+        target.write_text(
+            json.dumps(notebook, indent=1, ensure_ascii=False)
             + "\n",
             encoding="utf-8",
         )
