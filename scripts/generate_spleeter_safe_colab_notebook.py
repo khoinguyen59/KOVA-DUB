@@ -14,7 +14,7 @@ from textwrap import dedent
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ROOT / "notebooks"
+NOTEBOOKS = ROOT / "notebooks" / "voice_separation"
 NOTEBOOK = "LA_STUDIO_SEPARATION_SPLEETER_2STEMS_GPU.ipynb"
 MODEL_ID = "sherpa-onnx-spleeter-2stems-fp16"
 UPSTREAM_MODEL = "k2-fsa/sherpa-onnx-spleeter-2stems-fp16"
@@ -25,7 +25,8 @@ ARTIFACT_URL = (
 
 # This lock is updated only after the referenced worker templates have been
 # committed.  The notebook must never download a moving branch such as main.
-WORKER_COMMIT = "3c8f2bc3da273fc59e7a7aa5346dde41964de118"
+WORKER_REPOSITORY = "khoinguyen59/KOVA-DUB"
+WORKER_COMMIT = "3f194b9155e7c2fcdd8eed4ac5fa980e6084417e"
 WORKERS = {
     "la_studio_separation_worker.py": (
         "notebooks/workers/LA_STUDIO_SEPARATION_SPLEETER_2STEMS_WORKER.py",
@@ -55,12 +56,13 @@ def make_notebook() -> dict:
         "from urllib.request import urlopen",
         "",
         f'MODEL_ID = "{MODEL_ID}"',
+        f'WORKER_REPOSITORY = "{WORKER_REPOSITORY}"',
         f'WORKER_COMMIT = "{WORKER_COMMIT}"  # audited exact worker revision',
         "WORKERS = {",
         worker_rows,
         "}",
         "for destination, (relative_path, expected_sha256) in WORKERS.items():",
-        '    url = f"https://raw.githubusercontent.com/khoinguyen59/KOVA-DUB/{WORKER_COMMIT}/{relative_path}"',
+        '    url = f"https://raw.githubusercontent.com/{WORKER_REPOSITORY}/{WORKER_COMMIT}/{relative_path}"',
         "    payload = urlopen(url, timeout=60).read()",
         "    actual_sha256 = sha256(payload).hexdigest()",
         "    if actual_sha256 != expected_sha256:",

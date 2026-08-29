@@ -301,7 +301,11 @@ void TestDubbingWorkspaceContract::packagingRequiresPreBuildReleaseGate()
     QVERIFY(gate.contains(QStringLiteral("verify_remote_feature_surface.ps1")));
     QVERIFY(gate.contains(QStringLiteral("verify_colab_model_bindings.py")));
     QVERIFY(gate.contains(QStringLiteral("verify_generated_colab_notebooks.py")));
+    QVERIFY(gate.contains(QStringLiteral("test_colab_worker_pins.py")));
+    QVERIFY(gate.contains(QStringLiteral("verify_colab_worker_pins.py")));
     QVERIFY(gate.contains(QStringLiteral("verify_unified_dubbing_colab_notebook.py")));
+    QVERIFY(checklist.contains(QStringLiteral("Immutable Colab worker pin gate")));
+    QVERIFY(checklist.contains(QStringLiteral("Remote worker pin integrity")));
     QVERIFY(package.contains(QStringLiteral("prebuild_gate.ps1")));
     QVERIFY(package.contains(QStringLiteral("Pre-build release gate failed")));
     QVERIFY(package.contains(QStringLiteral("LASTUDIO_QML_SMOKE")));

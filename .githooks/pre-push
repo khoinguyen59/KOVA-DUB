@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+python scripts/test_colab_worker_pins.py
+python scripts/verify_colab_worker_pins.py

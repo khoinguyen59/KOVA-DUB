@@ -1,3 +1,21 @@
+# 2026-08-29 - Immutable Colab worker pin gate
+
+- Fixed the Spleeter notebook's stale 404 pin after the repository migration:
+  it now uses immutable commit `3f194b9155e7c2fcdd8eed4ac5fa980e6084417e`,
+  current worker hashes, and the canonical `notebooks/voice_separation/`
+  output directory.
+- Added `scripts/test_colab_worker_pins.py` and
+  `scripts/verify_colab_worker_pins.py`. The validator checks raw URL status
+  with bounded retry, remote/local SHA-256, generated notebook markers, and
+  tolerates Windows CRLF without tolerating content drift.
+- The check is now wired into `prebuild_gate.ps1`, CI, Windows release, and
+  optional pre-commit/pre-push hooks installed by
+  `scripts/install_git_hooks.ps1`.
+
+Verification: **6/6** pin unit tests, **2/2** live remote payloads,
+**32/32** generated notebooks, and prebuild gate **10/10** pass; full CTest
+remains **41/41**.
+
 # 2026-08-29 - Offline Dubbing artifact upload and explicit skip fix
 
 ## 2026-08-29 - Corrected missing visible Upload picker

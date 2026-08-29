@@ -1,5 +1,26 @@
 # AI agent response — offline Dubbing artifact upload
 
+## 2026-08-29 — immutable Colab worker pin regression fixed
+
+- Reproduced the Colab `HTTP Error 404` in the Spleeter notebook. The generator
+  referenced a commit that does not exist in `khoinguyen59/KOVA-DUB`, and it
+  wrote to a non-canonical notebook directory.
+- Corrected the single source of truth to repository
+  `khoinguyen59/KOVA-DUB`, immutable commit
+  `3f194b9155e7c2fcdd8eed4ac5fa980e6084417e`, the two verified worker SHA-256
+  values, and `notebooks/voice_separation/`. Regenerated the checked-in
+  notebook.
+- Added `scripts/verify_colab_worker_pins.py`: bounded HTTP retry, commit/URL
+  validation, remote SHA-256, local SHA-256 with Windows EOL normalization,
+  and generator/notebook marker checks. It writes JSON evidence to
+  `out\prebuild-gate\colab-worker-pins.json`.
+- Added the validator to the prebuild gate, GitHub CI, Windows release, and
+  optional repository Git hooks (`scripts/install_git_hooks.ps1`).
+
+Verification: pin unit tests **6/6 PASS**; live remote payload verification
+**2/2 PASS**; generated notebook integrity **32/32 PASS**; prebuild gate
+**10/10 PASS**; full CTest **41/41 PASS**.
+
 ## 2026-08-29 — corrected missing Upload picker in the production dialog
 
 - Reproduced the reported state in the production `DubbingArtifactUploadDialog`: the summary showed the required filename, but the body could be empty, so the user had no visible file-picker action.

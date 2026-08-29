@@ -1,5 +1,23 @@
 # Tri nho du an LA Studio
 
+## 2026-08-29 - Colab worker pin integrity
+
+- Spleeter worker notebooks must use one immutable repository/commit pair;
+  current source of truth is `khoinguyen59/KOVA-DUB` at commit
+  `3f194b9155e7c2fcdd8eed4ac5fa980e6084417e`.
+- `scripts/generate_spleeter_safe_colab_notebook.py` writes the canonical
+  notebook under `notebooks/voice_separation/` and carries the two expected
+  worker SHA-256 values.
+- Run `python scripts/test_colab_worker_pins.py` for deterministic local
+  checks and `python scripts/verify_colab_worker_pins.py` for remote/local
+  payload verification. Prebuild, CI and release must run both; local Git
+  hooks can be enabled with `scripts/install_git_hooks.ps1`.
+- A stale commit may pass a superficial notebook/string check but fail in
+  Colab with HTTP 404. Never update a worker hash before committing the worker,
+  and always regenerate the notebook from the generator.
+- Latest verification: pin tests **6/6**, remote payloads **2/2**, generated
+  notebooks **32/32**, prebuild gate **10/10**, and full CTest **41/41**.
+
 ## 2026-08-29 - Production Upload picker visibility regression
 
 - Neu dialog Upload hien summary nhung khong co nut chon file, kiem tra production component truoc khi build. `DubbingArtifactUploadPanel` khong duoc an boi mot `QVariant/JS map` tam thoi khi Repeater dang settle.
