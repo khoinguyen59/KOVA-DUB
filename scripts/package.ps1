@@ -124,7 +124,10 @@ function Normalize-AppVersion {
 }
 
 function Get-TextSha256 {
-    param([Parameter(Mandatory = $true)][string] $Text)
+    # A clean committed source tree has an intentionally empty tracked diff.
+    # Hash it as UTF-8 empty content instead of treating it as a missing
+    # argument; release provenance must work for clean and dirty trees alike.
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string] $Text)
 
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
     try {
