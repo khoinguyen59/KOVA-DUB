@@ -38,7 +38,15 @@ Rectangle {
         var activeStep = root.dubbing ? root.dubbing.currentStepId : ""
         return root.dubbing ? root.dubbing.workflowArtifactHandoffStatus(root.nodeId) : ({})
     }
-    readonly property bool mayChooseOutput: !dubbing.processing || handoffState.canOverride === true
+    readonly property bool mayChooseOutput: {
+        // Keep the aggregate processing dependency so this binding refreshes
+        // when the sibling STT/OCR worker starts or stops. Colab is not a
+        // prerequisite for selecting an already-saved local artifact.
+        var aggregateBusy = root.dubbing ? root.dubbing.processing : false
+        if (!root.dubbing) return false
+        return !aggregateBusy
+            || root.dubbing.canImportWorkflowArtifactNow(root.nodeId)
+    }
 
     // The parent Repeater is created only from a validated non-empty artifact
     // contract.  Do not hide the panel based on a transient QVariant/JS map
@@ -61,15 +69,7 @@ Rectangle {
     }
 
     function isolationStemName(stem) {
-        var expected = root.artifactSpec.expectedFiles || []
-        for (var index = 0; index < expected.length; ++index) {
-            var name = String(expected[index])
-            if (name.toLowerCase().indexOf(stem + ".") === 0)
-                return name
-        }
-        var extensions = root.artifactSpec.allowedExtensions || []
-        var extension = extensions.length > 0 ? String(extensions[0]) : ".flac"
-        return stem + extension
+        return stem === "vocals" ? qsTr("vocals audio") : qsTr("background audio")
     }
 
     function acceptOutput(paths) {
@@ -113,7 +113,7 @@ Rectangle {
             return
         }
         root.selectedVocalsPath = path
-        root.uploadStatus = qsTr("Vocals selected. Select background.wav or background.flac next.")
+        root.uploadStatus = qsTr("Vocals audio selected. Select Background audio next.")
     }
 
     function selectBackground(fileUrl) {
@@ -155,9 +155,9 @@ Rectangle {
     Component {
         id: vocalsDialogComponent
         FileDialog {
-            title: qsTr("Choose the saved %1 file").arg(root.isolationStemName("vocals"))
+            title: qsTr("Choose the audio file for Vocals")
             fileMode: FileDialog.OpenFile
-            nameFilters: [qsTr("Vocals output (%1)").arg(root.isolationStemName("vocals"))]
+            nameFilters: [qsTr("Audio files (%1)").arg(root.allowedFilePatterns().join(" "))]
             Component.onCompleted: open()
             onAccepted: {
                 root.selectVocals(selectedFile)
@@ -179,9 +179,9 @@ Rectangle {
     Component {
         id: backgroundDialogComponent
         FileDialog {
-            title: qsTr("Choose the saved %1 file").arg(root.isolationStemName("background"))
+            title: qsTr("Choose the audio file for Background")
             fileMode: FileDialog.OpenFile
-            nameFilters: [qsTr("Background output (%1)").arg(root.isolationStemName("background"))]
+            nameFilters: [qsTr("Audio files (%1)").arg(root.allowedFilePatterns().join(" "))]
             Component.onCompleted: open()
             onAccepted: {
                 root.selectBackground(selectedFile)
@@ -259,7 +259,7 @@ Rectangle {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: qsTr("You may import the exact completed file(s) below. Once accepted, LA Studio cancels this task's automatic Cloudflare transfer and continues with the normal next task.")
+                    text: qsTr("You may import the completed local file(s) below. Once accepted, LA Studio cancels this task's automatic transfer and continues with the normal next task.")
                     color: Theme.textSecondary
                     font.pixelSize: 10
                     wrapMode: Text.WordWrap
@@ -286,7 +286,7 @@ Rectangle {
             spacing: Theme.paddingSmall
             Text {
                 Layout.fillWidth: true
-                text: qsTr("Select both stems separately. LA Studio will not accept source.wav or an arbitrary audio file.")
+                text: qsTr("Select two audio files: first Vocals for STT, then Background for the final mix. File names may be anything.")
                 color: Theme.textPrimary
                 font.pixelSize: 10
                 wrapMode: Text.WordWrap
@@ -294,11 +294,11 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 PrimaryButton {
-                    text: qsTr("Choose %1").arg(root.isolationStemName("vocals"))
+                    text: qsTr("Choose Vocals audio")
                     iconName: "folder"
                     Layout.fillWidth: true
                     enabled: root.mayChooseOutput
-                    onClicked: root.openOutputDialog(vocalsDialogLoader, root.isolationStemName("vocals"))
+                    onClicked: root.openOutputDialog(vocalsDialogLoader, qsTr("Vocals audio"))
                 }
                 Text {
                     Layout.fillWidth: true
@@ -311,11 +311,11 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 PrimaryButton {
-                    text: qsTr("Choose %1").arg(root.isolationStemName("background"))
+                    text: qsTr("Choose Background audio")
                     iconName: "folder"
                     Layout.fillWidth: true
                     enabled: root.mayChooseOutput
-                    onClicked: root.openOutputDialog(backgroundDialogLoader, root.isolationStemName("background"))
+                    onClicked: root.openOutputDialog(backgroundDialogLoader, qsTr("Background audio"))
                 }
                 Text {
                     Layout.fillWidth: true
@@ -366,9 +366,12 @@ Rectangle {
         }
         Text {
             Layout.fillWidth: true
-            text: qsTr("Required file name: %1\nAllowed format: %2")
-                  .arg((root.artifactSpec.expectedFiles || []).join(", "))
-                  .arg(root.allowedFilePatterns().join(", "))
+            text: root.isIsolation
+                  ? qsTr("Required roles: Vocals audio, Background audio\nAllowed audio formats: %1")
+                        .arg(root.allowedFilePatterns().join(", "))
+                  : qsTr("Required file name: %1\nAllowed format: %2")
+                        .arg((root.artifactSpec.expectedFiles || []).join(", "))
+                        .arg(root.allowedFilePatterns().join(", "))
             color: Theme.textSecondary
             font.pixelSize: 10
             wrapMode: Text.WordWrap

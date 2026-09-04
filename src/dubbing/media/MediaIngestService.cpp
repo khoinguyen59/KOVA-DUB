@@ -4,7 +4,7 @@
 #include "core/storage/PathUtils.h"
 #include "dubbing/media/AtomicMediaCommit.h"
 #include "dubbing/media/MediaProcessTimeout.h"
-#include "audio/io/WavIO.h"
+#include "audio/io/AudioFileDecoder.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -24,8 +24,15 @@ namespace {
 
 bool readableAudioArtifact(const QString &path)
 {
-    const WavIO::WavData audio = WavIO::loadAsFloat(path);
+    QString error;
+    const WavIO::WavData audio = AudioFileDecoder::decode(path, &error);
     return !audio.samples.isEmpty() && audio.sampleRate > 0 && audio.channels > 0;
+}
+
+QString legacyWavSibling(const QString &flacPath)
+{
+    const QFileInfo info(flacPath);
+    return info.dir().filePath(info.completeBaseName() + QStringLiteral(".wav"));
 }
 
 } // namespace
@@ -118,13 +125,15 @@ void MediaIngestService::onHashFinished()
     }
     m_hash = result.hash;
     m_workspace = PathUtils::cacheDir() + QStringLiteral("/dubbing/imports/") + m_hash;
-    m_masterPath = m_workspace + QStringLiteral("/master.wav");
-    m_analysisPath = m_workspace + QStringLiteral("/analysis.wav");
+    m_masterPath = m_workspace + QStringLiteral("/master.flac");
+    m_analysisPath = m_workspace + QStringLiteral("/analysis.flac");
+    m_cacheMasterPath.clear();
+    m_cacheAnalysisPath.clear();
     const QString stagingId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_masterStagingPath = m_workspace + QStringLiteral("/master.workflow-") + stagingId
-        + QStringLiteral(".staging.wav");
+        + QStringLiteral(".staging.flac");
     m_analysisStagingPath = m_workspace + QStringLiteral("/analysis.workflow-") + stagingId
-        + QStringLiteral(".staging.wav");
+        + QStringLiteral(".staging.flac");
     m_manifest.clear();
     m_loudnessMeasurements.clear();
     m_probeOutput.clear();
@@ -178,7 +187,9 @@ void MediaIngestService::startMaster()
     m_process.setArguments({QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"), QStringLiteral("-y"),
                             QStringLiteral("-i"), m_inputPath, QStringLiteral("-map"), QStringLiteral("0:a:0"),
                             QStringLiteral("-vn"), QStringLiteral("-ac"), QStringLiteral("2"), QStringLiteral("-ar"), QStringLiteral("48000"),
-                            QStringLiteral("-af"), filter, QStringLiteral("-c:a"), QStringLiteral("pcm_f32le"),
+                            QStringLiteral("-af"), filter + QStringLiteral(",aformat=sample_fmts=s16"),
+                            QStringLiteral("-c:a"), QStringLiteral("flac"),
+                            QStringLiteral("-sample_fmt"), QStringLiteral("s16"),
                             m_masterStagingPath});
     m_process.start();
     m_processTimeout.start(MediaProcessTimeout::configured(
@@ -193,7 +204,8 @@ void MediaIngestService::startAnalysis()
     m_process.setArguments({QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"), QStringLiteral("-y"),
                             QStringLiteral("-i"), m_masterPath, QStringLiteral("-map"), QStringLiteral("0:a:0"),
                             QStringLiteral("-vn"), QStringLiteral("-ac"), QStringLiteral("1"), QStringLiteral("-ar"), QStringLiteral("16000"),
-                            QStringLiteral("-c:a"), QStringLiteral("pcm_s16le"), m_analysisStagingPath});
+                            QStringLiteral("-c:a"), QStringLiteral("flac"),
+                            QStringLiteral("-sample_fmt"), QStringLiteral("s16"), m_analysisStagingPath});
     m_process.start();
     m_processTimeout.start(MediaProcessTimeout::configured(
         MediaProcessTimeout::kFfmpegTimeoutMs));
@@ -261,6 +273,16 @@ void MediaIngestService::onProcessFinished(int exitCode, QProcess::ExitStatus st
                     == QStringLiteral("ebur128-r128-2pass");
             if (cacheIsValidated) {
                 const QVariantMap cached = cachedDocument.object().toVariantMap();
+                const QString cachedMaster = cached.value(QStringLiteral("masterAudioPath")).toString();
+                const QString cachedAnalysis = cached.value(QStringLiteral("analysisAudioPath")).toString();
+                m_cacheMasterPath = QFileInfo(cachedMaster).isFile()
+                    ? cachedMaster
+                    : (QFileInfo(m_masterPath).isFile()
+                       ? m_masterPath : legacyWavSibling(m_masterPath));
+                m_cacheAnalysisPath = QFileInfo(cachedAnalysis).isFile()
+                    ? cachedAnalysis
+                    : (QFileInfo(m_analysisPath).isFile()
+                       ? m_analysisPath : legacyWavSibling(m_analysisPath));
                 m_manifest.insert(QStringLiteral("normalizationMethod"),
                                   cached.value(QStringLiteral("normalizationMethod")));
                 m_manifest.insert(QStringLiteral("normalization"),
@@ -303,8 +325,16 @@ void MediaIngestService::startCacheValidation()
 {
     if (m_terminal) return;
     m_stage = Stage::CacheValidation;
-    const QString masterPath = m_masterPath;
-    const QString analysisPath = m_analysisPath;
+    if (m_cacheMasterPath.isEmpty()) {
+        m_cacheMasterPath = QFileInfo(m_masterPath).isFile()
+            ? m_masterPath : legacyWavSibling(m_masterPath);
+    }
+    if (m_cacheAnalysisPath.isEmpty()) {
+        m_cacheAnalysisPath = QFileInfo(m_analysisPath).isFile()
+            ? m_analysisPath : legacyWavSibling(m_analysisPath);
+    }
+    const QString masterPath = m_cacheMasterPath;
+    const QString analysisPath = m_cacheAnalysisPath;
     m_artifactWatcher.setFuture(QtConcurrent::run([masterPath, analysisPath]() {
         return readableAudioArtifact(masterPath) && readableAudioArtifact(analysisPath);
     }));
@@ -318,6 +348,10 @@ void MediaIngestService::onArtifactValidationFinished()
     const Stage validationStage = m_stage;
     if (!m_artifactWatcher.result()) {
         if (validationStage == Stage::CacheValidation) {
+            m_masterPath = m_workspace + QStringLiteral("/master.flac");
+            m_analysisPath = m_workspace + QStringLiteral("/analysis.flac");
+            m_cacheMasterPath.clear();
+            m_cacheAnalysisPath.clear();
             startLoudnessMeasurement();
             return;
         }
@@ -327,6 +361,8 @@ void MediaIngestService::onArtifactValidationFinished()
         return;
     }
     if (validationStage == Stage::CacheValidation) {
+        m_masterPath = m_cacheMasterPath.isEmpty() ? m_masterPath : m_cacheMasterPath;
+        m_analysisPath = m_cacheAnalysisPath.isEmpty() ? m_analysisPath : m_cacheAnalysisPath;
         m_manifest.insert(QStringLiteral("masterAudioPath"), m_masterPath);
         m_manifest.insert(QStringLiteral("analysisAudioPath"), m_analysisPath);
         finishCached();

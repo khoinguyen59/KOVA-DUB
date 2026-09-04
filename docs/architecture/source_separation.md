@@ -40,7 +40,7 @@ VoiceIsolatorController / DubbingJobRunner
 - **`SourceSeparationService`**: Lives on the main/UI thread. It owns a dedicated `QThread` and an instance of `SeparationWorker`.
 - **`SeparationWorker`**: Moved to the dedicated worker thread. All heavy computations—hashing, media decoding (via QAudioDecoder or FFmpeg), inference, cache read/write, and WAV encoding—are performed sequentially on this worker thread.
 - **Queued Connections**: Thread communication uses Qt's queued signal/slot mechanism. Audio buffers are **never** passed back via signals to the UI thread; instead, filepath references to output stems are returned in the final `SeparationResult`.
-- **Destruction Safety**: When the service is destroyed, it sets an atomic cancel flag, requests the thread to quit, and blocks using `m_thread->wait()` to ensure that no DLLs are unloaded while native backend execution is still in progress.
+- **Destruction Safety**: When the service is destroyed, it sets a shared-owned atomic cancel flag, requests the thread to quit, and waits only for a bounded graceful window. If a native backend is still inside its uninterruptible C API call, the worker and thread are detached and self-clean after the call returns. The shared flag outlives the UI service, so the detached worker cannot dereference destroyed service memory. The UI is never blocked indefinitely during window/application shutdown, and the native DLL is not force-terminated mid-call.
 
 ---
 
@@ -82,7 +82,15 @@ public:
 
 - **Cancellation Token**: Passed down from the service to the worker and backends.
 - **FFmpeg/Decoding Checkpoints**: The decoding stage checks the token periodically. If cancelled, FFmpeg is terminated immediately and partial staging files are removed.
-- **Sherpa-Onnx Inference Block**: Native `sherpa-onnx` inference is executed as a single C API function call (`SherpaOnnxOfflineSourceSeparationProcess`), which cannot be interrupted midway. Therefore, cancellation requested during inference waits for the native call to return, then immediately discards the output instead of writing it to cache or notifying the user of success. The UI displays "cancellation requested" during this waiting period.
+- **Sherpa-Onnx Inference Block**: Native `sherpa-onnx` inference is executed as a single C API function call (`SherpaOnnxOfflineSourceSeparationProcess`), which cannot be interrupted midway. Therefore, cancellation requested during inference waits for the native call to return, then immediately discards the output instead of writing it to cache or notifying the user of success. The UI displays "cancellation requested" during this waiting period. A new Separate request is rejected while that native call is draining; it cannot overlap two native separation engines.
+
+### UI responsiveness budget
+
+- The desktop runner uses `InferenceBackendProfile::SourceSeparationCpu`, which reserves CPU capacity for the GUI and caps the native engine at three threads. It no longer passes a hard-coded four-thread value that can oversubscribe small machines.
+- The standalone Voice Isolator uses the same policy, so a stale or oversized saved thread count cannot bypass the cap.
+- The dedicated `QThread` starts at `QThread::LowPriority`. This does not make inference cancellable, but it prevents a CPU-heavy native call from starving QML input, paint and window-close events.
+- FFmpeg decoder timeout recovery has a bounded post-`kill()` wait; a failed child cannot create a second unbounded shutdown wait.
+- `SourceSeparationService::isolate()` only starts the worker thread and queues the request; it never invokes the native backend on the caller/UI thread. If the thread cannot start or the queued invocation cannot be scheduled, it returns a terminal error immediately instead of leaving the UI in a permanent processing state.
 
 ---
 

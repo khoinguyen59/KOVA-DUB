@@ -11,7 +11,11 @@ enum class InferenceBackendProfile {
     CrispAsrGpu,
     VieNeuNative,
     Kokoro,
-    RealtimeTts
+    RealtimeTts,
+    // Source separation invokes a native CPU inference call. Keep a small
+    // bounded budget so that decoding, QML rendering and input handling retain
+    // CPU capacity while the model is running.
+    SourceSeparationCpu
 };
 
 struct InferenceThreadRequest {

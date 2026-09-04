@@ -38,7 +38,11 @@ private:
     QThread *m_thread = nullptr;
     SeparationWorker *m_worker = nullptr;
     bool m_processing = false;
-    QAtomicInt m_cancelRequested{0};
+    // The native backend may outlive this service during bounded shutdown.
+    // Keep the cancellation flag alive with the queued worker invocation so a
+    // detached worker never dereferences storage owned by the destroyed UI
+    // service.
+    std::shared_ptr<QAtomicInt> m_cancelRequested = std::make_shared<QAtomicInt>(0);
 };
 
 } // namespace LAStudio

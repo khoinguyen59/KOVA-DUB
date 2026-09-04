@@ -1,5 +1,6 @@
 #include "dubbing/fusion/AlignmentRefinementService.h"
 
+#include "audio/io/AudioFileDecoder.h"
 #include "audio/io/WavIO.h"
 #include "core/models/ModelManager.h"
 #include "core/storage/PathUtils.h"
@@ -493,10 +494,13 @@ AlignmentRefinementResult AlignmentRefinementService::refine(
         return result;
     }
 
-    const WavIO::WavData audio = WavIO::loadAsFloatMono16k(audioPath);
+    QString audioError;
+    const WavIO::WavData audio = AudioFileDecoder::decodeMono(audioPath, 16000, &audioError);
     if (audio.samples.isEmpty()) {
         result.status = QStringLiteral("skipped");
-        result.diagnostic = QStringLiteral("Analysis audio could not be decoded for forced alignment.");
+        result.diagnostic = audioError.isEmpty()
+            ? QStringLiteral("Analysis audio could not be decoded for forced alignment.")
+            : QStringLiteral("Analysis audio could not be decoded for forced alignment: %1").arg(audioError);
         result.segments = markSkipped(segments, result.diagnostic);
         return result;
     }

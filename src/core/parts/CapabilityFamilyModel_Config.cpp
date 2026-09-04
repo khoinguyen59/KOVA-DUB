@@ -458,7 +458,11 @@ void CapabilityFamilyModel::saveSelectionForFamily(const QString &familyId,
     selection.runtimeId = runtimeId;
     selection.runtimeVersion = runtimeVersion;
     selection.selectedFiles = selectedFiles;
-    m_selectionRepository->saveActiveSelection(selection);
+    QString saveError;
+    if (!m_selectionRepository->saveActiveSelection(selection, &saveError)) {
+        Logger::error(QStringLiteral("CapabilityFamilyModel"), saveError);
+        return;
+    }
 
     if (m_settings) {
         if (selection.capabilityId == QStringLiteral("stt")) {

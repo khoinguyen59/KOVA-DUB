@@ -22,7 +22,7 @@ SeparationWorker::SeparationWorker(std::shared_ptr<SeparationBackendFactory> fac
 {
 }
 
-void SeparationWorker::process(const SeparationRequest &request, QAtomicInt *cancelFlag)
+void SeparationWorker::process(const SeparationRequest &request, std::shared_ptr<QAtomicInt> cancelFlag)
 {
     CancellationToken cancellation;
     if (cancelFlag) {

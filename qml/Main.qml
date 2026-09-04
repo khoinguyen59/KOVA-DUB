@@ -322,6 +322,18 @@ ApplicationWindow {
         onCancelled: AppController.settings.updateCheckConsentAsked = true
     }
 
+    Connections {
+        target: AppController.settings
+        function onOnboardingCompleteChanged() {
+            // First-run onboarding owns the initial modal. Ask update consent
+            // only after it closes, never as a second competing overlay.
+            if (AppController.settings.onboardingComplete
+                    && !AppController.settings.updateCheckConsentAsked
+                    && !updateConsentDialog.visible)
+                Qt.callLater(function() { updateConsentDialog.open() })
+        }
+    }
+
     Component.onCompleted: {
         // Do not bind visibility directly to the persisted value: changing a
         // native Windows window state emits onVisibilityChanged, which writes
@@ -331,7 +343,8 @@ ApplicationWindow {
         restoringWindowPlacement = false
         if (initialPreviewRouteId !== "")
             stack.currentIndex = StudioRouteRegistry.getIndex(initialPreviewRouteId)
-        if (!AppController.settings.updateCheckConsentAsked)
+        if (AppController.settings.onboardingComplete
+                && !AppController.settings.updateCheckConsentAsked)
             updateConsentDialog.open()
     }
 
@@ -900,6 +913,10 @@ ApplicationWindow {
                     id: dubbingLoader
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    // Project/controller state is durable in AppController.
+                    // Keeping a full video/QML editor alive after navigation
+                    // retained decoder surfaces and large preview allocations
+                    // for the rest of the desktop session.
                     active: stack.currentIndex === 8
                     sourceComponent: DubbingPage { qmlSmokeMediaPath: root.qmlSmokeMediaPath }
                 }

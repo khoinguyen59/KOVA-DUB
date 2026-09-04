@@ -142,6 +142,13 @@ bool writeFixtureFile(const QString &path, const QByteArray &contents)
         && file.write(contents) == contents.size();
 }
 
+QByteArray readFixtureFile(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return {};
+    return file.readAll();
+}
+
 QByteArray batchSubtitleOcrFfmpegScript()
 {
     return QByteArrayLiteral(
@@ -270,8 +277,9 @@ private:
 class ExactRouteWorkerMock final : public QObject
 {
 public:
-    ExactRouteWorkerMock(const QString &capability, const QString &model)
-        : m_capability(capability), m_model(model)
+    ExactRouteWorkerMock(const QString &capability, const QString &model,
+                         const QString &workerRevision = QString())
+        : m_capability(capability), m_model(model), m_workerRevision(workerRevision)
     {
         connect(&m_server, &QTcpServer::newConnection, this, [this] {
             while (QTcpSocket *socket = m_server.nextPendingConnection()) {
@@ -283,13 +291,15 @@ public:
                     const QByteArray request = pending.left(headerEnd + 4);
                     const QByteArray firstLine = request.left(request.indexOf("\r\n"));
                     QByteArray response;
-                    const QString workerRevision = m_capability == QStringLiteral("stt")
+                    const QString workerRevision = !m_workerRevision.isEmpty()
+                        ? m_workerRevision
+                        : (m_capability == QStringLiteral("stt")
                         ? QStringLiteral("stt-2026-07-30.2")
                         : (m_capability == QStringLiteral("translation")
                                ? QStringLiteral("translation-2026-07-30.3")
                                : (m_capability == QStringLiteral("subtitle-ocr")
-                                      ? QStringLiteral("subtitle-ocr-2026-08-23.17")
-                                      : QString()));
+                                      ? QStringLiteral("subtitle-ocr-2026-08-23.18")
+                                      : QString())));
                     const QString responseContract = m_capability == QStringLiteral("translation")
                         ? QStringLiteral("translation-patches-v3")
                         : (m_capability == QStringLiteral("subtitle-ocr")
@@ -343,6 +353,7 @@ private:
     QHash<QTcpSocket *, QByteArray> m_pending;
     QString m_capability;
     QString m_model;
+    QString m_workerRevision;
 };
 
 // A single coordinator endpoint must still expose one exact worker contract
@@ -1015,6 +1026,15 @@ void TestDubbingProject::roundTripsVersionedJson()
     original.segments.append(QVariantMap{{QStringLiteral("startMs"), 1000},
                                          {QStringLiteral("endMs"), 2400},
                                          {QStringLiteral("sourceText"), QStringLiteral("Hello")} });
+    original.workflowCurrentStepId = QStringLiteral("translate");
+    original.workflowLastCompletedStepId = QStringLiteral("transcribe");
+    original.workflowStepOutputs = {
+        {QStringLiteral("transcribe"), QVariantMap{{QStringLiteral("path"), QStringLiteral("transcript.srt")}}}
+    };
+    original.previewAudioPath = QStringLiteral("C:/media/preview.wav");
+    original.dubbedVocalAudioPath = QStringLiteral("C:/media/dubbed-vocals.wav");
+    original.exportMediaPath = QStringLiteral("C:/media/final.mp4");
+    original.capCutDraftPath = QStringLiteral("C:/media/capcut-draft");
 
     QString error;
     QVERIFY2(original.save(&error), qPrintable(error));
@@ -1035,6 +1055,135 @@ void TestDubbingProject::roundTripsVersionedJson()
              QStringLiteral("cli"));
     QCOMPARE(loaded.segments.size(), 1);
     QCOMPARE(loaded.segments.first().toMap().value(QStringLiteral("startMs")).toLongLong(), qint64(1000));
+    QCOMPARE(loaded.workflowCurrentStepId, original.workflowCurrentStepId);
+    QCOMPARE(loaded.workflowLastCompletedStepId, original.workflowLastCompletedStepId);
+    QCOMPARE(loaded.workflowStepOutputs.value(QStringLiteral("transcribe")).toMap()
+                 .value(QStringLiteral("path")).toString(),
+             QDir(QFileInfo(original.projectPath).absolutePath())
+                 .filePath(QStringLiteral("transcript.srt")));
+    QCOMPARE(loaded.previewAudioPath, original.previewAudioPath);
+    QCOMPARE(loaded.dubbedVocalAudioPath, original.dubbedVocalAudioPath);
+    QCOMPARE(loaded.exportMediaPath, original.exportMediaPath);
+    QCOMPARE(loaded.capCutDraftPath, original.capCutDraftPath);
+}
+
+void TestDubbingProject::projectPathsRebaseAfterProjectDirectoryMove()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    const QString originalRoot = directory.filePath(QStringLiteral("original-project"));
+    const QString movedRoot = directory.filePath(QStringLiteral("moved-project"));
+    QVERIFY(QDir().mkpath(originalRoot));
+    QVERIFY(QDir().mkpath(QDir(originalRoot).filePath(QStringLiteral("assets/clips"))));
+    QVERIFY(QDir().mkpath(QDir(originalRoot).filePath(QStringLiteral("artifacts"))));
+    QVERIFY(writeFixtureFile(QDir(originalRoot).filePath(QStringLiteral("assets/source.flac")),
+                             QByteArrayLiteral("source")));
+    QVERIFY(writeFixtureFile(QDir(originalRoot).filePath(QStringLiteral("assets/clips/001.wav")),
+                             QByteArrayLiteral("clip")));
+    QVERIFY(writeFixtureFile(QDir(originalRoot).filePath(QStringLiteral("artifacts/transcript.srt")),
+                             QByteArrayLiteral("1\n00:00:00,000 --> 00:00:01,000\nHello\n\n")));
+
+    const QString externalPath = directory.filePath(QStringLiteral("external-user-source.mp4"));
+    QVERIFY(writeFixtureFile(externalPath, QByteArrayLiteral("external")));
+    DubbingProject project;
+    project.projectPath = QDir(originalRoot).filePath(QStringLiteral("project.ladub.json"));
+    project.sourceMediaPath = externalPath;
+    project.masterAudioPath = QDir(originalRoot).filePath(QStringLiteral("assets/source.flac"));
+    project.previewAudioPath = QDir(originalRoot).filePath(QStringLiteral("assets/clips/001.wav"));
+    project.segments = {QVariantMap{{QStringLiteral("clipPath"), project.previewAudioPath}}};
+    project.workflowStepOutputs = {
+        {QStringLiteral("transcribe"), QVariantMap{
+            {QStringLiteral("path"), QDir(originalRoot).filePath(QStringLiteral("artifacts/transcript.srt"))},
+            {QStringLiteral("nested"), QVariantList{QVariantMap{
+                {QStringLiteral("audio"), project.previewAudioPath}}}}}}};
+    QString error;
+    QVERIFY2(project.save(&error), qPrintable(error));
+
+    QFile saved(project.projectPath);
+    QVERIFY(saved.open(QIODevice::ReadOnly));
+    const QJsonObject serialized = QJsonDocument::fromJson(saved.readAll()).object();
+    QCOMPARE(serialized.value(QStringLiteral("masterAudioPath")).toString(),
+             QStringLiteral("assets/source.flac"));
+    QCOMPARE(serialized.value(QStringLiteral("sourceMediaPath")).toString(), externalPath);
+    QCOMPARE(serialized.value(QStringLiteral("segments")).toArray().first().toObject()
+                 .value(QStringLiteral("clipPath")).toString(),
+             QStringLiteral("assets/clips/001.wav"));
+    saved.close();
+
+    // QDir::rename expects names relative to its own path on Windows; using the
+    // temporary directory also models the user moving the whole project folder.
+    QVERIFY(QDir(directory.path()).rename(QStringLiteral("original-project"),
+                                          QStringLiteral("moved-project")));
+    DubbingProject loaded;
+    const QString movedProjectPath = QDir(movedRoot).filePath(QStringLiteral("project.ladub.json"));
+    QVERIFY2(DubbingProject::load(movedProjectPath, loaded, &error), qPrintable(error));
+    QCOMPARE(loaded.sourceMediaPath, externalPath);
+    QCOMPARE(loaded.masterAudioPath, QDir(movedRoot).filePath(QStringLiteral("assets/source.flac")));
+    QCOMPARE(loaded.previewAudioPath, QDir(movedRoot).filePath(QStringLiteral("assets/clips/001.wav")));
+    QCOMPARE(loaded.segments.first().toMap().value(QStringLiteral("clipPath")).toString(),
+             QDir(movedRoot).filePath(QStringLiteral("assets/clips/001.wav")));
+    QCOMPARE(loaded.workflowStepOutputs.value(QStringLiteral("transcribe")).toMap()
+                 .value(QStringLiteral("nested")).toList().first().toMap()
+                 .value(QStringLiteral("audio")).toString(),
+             QDir(movedRoot).filePath(QStringLiteral("assets/clips/001.wav")));
+}
+
+void TestDubbingProject::fromJsonClearsFieldsWhenLoadingLegacySchema()
+{
+    DubbingProject reused;
+    reused.workflowEntryMode = QStringLiteral("automatic");
+    reused.ttsVoiceId = QStringLiteral("builtin:voice-1");
+    reused.cloneVoicePresetId = QStringLiteral("saved-clone");
+    reused.workflowNodeConfigurations = {
+        {QStringLiteral("synthesize"), QVariantMap{{QStringLiteral("modelId"), QStringLiteral("stale-model")}}}
+    };
+    reused.transcriptConfiguration = {
+        {QStringLiteral("transcriptSource"), QStringLiteral("ocr")},
+        {QStringLiteral("sttSegments"), QVariantList{QVariantMap{{QStringLiteral("id"), QStringLiteral("stale")}}}}
+    };
+    reused.subtitleConfiguration = {{QStringLiteral("burnIn"), true}};
+    reused.timingConfiguration = {{QStringLiteral("mode"), QStringLiteral("ripple")}};
+    reused.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 35},
+                                    {QStringLiteral("dubbedGainPercent"), 80}};
+    reused.customRewriteConfiguration = {{QStringLiteral("provider"), QStringLiteral("stale-provider")}};
+    reused.workflowCurrentStepId = QStringLiteral("mix");
+    reused.workflowLastCompletedStepId = QStringLiteral("synthesize");
+    reused.workflowStepOutputs = {{QStringLiteral("mix"), QVariantMap{{QStringLiteral("path"), QStringLiteral("stale.wav")}}}};
+    reused.previewAudioPath = QStringLiteral("stale-preview.wav");
+    reused.dubbedVocalAudioPath = QStringLiteral("stale-dubbed.wav");
+    reused.exportMediaPath = QStringLiteral("stale-export.mp4");
+    reused.capCutDraftPath = QStringLiteral("stale-capcut");
+
+    const QJsonObject legacy{
+        {QStringLiteral("schemaVersion"), 5},
+        {QStringLiteral("sourceLanguage"), QStringLiteral("zh")},
+        {QStringLiteral("targetLanguage"), QStringLiteral("vi")},
+        {QStringLiteral("cloneVoicePresetId"), QStringLiteral("legacy-voice")}
+    };
+    QString error;
+    QVERIFY2(DubbingProject::fromJson(legacy, reused, &error), qPrintable(error));
+
+    QCOMPARE(reused.workflowEntryMode, QString());
+    QCOMPARE(reused.ttsVoiceId, QString());
+    QCOMPARE(reused.cloneVoicePresetId, QString());
+    QCOMPARE(reused.workflowNodeConfigurations, QVariantMap());
+    QCOMPARE(reused.customRewriteConfiguration, QVariantMap());
+    QCOMPARE(reused.subtitleConfiguration, QVariantMap());
+    QCOMPARE(reused.timingConfiguration, QVariantMap());
+    QCOMPARE(reused.workflowCurrentStepId, QString());
+    QCOMPARE(reused.workflowLastCompletedStepId, QString());
+    QCOMPARE(reused.workflowStepOutputs, QVariantMap());
+    QCOMPARE(reused.previewAudioPath, QString());
+    QCOMPARE(reused.dubbedVocalAudioPath, QString());
+    QCOMPARE(reused.exportMediaPath, QString());
+    QCOMPARE(reused.capCutDraftPath, QString());
+    QCOMPARE(reused.transcriptConfiguration.value(QStringLiteral("transcriptSource")).toString(),
+             QStringLiteral("stt"));
+    QCOMPARE(reused.transcriptConfiguration.value(QStringLiteral("fusionPolicy")).toString(),
+             QStringLiteral("prefer-ocr"));
+    QCOMPARE(reused.audioMixConfiguration.value(QStringLiteral("originalGainPercent")).toInt(), 0);
+    QCOMPARE(reused.audioMixConfiguration.value(QStringLiteral("dubbedGainPercent")).toInt(), 100);
 }
 
 void TestDubbingProject::controllerSaveAsPersistsProjectForLaterResume()
@@ -1055,6 +1204,199 @@ void TestDubbingProject::controllerSaveAsPersistsProjectForLaterResume()
     QCOMPARE(reader.projectPath(), QFileInfo(projectPath).absoluteFilePath());
     QCOMPARE(reader.sourceLanguage(), QStringLiteral("zh"));
     QCOMPARE(reader.targetLanguage(), QStringLiteral("vi"));
+}
+
+void TestDubbingProject::workflowResumeStateSurvivesProjectReopen()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    const QString mediaPath = dir.filePath(QStringLiteral("source.mp4"));
+    QVERIFY(writeFixtureFile(mediaPath, QByteArrayLiteral("video-placeholder")));
+    const QString projectPath = dir.filePath(QStringLiteral("resume-state.ladub.json"));
+
+    DubbingController writer(nullptr, nullptr);
+    QVERIFY2(writer.newProject(projectPath), qPrintable(writer.lastError()));
+    QVERIFY2(writer.importMedia(mediaPath), qPrintable(writer.lastError()));
+    QVERIFY2(writer.skipWorkflowTask(QStringLiteral("ingest")), qPrintable(writer.lastError()));
+    QCOMPARE(writer.currentStepId(), QStringLiteral("transcribe"));
+    QCOMPARE(writer.lastCompletedStepId(), QStringLiteral("ingest"));
+    QVERIFY(writer.stepOutput(QStringLiteral("ingest")).value(QStringLiteral("skipped")).toBool());
+
+    const QString transcriptPath = dir.filePath(QStringLiteral("transcript.srt"));
+    QVERIFY(writeFixtureFile(transcriptPath,
+                             QByteArrayLiteral("1\n00:00:01,000 --> 00:00:03,000\n你好，王先生。\n\n"
+                                               "2\n00:00:04,000 --> 00:00:06,000\n我们现在开始。\n")));
+    QVERIFY2(writer.importWorkflowArtifactFiles(
+                 QStringLiteral("stt"), QVariantList{transcriptPath}),
+             qPrintable(writer.lastError()));
+    QCOMPARE(writer.lastCompletedStepId(), QStringLiteral("transcribe"));
+    QCOMPARE(writer.segments().size(), 2);
+    QCOMPARE(writer.transcriptConfiguration().value(QStringLiteral("sttSegments")).toList().size(), 2);
+    QVERIFY(!writer.stepOutput(QStringLiteral("transcribe")).value(QStringLiteral("path"))
+                 .toString().isEmpty());
+
+    DubbingController reader(nullptr, nullptr);
+    QVERIFY2(reader.openProject(projectPath), qPrintable(reader.lastError()));
+    QCOMPARE(reader.currentStepId(), QStringLiteral("transcribe"));
+    QCOMPARE(reader.lastCompletedStepId(), QStringLiteral("transcribe"));
+    QCOMPARE(reader.segments().size(), 2);
+    QCOMPARE(reader.segments().first().toMap().value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("你好，王先生。"));
+    QCOMPARE(reader.transcriptConfiguration().value(QStringLiteral("sttSegments")).toList().size(), 2);
+    QVERIFY(reader.stepOutput(QStringLiteral("ingest")).value(QStringLiteral("skipped")).toBool());
+    QVERIFY(!reader.stepOutput(QStringLiteral("transcribe")).value(QStringLiteral("path"))
+                 .toString().isEmpty());
+}
+
+void TestDubbingProject::workflowResumeStateSurvivesControllerClose()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    const QString mediaPath = dir.filePath(QStringLiteral("source.mp4"));
+    QVERIFY(writeFixtureFile(mediaPath, QByteArrayLiteral("video-placeholder")));
+    const QString transcriptPath = dir.filePath(QStringLiteral("transcript.srt"));
+    QVERIFY(writeFixtureFile(transcriptPath,
+                             QByteArrayLiteral("1\n00:00:01,000 --> 00:00:03,000\n你好，王先生。\n\n"
+                                               "2\n00:00:04,000 --> 00:00:06,000\n我们现在开始。\n")));
+    const QString projectPath = dir.filePath(QStringLiteral("close-resume-state.ladub.json"));
+    QString expectedCurrentStep;
+    QString expectedLastCompletedStep;
+    QString expectedTranscriptArtifactPath;
+    QVariantMap expectedTranscriptConfiguration;
+    QVariantMap expectedIngestOutput;
+    QVariantMap expectedTranscribeOutput;
+
+    {
+        DubbingController writer(nullptr, nullptr);
+        QVERIFY2(writer.newProject(projectPath), qPrintable(writer.lastError()));
+        QVERIFY2(writer.importMedia(mediaPath), qPrintable(writer.lastError()));
+        QVERIFY2(writer.skipWorkflowTask(QStringLiteral("ingest")), qPrintable(writer.lastError()));
+        QVERIFY2(writer.importWorkflowArtifactFiles(
+                     QStringLiteral("stt"), QVariantList{transcriptPath}),
+                 qPrintable(writer.lastError()));
+        expectedTranscriptConfiguration = writer.transcriptConfiguration();
+        expectedIngestOutput = writer.stepOutput(QStringLiteral("ingest"));
+        expectedTranscribeOutput = writer.stepOutput(QStringLiteral("transcribe"));
+        expectedTranscriptArtifactPath = expectedTranscribeOutput.value(QStringLiteral("path"))
+                                             .toString();
+        QVERIFY(QFileInfo(expectedTranscriptArtifactPath).isFile());
+        QVERIFY2(writer.saveProject(), qPrintable(writer.lastError()));
+        expectedCurrentStep = writer.currentStepId();
+        expectedLastCompletedStep = writer.lastCompletedStepId();
+        QCOMPARE(expectedLastCompletedStep, QStringLiteral("transcribe"));
+    }
+
+    // The writer has been destroyed. Reopen must use only durable project data,
+    // not state retained by the previous controller or runner instance.
+    DubbingController reader(nullptr, nullptr);
+    QVERIFY2(reader.openProject(projectPath), qPrintable(reader.lastError()));
+    QCOMPARE(reader.projectPath(), QFileInfo(projectPath).absoluteFilePath());
+    QCOMPARE(reader.sourceMediaPath(), QFileInfo(mediaPath).absoluteFilePath());
+    QCOMPARE(reader.sourceLanguage(), QStringLiteral("zh"));
+    QCOMPARE(reader.targetLanguage(), QStringLiteral("vi"));
+    QCOMPARE(reader.currentStepId(), expectedCurrentStep);
+    QCOMPARE(reader.lastCompletedStepId(), expectedLastCompletedStep);
+    QCOMPARE(reader.segments().size(), 2);
+    QCOMPARE(reader.segments().first().toMap().value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("你好，王先生。"));
+    QCOMPARE(reader.transcriptConfiguration().value(QStringLiteral("transcriptSource")).toString(),
+             expectedTranscriptConfiguration.value(QStringLiteral("transcriptSource")).toString());
+    QCOMPARE(reader.transcriptConfiguration().value(QStringLiteral("sttSegments")).toList().size(),
+             expectedTranscriptConfiguration.value(QStringLiteral("sttSegments")).toList().size());
+    QCOMPARE(reader.timingConfiguration().value(QStringLiteral("mode")).toString(),
+             QStringLiteral("keep"));
+    QCOMPARE(reader.audioMixConfiguration().value(QStringLiteral("originalGainPercent")).toInt(), 0);
+    QCOMPARE(reader.audioMixConfiguration().value(QStringLiteral("dubbedGainPercent")).toInt(), 100);
+    QCOMPARE(reader.stepOutput(QStringLiteral("ingest")), expectedIngestOutput);
+    QCOMPARE(reader.stepOutput(QStringLiteral("transcribe")), expectedTranscribeOutput);
+    QCOMPARE(reader.stepOutput(QStringLiteral("transcribe")).value(QStringLiteral("path"))
+                 .toString(), expectedTranscriptArtifactPath);
+    QVERIFY(reader.stepOutput(QStringLiteral("ingest")).value(QStringLiteral("skipped")).toBool());
+    QVERIFY(!reader.stepOutput(QStringLiteral("transcribe")).value(QStringLiteral("path"))
+                 .toString().isEmpty());
+}
+
+void TestDubbingProject::workflowTranscriptArtifactsAreWrittenAndPersisted()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    const QVariantList sourceSegments{
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("stt-1")},
+                    {QStringLiteral("startMs"), 0}, {QStringLiteral("endMs"), 1200},
+                    {QStringLiteral("sourceText"), QStringLiteral("你好，王先生。")}}
+    };
+    const QString projectPath = dir.filePath(QStringLiteral("artifact-paths.ladub.json"));
+    DubbingController controller(nullptr, nullptr);
+    QVERIFY2(controller.newProject(projectPath), qPrintable(controller.lastError()));
+    DubbingJobRunner *runner = controller.findChild<DubbingJobRunner *>();
+    QVERIFY(runner);
+
+    const QVariantMap sttOutputs{{QStringLiteral("transcript"), sourceSegments},
+                                 {QStringLiteral("transcriptSource"), QStringLiteral("stt")}};
+    QVERIFY(QMetaObject::invokeMethod(
+        runner, "stageCompleted", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("transcribe")),
+        Q_ARG(QVariantMap, sttOutputs)));
+    const QString sttPath = controller.stepOutput(QStringLiteral("transcribe"))
+                                .value(QStringLiteral("path")).toString();
+    QVERIFY2(QFileInfo(sttPath).isFile(), qPrintable(sttPath));
+    QVERIFY(QFileInfo(sttPath).fileName() == QStringLiteral("transcript.srt"));
+    QCOMPARE(QDir(dir.path()).relativeFilePath(sttPath).replace('\\', '/'),
+             QStringLiteral(".workflow-artifacts/artifact-paths/01-stt/transcript.srt"));
+
+    const QVariantList ocrSegments{
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("ocr-1")},
+                    {QStringLiteral("startMs"), 0}, {QStringLiteral("endMs"), 1200},
+                    {QStringLiteral("sourceText"), QStringLiteral("你好，王先生。")}}
+    };
+    const QVariantMap ocrOutputs{{QStringLiteral("transcript"), ocrSegments},
+                                 {QStringLiteral("transcriptSource"), QStringLiteral("ocr")}};
+    QVERIFY(QMetaObject::invokeMethod(
+        runner, "stageCompleted", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("transcribe")),
+        Q_ARG(QVariantMap, ocrOutputs)));
+    const QString ocrPath = controller.stepOutput(QStringLiteral("subtitle-ocr"))
+                                .value(QStringLiteral("path")).toString();
+    QVERIFY2(QFileInfo(ocrPath).isFile(), qPrintable(ocrPath));
+    QVERIFY(QFileInfo(ocrPath).fileName() == QStringLiteral("ocr.srt"));
+    QCOMPARE(QDir(dir.path()).relativeFilePath(ocrPath).replace('\\', '/'),
+             QStringLiteral(".workflow-artifacts/artifact-paths/02-ocr/ocr.srt"));
+
+    QVERIFY2(controller.reconcileTranscriptSources(), qPrintable(controller.lastError()));
+    const QString reviewedPath = controller.stepOutput(QStringLiteral("review-transcript"))
+                                     .value(QStringLiteral("path")).toString();
+    QVERIFY2(QFileInfo(reviewedPath).isFile(), qPrintable(reviewedPath));
+    QCOMPARE(QDir(dir.path()).relativeFilePath(reviewedPath).replace('\\', '/'),
+             QStringLiteral(".workflow-artifacts/artifact-paths/03-review/reviewed-transcript.srt"));
+
+    const QVariantList translatedSegments{
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("ocr-1")},
+                    {QStringLiteral("startMs"), 0}, {QStringLiteral("endMs"), 1200},
+                    {QStringLiteral("targetText"), QStringLiteral("Xin chào, ông Vương.")}}
+    };
+    const QVariantMap translationOutputs{{QStringLiteral("transcript"), translatedSegments}};
+    QVERIFY(QMetaObject::invokeMethod(
+        runner, "stageCompleted", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("translate")),
+        Q_ARG(QVariantMap, translationOutputs)));
+    const QString translatedPath = controller.stepOutput(QStringLiteral("translate"))
+                                       .value(QStringLiteral("path")).toString();
+    QVERIFY2(QFileInfo(translatedPath).isFile(), qPrintable(translatedPath));
+    QVERIFY(QFileInfo(translatedPath).fileName() == QStringLiteral("translated.srt"));
+    QCOMPARE(QDir(dir.path()).relativeFilePath(translatedPath).replace('\\', '/'),
+             QStringLiteral(".workflow-artifacts/artifact-paths/04-translation/translated.srt"));
+
+    DubbingController reopened(nullptr, nullptr);
+    QVERIFY2(reopened.openProject(projectPath), qPrintable(reopened.lastError()));
+    QVERIFY(QFileInfo(reopened.stepOutput(QStringLiteral("transcribe"))
+                          .value(QStringLiteral("path")).toString()).isFile());
+    QVERIFY(QFileInfo(reopened.stepOutput(QStringLiteral("subtitle-ocr"))
+                          .value(QStringLiteral("path")).toString()).isFile());
+    QVERIFY(QFileInfo(reopened.stepOutput(QStringLiteral("translate"))
+                          .value(QStringLiteral("path")).toString()).isFile());
 }
 
 void TestDubbingProject::migratesLegacyProjectsToLlmRewritePipeline()
@@ -1139,6 +1481,49 @@ void TestDubbingProject::importingMediaDoesNotStartProcessing()
     QVERIFY(controller.vocalsPath().isEmpty());
     QCOMPARE(controller.workflowMode(), QStringLiteral("idle"));
     QCOMPARE(controller.currentStepId(), QStringLiteral("ingest"));
+}
+
+void TestDubbingProject::autoProjectNamesAvoidOverwritingExistingProjects()
+{
+    const QString baseName = QStringLiteral("codex_collision_%1")
+                                 .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+
+    DubbingController first(nullptr, nullptr);
+    QVERIFY2(first.createAutoProject(baseName), qPrintable(first.lastError()));
+    const QString firstPath = first.projectPath();
+    QVERIFY(QFileInfo::exists(firstPath));
+
+    DubbingController second(nullptr, nullptr);
+    QVERIFY2(second.createAutoProject(baseName), qPrintable(second.lastError()));
+    const QString secondPath = second.projectPath();
+    QVERIFY(QFileInfo::exists(secondPath));
+    QVERIFY(firstPath != secondPath);
+    QVERIFY(secondPath.endsWith(baseName + QStringLiteral("__2.ladub.json")));
+
+    QVERIFY(QFile::remove(firstPath));
+    QVERIFY(QFile::remove(secondPath));
+}
+
+void TestDubbingProject::unnamedProjectsAreCollisionSafe()
+{
+    DubbingController first(nullptr, nullptr);
+    QVERIFY2(first.newProject(), qPrintable(first.lastError()));
+    const QString firstPath = first.projectPath();
+    QVERIFY(!firstPath.isEmpty());
+    QVERIFY(QFileInfo::exists(firstPath));
+
+    DubbingController second(nullptr, nullptr);
+    QVERIFY2(second.newProject(), qPrintable(second.lastError()));
+    const QString secondPath = second.projectPath();
+    QVERIFY(!secondPath.isEmpty());
+    QVERIFY(QFileInfo::exists(secondPath));
+
+    QVERIFY(firstPath != secondPath);
+    QVERIFY(firstPath.endsWith(QStringLiteral(".ladub.json")));
+    QVERIFY(secondPath.endsWith(QStringLiteral(".ladub.json")));
+
+    QVERIFY(QFile::remove(firstPath));
+    QVERIFY(QFile::remove(secondPath));
 }
 
 void TestDubbingProject::automaticWorkflowDoesNotStartWithUnresolvedPreflight()
@@ -2695,6 +3080,48 @@ void TestDubbingProject::currentSubtitleOcrNotebookRevisionVerifies()
              qPrintable(session.lastError()));
 }
 
+void TestDubbingProject::previousSubtitleOcrNotebookRevisionStillVerifies()
+{
+    // The live worker currently used for this project reports .17 while
+    // keeping the same exact model and response contract.  This is a
+    // compatibility regression test for that observed production endpoint.
+    ExactRouteWorkerMock worker(QStringLiteral("subtitle-ocr"),
+                                QStringLiteral("pp-ocrv5-multilingual-3.1"),
+                                QStringLiteral("subtitle-ocr-2026-08-23.17"));
+    QVERIFY(worker.start());
+
+    ColabSession session;
+    QSignalSpy verification(&session, &ColabSession::verificationFinished);
+    QString error;
+    QVERIFY2(session.beginVerifiedSession(worker.workerUrl(), QStringLiteral("test-token"),
+                                          QStringLiteral("subtitle-ocr"),
+                                          QStringLiteral("pp-ocrv5-multilingual-3.1"),
+                                          &error, true), qPrintable(error));
+    QTRY_COMPARE(verification.count(), 1);
+    QVERIFY2(verification.constFirst().at(0).toBool(),
+             qPrintable(session.lastError()));
+}
+
+void TestDubbingProject::unknownSubtitleOcrNotebookRevisionIsRejected()
+{
+    ExactRouteWorkerMock worker(QStringLiteral("subtitle-ocr"),
+                                QStringLiteral("pp-ocrv5-multilingual-3.1"),
+                                QStringLiteral("subtitle-ocr-2026-08-23.19"));
+    QVERIFY(worker.start());
+
+    ColabSession session;
+    QSignalSpy verification(&session, &ColabSession::verificationFinished);
+    QString error;
+    QVERIFY2(session.beginVerifiedSession(worker.workerUrl(), QStringLiteral("test-token"),
+                                          QStringLiteral("subtitle-ocr"),
+                                          QStringLiteral("pp-ocrv5-multilingual-3.1"),
+                                          &error, true), qPrintable(error));
+    QTRY_COMPARE(verification.count(), 1);
+    QVERIFY(!verification.constFirst().at(0).toBool());
+    QVERIFY(session.lastError().contains(QStringLiteral("reported revision")));
+    QVERIFY(session.lastError().contains(QStringLiteral(".19")));
+}
+
 void TestDubbingProject::dubbingColabModelsMapToExactNotebooks()
 {
     const QStringList nodes{
@@ -2737,7 +3164,7 @@ void TestDubbingProject::dubbingColabModelsMapToExactNotebooks()
                 QStringLiteral("not-a-model")).isEmpty());
 }
 
-void TestDubbingProject::dubbingManualArtifactSpecsExposeStrictColabContracts()
+void TestDubbingProject::dubbingManualArtifactSpecsExposeRoleBasedAudioContracts()
 {
     DubbingController controller(nullptr, nullptr);
 
@@ -2745,7 +3172,7 @@ void TestDubbingProject::dubbingManualArtifactSpecsExposeStrictColabContracts()
     QCOMPARE(ocr.value(QStringLiteral("colabFolder")).toString(),
              QStringLiteral("/content/la_studio_outputs/ocr/<model-id>/"));
     QVERIFY(ocr.value(QStringLiteral("workerPath")).toString().contains(
-        QStringLiteral("ocr.srt")));
+        QStringLiteral("any project/run-scoped basename")));
     QVERIFY(ocr.value(QStringLiteral("allowedExtensions")).toStringList().contains(
         QStringLiteral(".srt")));
     QVERIFY(!ocr.value(QStringLiteral("allowedExtensions")).toStringList().contains(
@@ -2757,14 +3184,20 @@ void TestDubbingProject::dubbingManualArtifactSpecsExposeStrictColabContracts()
     QCOMPARE(isolation.value(QStringLiteral("colabFolder")).toString(),
              QStringLiteral("/content/la-studio-separation-jobs/<model-id>/<job-id>/"));
     QVERIFY(isolation.value(QStringLiteral("workerPath")).toString().contains(
-        QStringLiteral("source.wav is input")));
+        QStringLiteral("mixed as Background")));
     const QStringList expectedIsolationFiles{
-        QStringLiteral("vocals.flac"), QStringLiteral("background.flac")};
+        QStringLiteral("vocals audio (any accepted filename)"),
+        QStringLiteral("background audio (any accepted filename)")};
     QCOMPARE(isolation.value(QStringLiteral("expectedFiles")).toStringList(),
              expectedIsolationFiles);
-    const QStringList expectedWavExtensions{QStringLiteral(".flac")};
+    const QStringList expectedAudioExtensions{
+        QStringLiteral(".wav"), QStringLiteral(".mp3"), QStringLiteral(".m4a"),
+        QStringLiteral(".aac"), QStringLiteral(".flac"), QStringLiteral(".ogg"),
+        QStringLiteral(".opus"), QStringLiteral(".wma"), QStringLiteral(".aiff"),
+        QStringLiteral(".aif"), QStringLiteral(".ac3"), QStringLiteral(".amr"),
+        QStringLiteral(".webm")};
     QCOMPARE(isolation.value(QStringLiteral("allowedExtensions")).toStringList(),
-             expectedWavExtensions);
+             expectedAudioExtensions);
     QCOMPARE(isolation.value(QStringLiteral("multiple")).toBool(), true);
 
     // Every Dubbing stage that produces a portable artifact exposes its own
@@ -2773,30 +3206,54 @@ void TestDubbingProject::dubbingManualArtifactSpecsExposeStrictColabContracts()
     // which the next workflow step does not understand.
     const auto oneArtifact = [&controller](const QString &stage,
                                            const QString &artifactId,
-                                           const QString &fileName) {
+                                           const QString &fileName,
+                                           const bool losslessAudio = false) {
         const QVariantList specs = controller.workflowArtifactSpecsForStage(stage);
         QCOMPARE(specs.size(), 1);
         const QVariantMap spec = specs.constFirst().toMap();
         QCOMPARE(spec.value(QStringLiteral("nodeId")).toString(), artifactId);
         QVERIFY(spec.value(QStringLiteral("colabFolder")).toString().startsWith(
             QStringLiteral("/content/la_studio_outputs/")));
-        QVERIFY(spec.value(QStringLiteral("workerPath")).toString().contains(fileName));
-        QVERIFY(spec.value(QStringLiteral("expectedFiles")).toStringList().constFirst().startsWith(fileName));
+        const QStringList expectedFiles = spec.value(QStringLiteral("expectedFiles")).toStringList();
+        const bool transcriptArtifact = artifactId == QStringLiteral("stt")
+            || artifactId == QStringLiteral("subtitle-ocr")
+            || artifactId == QStringLiteral("transcribe")
+            || artifactId == QStringLiteral("review-transcript")
+            || artifactId == QStringLiteral("translate");
+        if (transcriptArtifact) {
+            QVERIFY(spec.value(QStringLiteral("workerPath")).toString().contains(
+                QStringLiteral("project/run-scoped basename")));
+            QVERIFY(expectedFiles.constFirst().contains(QStringLiteral("any accepted filename")));
+        } else {
+            QVERIFY(spec.value(QStringLiteral("workerPath")).toString().contains(fileName));
+            QVERIFY(expectedFiles.constFirst().startsWith(fileName));
+        }
+        if (losslessAudio) {
+            const QStringList extensions = spec.value(QStringLiteral("allowedExtensions")).toStringList();
+            QVERIFY(extensions.contains(QStringLiteral(".wav")));
+            QVERIFY(extensions.contains(QStringLiteral(".flac")));
+        }
     };
     oneArtifact(QStringLiteral("normalize"), QStringLiteral("ingest"),
-                QStringLiteral("normalized.wav"));
+                QStringLiteral("normalized.wav"), true);
+    oneArtifact(QStringLiteral("stt"), QStringLiteral("stt"),
+                QStringLiteral("transcript.srt"));
+    oneArtifact(QStringLiteral("ocr"), QStringLiteral("subtitle-ocr"),
+                QStringLiteral("ocr.srt"));
+    oneArtifact(QStringLiteral("subtitle-ocr"), QStringLiteral("subtitle-ocr"),
+                QStringLiteral("ocr.srt"));
     oneArtifact(QStringLiteral("transcribe"), QStringLiteral("transcribe"),
                 QStringLiteral("transcript.srt"));
     oneArtifact(QStringLiteral("review-transcript"), QStringLiteral("review-transcript"),
                 QStringLiteral("reviewed-transcript.srt"));
     oneArtifact(QStringLiteral("alignment-subtitle"), QStringLiteral("fit-timing"),
-                QStringLiteral("timed-voice.wav"));
+                QStringLiteral("timed-voice.wav"), true);
     oneArtifact(QStringLiteral("translate"), QStringLiteral("translate"),
                 QStringLiteral("translated.srt"));
     oneArtifact(QStringLiteral("tts"), QStringLiteral("synthesize"),
-                QStringLiteral("voice.wav"));
+                QStringLiteral("voice.wav"), true);
     oneArtifact(QStringLiteral("mix"), QStringLiteral("mix"),
-                QStringLiteral("mix.wav"));
+                QStringLiteral("mix.wav"), true);
 
     oneArtifact(QStringLiteral("export-output"), QStringLiteral("export"),
                 QStringLiteral("final.mp4"));
@@ -2810,34 +3267,108 @@ void TestDubbingProject::dubbingManualArtifactSpecsExposeStrictColabContracts()
     QVERIFY(writeFixtureFile(vocals, QByteArrayLiteral("flac fixture")));
     QVERIFY(writeFixtureFile(background, QByteArrayLiteral("flac fixture")));
 
-    // The task contract is exact: isolation rejects an arbitrary file name,
-    // then accepts only the two declared lossless FLAC artifacts.
-    const QString wrongName = dir.filePath(QStringLiteral("other.flac"));
-    QVERIFY(writeFixtureFile(wrongName, QByteArrayLiteral("flac fixture")));
+    // Manual isolation uses roles and format, not the names emitted by a
+    // Colab worker. An arbitrary valid extension is accepted; an unsupported
+    // extension is rejected.
+    const QString arbitraryName = dir.filePath(QStringLiteral("my-own-dialogue.flac"));
+    QVERIFY(writeFixtureFile(arbitraryName, QByteArrayLiteral("flac fixture")));
+    QVERIFY(controller.importWorkflowArtifactFiles(
+        QStringLiteral("source-separate"), QVariantList{arbitraryName, background}));
+    const QString wrongFormat = dir.filePath(QStringLiteral("not-audio.txt"));
+    QVERIFY(writeFixtureFile(wrongFormat, QByteArrayLiteral("text fixture")));
     QVERIFY(!controller.importWorkflowArtifactFiles(
-        QStringLiteral("source-separate"), QVariantList{vocals, wrongName}));
+        QStringLiteral("source-separate"), QVariantList{arbitraryName, wrongFormat}));
     QVERIFY(controller.importWorkflowArtifactFiles(
         QStringLiteral("source-separate"), QVariantList{vocals, background}));
     QVERIFY(QFileInfo(controller.vocalsPath()).isFile());
     QVERIFY(QFileInfo(controller.backgroundPath()).isFile());
 
-    // WAV remains an explicit compatibility choice. It is never silently
-    // selected for a new Direct-Colab isolation route, but projects that need
-    // PCM handoff can opt in and receive an equally strict WAV-only contract.
+    // The transfer format remains a Colab preference only; it must not narrow
+    // the independent local upload flow.
     QVERIFY(controller.setWorkflowNodeParameters(QStringLiteral("source-separate"), {
         {QStringLiteral("artifactTransferFormat"), QStringLiteral("wav")},
     }));
     const QVariantMap wavIsolation = controller.workflowArtifactSpec(
         QStringLiteral("source-separate"));
     QCOMPARE(wavIsolation.value(QStringLiteral("expectedFiles")).toStringList(),
-             QStringList({QStringLiteral("vocals.wav"), QStringLiteral("background.wav")}));
+             expectedIsolationFiles);
     QCOMPARE(wavIsolation.value(QStringLiteral("allowedExtensions")).toStringList(),
-             QStringList({QStringLiteral(".wav")}));
+             expectedAudioExtensions);
+}
+
+void TestDubbingProject::manualSeparationUploadAcceptsRoleBasedAudioNames()
+{
+    DubbingController controller(nullptr, nullptr);
+    const QVariantMap isolation = controller.workflowArtifactSpec(
+        QStringLiteral("source-separate"));
+    const QStringList expectedAudioExtensions{
+        QStringLiteral(".wav"), QStringLiteral(".mp3"), QStringLiteral(".m4a"),
+        QStringLiteral(".aac"), QStringLiteral(".flac"), QStringLiteral(".ogg"),
+        QStringLiteral(".opus"), QStringLiteral(".wma"), QStringLiteral(".aiff"),
+        QStringLiteral(".aif"), QStringLiteral(".ac3"), QStringLiteral(".amr"),
+        QStringLiteral(".webm")};
+    QCOMPARE(isolation.value(QStringLiteral("allowedExtensions")).toStringList(),
+             expectedAudioExtensions);
+    QCOMPARE(isolation.value(QStringLiteral("expectedFiles")).toStringList(),
+             QStringList({QStringLiteral("vocals audio (any accepted filename)"),
+                          QStringLiteral("background audio (any accepted filename)")}));
+
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QVERIFY(controller.newProject(directory.filePath(QStringLiteral("role-based-upload.ladub.json"))));
+    const QString dialogue = directory.filePath(QStringLiteral("my-dialogue-take.mp3"));
+    const QString music = directory.filePath(QStringLiteral("favorite-background-track.ogg"));
+    QVERIFY(writeFixtureFile(dialogue, QByteArrayLiteral("dialogue audio fixture")));
+    QVERIFY(writeFixtureFile(music, QByteArrayLiteral("background audio fixture")));
+
+    // The picker order is the role contract. File basenames are user-owned
+    // and must not be mistaken for a Colab-generated filename contract.
+    QVERIFY2(controller.importWorkflowArtifactFiles(
+                 QStringLiteral("source-separate"), QVariantList{dialogue, music}),
+             qPrintable(controller.lastError()));
+    QCOMPARE(QFileInfo(controller.vocalsPath()).fileName(),
+             QStringLiteral("my-dialogue-take.mp3"));
+    QCOMPARE(QFileInfo(controller.backgroundPath()).fileName(),
+             QStringLiteral("favorite-background-track.ogg"));
+    QCOMPARE(controller.stepOutput(QStringLiteral("source-separate"))
+                 .value(QStringLiteral("vocals")).toString(),
+             controller.vocalsPath());
+    QCOMPARE(controller.stepOutput(QStringLiteral("source-separate"))
+                 .value(QStringLiteral("background")).toString(),
+             controller.backgroundPath());
+
+    // Same basename from different folders must not make the second role
+    // overwrite the first cached artifact.
+    const QString firstFolder = directory.filePath(QStringLiteral("first"));
+    const QString secondFolder = directory.filePath(QStringLiteral("second"));
+    QVERIFY(QDir().mkpath(firstFolder));
+    QVERIFY(QDir().mkpath(secondFolder));
+    const QString sameNameVocals = QDir(firstFolder).filePath(QStringLiteral("take.wav"));
+    const QString sameNameBackground = QDir(secondFolder).filePath(QStringLiteral("take.wav"));
+    QVERIFY(writeFixtureFile(sameNameVocals, QByteArrayLiteral("vocals audio fixture")));
+    QVERIFY(writeFixtureFile(sameNameBackground, QByteArrayLiteral("background audio fixture")));
+    QVERIFY2(controller.importWorkflowArtifactFiles(
+                 QStringLiteral("source-separate"),
+                 QVariantList{sameNameVocals, sameNameBackground}),
+             qPrintable(controller.lastError()));
+    QVERIFY(controller.vocalsPath() != controller.backgroundPath());
+    QVERIFY(QFileInfo(controller.vocalsPath()).isFile());
+    QVERIFY(QFileInfo(controller.backgroundPath()).isFile());
+    QCOMPARE(QFileInfo(controller.vocalsPath()).fileName(), QStringLiteral("take.wav"));
+    QCOMPARE(QFileInfo(controller.backgroundPath()).fileName(), QStringLiteral("background-take.wav"));
 }
 
 void TestDubbingProject::manualArtifactUploadAcceptsPresentationStagesWithoutColab()
 {
     DubbingController controller(nullptr, nullptr);
+
+    const auto workflowNodeById = [](const QVariantList &nodes, const QString &id) {
+        for (const QVariant &value : nodes) {
+            const QVariantMap node = value.toMap();
+            if (node.value(QStringLiteral("id")).toString() == id) return node;
+        }
+        return QVariantMap();
+    };
 
     // Upload is a local handoff: it must expose a contract even when no
     // Colab session has ever been configured.  These aliases are the ids
@@ -2898,6 +3429,148 @@ void TestDubbingProject::manualArtifactUploadAcceptsPresentationStagesWithoutCol
                           QStringLiteral(".ass"), QStringLiteral(".ssa"),
                           QStringLiteral(".txt"), QStringLiteral(".md"),
                           QStringLiteral(".markdown")}));
+
+    // Exercise the real local import path for both independent transcript
+    // routes. No Colab URL/token/session is configured in either controller.
+    const QByteArray timedTranscript = QByteArrayLiteral(
+        "1\n00:00:00,000 --> 00:00:01,000\nOffline transcript\n\n");
+    const QString sttPath = combinedDirectory.filePath(
+        QStringLiteral("combined-upload__20260902-204500-ab12cd34__stt.srt"));
+    const QString ocrPath = combinedDirectory.filePath(
+        QStringLiteral("combined-upload__20260902-204500-ab12cd34__ocr.srt"));
+    QVERIFY(writeFixtureFile(sttPath, timedTranscript));
+    QVERIFY(writeFixtureFile(ocrPath, timedTranscript));
+
+    QVERIFY2(combined.importWorkflowArtifactFiles(
+                 QStringLiteral("stt"), QVariantList{sttPath}),
+             qPrintable(combined.lastError()));
+    QVERIFY2(combined.importWorkflowArtifactFiles(
+                 QStringLiteral("subtitle-ocr"), QVariantList{ocrPath}),
+             qPrintable(combined.lastError()));
+    QVERIFY2(combined.reconcileTranscriptSources(), qPrintable(combined.lastError()));
+    QCOMPARE(combined.segments().size(), 1);
+    QCOMPARE(combined.segments().constFirst().toMap()
+                 .value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("Offline transcript"));
+    QCOMPARE(combined.transcriptConfiguration()
+                 .value(QStringLiteral("reconciledSegments")).toList().size(), 1);
+    QCOMPARE(workflowNodeById(combined.workflowNodes(), QStringLiteral("translate"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("ready"));
+
+    // AI-IDE outputs use project/run-scoped names. A second upload with the
+    // same basename must be copied beside the first one rather than replacing
+    // it, so prior project evidence remains recoverable.
+    DubbingController collisionSafe(nullptr, nullptr);
+    QTemporaryDir collisionDirectory;
+    QVERIFY(collisionDirectory.isValid());
+    QVERIFY(collisionSafe.newProject(
+        collisionDirectory.filePath(QStringLiteral("collision-safe.ladub.json"))));
+    const QString firstInputDirectory = collisionDirectory.filePath(QStringLiteral("first"));
+    const QString secondInputDirectory = collisionDirectory.filePath(QStringLiteral("second"));
+    QVERIFY(QDir().mkpath(firstInputDirectory));
+    QVERIFY(QDir().mkpath(secondInputDirectory));
+    const QString firstInput = QDir(firstInputDirectory).filePath(
+        QStringLiteral("same-project__run-01__reviewed.srt"));
+    const QString secondInput = QDir(secondInputDirectory).filePath(
+        QStringLiteral("same-project__run-01__reviewed.srt"));
+    QVERIFY(writeFixtureFile(firstInput,
+                             QByteArrayLiteral("1\n00:00:00,000 --> 00:00:01,000\nFirst\n\n")));
+    QVERIFY(writeFixtureFile(secondInput,
+                             QByteArrayLiteral("1\n00:00:00,000 --> 00:00:01,000\nSecond\n\n")));
+    QVERIFY2(collisionSafe.importWorkflowArtifactFiles(
+                 QStringLiteral("stt"), QVariantList{firstInput}),
+             qPrintable(collisionSafe.lastError()));
+    const QString firstArtifact = collisionSafe.stepOutput(QStringLiteral("transcribe"))
+                                      .value(QStringLiteral("path")).toString();
+    QVERIFY2(collisionSafe.importWorkflowArtifactFiles(
+                 QStringLiteral("stt"), QVariantList{secondInput}),
+             qPrintable(collisionSafe.lastError()));
+    const QString secondArtifact = collisionSafe.stepOutput(QStringLiteral("transcribe"))
+                                       .value(QStringLiteral("path")).toString();
+    QVERIFY(QFileInfo(firstArtifact).isFile());
+    QVERIFY(QFileInfo(secondArtifact).isFile());
+    QVERIFY(firstArtifact != secondArtifact);
+    QCOMPARE(QString::fromUtf8(readFixtureFile(firstArtifact)),
+             QStringLiteral("1\n00:00:00,000 --> 00:00:01,000\nFirst\n\n"));
+    QCOMPARE(QString::fromUtf8(readFixtureFile(secondArtifact)),
+             QStringLiteral("1\n00:00:00,000 --> 00:00:01,000\nSecond\n\n"));
+
+    DubbingController offlineStt(nullptr, nullptr);
+    QVERIFY(offlineStt.newProject(
+        combinedDirectory.filePath(QStringLiteral("offline-stt.ladub.json"))));
+    QVERIFY2(offlineStt.importWorkflowArtifactFiles(
+                 QStringLiteral("stt"), QVariantList{sttPath}),
+             qPrintable(offlineStt.lastError()));
+    QCOMPARE(offlineStt.segments().size(), 1);
+    QCOMPARE(offlineStt.segments().constFirst().toMap()
+                 .value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("Offline transcript"));
+    QCOMPARE(offlineStt.transcriptConfiguration()
+                 .value(QStringLiteral("sttSegments")).toList().size(), 1);
+    const QVariantMap sttOutput = offlineStt.stepOutput(QStringLiteral("transcribe"));
+    QVERIFY(sttOutput.value(QStringLiteral("manualUpload")).toBool());
+    QVERIFY(QFileInfo(sttOutput.value(QStringLiteral("path")).toString()).isFile());
+    QCOMPARE(workflowNodeById(offlineStt.workflowNodes(), QStringLiteral("transcribe"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("completed"));
+    QCOMPARE(workflowNodeById(offlineStt.workflowNodes(), QStringLiteral("translate"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("ready"));
+    QVERIFY(offlineStt.saveProject());
+
+    // The downstream handoff is durable: reopening the project must expose the
+    // uploaded transcript to Translate instead of requiring another upload.
+    DubbingController reopenedStt(nullptr, nullptr);
+    QVERIFY2(reopenedStt.openProject(
+                 combinedDirectory.filePath(QStringLiteral("offline-stt.ladub.json"))),
+             qPrintable(reopenedStt.lastError()));
+    QCOMPARE(reopenedStt.segments().size(), 1);
+    QCOMPARE(reopenedStt.segments().constFirst().toMap()
+                 .value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("Offline transcript"));
+    QCOMPARE(reopenedStt.transcriptConfiguration()
+                 .value(QStringLiteral("sttSegments")).toList().size(), 1);
+    QCOMPARE(workflowNodeById(reopenedStt.workflowNodes(), QStringLiteral("translate"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("ready"));
+
+    DubbingController offlineOcr(nullptr, nullptr);
+    QVERIFY(offlineOcr.newProject(
+        combinedDirectory.filePath(QStringLiteral("offline-ocr.ladub.json"))));
+    QVERIFY2(offlineOcr.importWorkflowArtifactFiles(
+                 QStringLiteral("subtitle-ocr"), QVariantList{ocrPath}),
+             qPrintable(offlineOcr.lastError()));
+    QCOMPARE(offlineOcr.segments().size(), 1);
+    QCOMPARE(offlineOcr.segments().constFirst().toMap()
+                 .value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("Offline transcript"));
+    QCOMPARE(offlineOcr.transcriptConfiguration()
+                 .value(QStringLiteral("ocrSegments")).toList().size(), 1);
+    const QVariantMap ocrOutput = offlineOcr.stepOutput(QStringLiteral("subtitle-ocr"));
+    QVERIFY(ocrOutput.value(QStringLiteral("manualUpload")).toBool());
+    QVERIFY(QFileInfo(ocrOutput.value(QStringLiteral("path")).toString()).isFile());
+    QCOMPARE(workflowNodeById(offlineOcr.workflowNodes(), QStringLiteral("transcribe"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("completed"));
+    QCOMPARE(workflowNodeById(offlineOcr.workflowNodes(), QStringLiteral("translate"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("ready"));
+    QVERIFY(offlineOcr.saveProject());
+
+    DubbingController reopenedOcr(nullptr, nullptr);
+    QVERIFY2(reopenedOcr.openProject(
+                 combinedDirectory.filePath(QStringLiteral("offline-ocr.ladub.json"))),
+             qPrintable(reopenedOcr.lastError()));
+    QCOMPARE(reopenedOcr.segments().size(), 1);
+    QCOMPARE(reopenedOcr.segments().constFirst().toMap()
+                 .value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("Offline transcript"));
+    QCOMPARE(reopenedOcr.transcriptConfiguration()
+                 .value(QStringLiteral("ocrSegments")).toList().size(), 1);
+    QCOMPARE(workflowNodeById(reopenedOcr.workflowNodes(), QStringLiteral("translate"))
+                 .value(QStringLiteral("state")).toString(),
+             QStringLiteral("ready"));
 }
 
 void TestDubbingProject::manualArtifactUploadUiOffersPickerAndIndependentSkip()
@@ -2932,6 +3605,8 @@ void TestDubbingProject::manualArtifactUploadUiOffersPickerAndIndependentSkip()
     QVERIFY(page.contains(QStringLiteral("onArtifactAccepted")));
     QVERIFY(page.contains(QStringLiteral("onSkipRequested")));
     QVERIFY(dialog.contains(QStringLiteral("root.dubbing.skipWorkflowTask")));
+    QVERIFY(dialog.contains(QStringLiteral("function refreshSpecs")));
+    QVERIFY(dialog.contains(QStringLiteral("workflowArtifactSpec")));
     QFile reviewPanel(QDir(sourceRoot).filePath(
         QStringLiteral("qml/components/dubbing/panels/DubbingReviewPanel.qml")));
     QVERIFY(reviewPanel.open(QIODevice::ReadOnly));
@@ -2940,18 +3615,90 @@ void TestDubbingProject::manualArtifactUploadUiOffersPickerAndIndependentSkip()
     QVERIFY(reviewPanelSource.contains(QStringLiteral("artifactSkipRequested")));
     QVERIFY(reviewPanelSource.contains(QStringLiteral("Accepted %1 of %2 outputs")));
     QVERIFY(reviewPanelSource.contains(QStringLiteral("handleArtifactAccepted")));
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("function refreshArtifactSpecs")));
+    QVERIFY(reviewPanelSource.contains(QStringLiteral("function onProjectChanged")));
     QVERIFY(header.contains(QStringLiteral(
         "Q_INVOKABLE bool skipWorkflowTask(const QString &nodeId)")));
+    QVERIFY(header.contains(QStringLiteral(
+        "Q_INVOKABLE bool canImportWorkflowArtifactNow(const QString &nodeId) const")));
+    QVERIFY(panel.contains(QStringLiteral("canImportWorkflowArtifactNow")));
+    const QString transcribeStep = read(QStringLiteral(
+        "qml/components/dubbing/steps/DubbingTranscribeStep.qml"));
+    QVERIFY(transcribeStep.contains(QStringLiteral("canImportWorkflowArtifactNow")));
 
     DubbingController controller(nullptr, nullptr);
     QTemporaryDir directory;
     QVERIFY(directory.isValid());
     QVERIFY(controller.newProject(directory.filePath(QStringLiteral("skip-task.ladub.json"))));
+    // Manual STT/OCR handoff is available before any Colab setup. The same
+    // policy must remain true while the other independent transcript worker
+    // is active; a busy aggregate flag must not lock the sibling upload.
+    QVERIFY(controller.canImportWorkflowArtifactNow(QStringLiteral("stt")));
+    QVERIFY(controller.canImportWorkflowArtifactNow(QStringLiteral("subtitle-ocr")));
     QVERIFY(controller.skipWorkflowTask(QStringLiteral("source-separate")));
     const QVariantMap skipped = controller.stepOutput(QStringLiteral("source-separate"));
     QVERIFY(skipped.value(QStringLiteral("skipped")).toBool());
     QCOMPARE(skipped.value(QStringLiteral("skipReason")).toString(),
              QStringLiteral("user-requested"));
+}
+
+void TestDubbingProject::independentTranscriptSkipPolicyKeepsSiblingRouteAvailable()
+{
+    const QString sourceRoot = QStringLiteral(LASTUDIO_SOURCE_DIR);
+    auto read = [&sourceRoot](const QString &relativePath) {
+        QFile file(QDir(sourceRoot).filePath(relativePath));
+        if (!file.open(QIODevice::ReadOnly)) return QString();
+        return QString::fromUtf8(file.readAll());
+    };
+
+    const QString controllerSource = read(QStringLiteral(
+        "src/controllers/dubbing/parts/DubbingController_Preflight.cpp"));
+    const QString header = read(QStringLiteral("src/controllers/dubbing/DubbingController.h"));
+    const QString uploadDialog = read(QStringLiteral(
+        "qml/components/dubbing/DubbingArtifactUploadDialog.qml"));
+    const QString reviewPanel = read(QStringLiteral(
+        "qml/components/dubbing/panels/DubbingReviewPanel.qml"));
+
+    // The old unconditional aggregate-busy guard made Skip unusable for the
+    // idle sibling while the other independent transcript worker ran.
+    QVERIFY(header.contains(QStringLiteral(
+        "Q_INVOKABLE bool canSkipWorkflowTask(const QString &nodeId) const")));
+    QVERIFY(controllerSource.contains(QStringLiteral(
+        "bool DubbingController::canSkipWorkflowTask(const QString &nodeId) const")));
+    QVERIFY(controllerSource.contains(QStringLiteral("isTranscriptionRunnerActive()")));
+    QVERIFY(controllerSource.contains(QStringLiteral("subtitleOcrProcessing()")));
+    QVERIFY(controllerSource.contains(QStringLiteral("return !sttBusy && ocrBusy;")));
+    QVERIFY(controllerSource.contains(QStringLiteral("return sttBusy && !ocrBusy;")));
+    QVERIFY(uploadDialog.contains(QStringLiteral(
+        "root.dubbing.canSkipWorkflowTask(root.requestedNodeId)")));
+    QVERIFY(reviewPanel.contains(QStringLiteral(
+        "root.dubbing.canSkipWorkflowTask(root.actionNodeId)")));
+    QVERIFY(!uploadDialog.contains(
+        QStringLiteral("enabled: root.canSkipTask() && root.dubbing && !root.dubbing.processing")));
+    QVERIFY(!reviewPanel.contains(
+        QStringLiteral("enabled: root.dubbing && !root.dubbing.processing")));
+
+    DubbingController controller(nullptr, nullptr);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    QVERIFY(controller.newProject(directory.filePath(QStringLiteral("skip-policy.ladub.json"))));
+
+    bool sttAllowed = false;
+    bool ocrAllowed = false;
+    QVERIFY(QMetaObject::invokeMethod(
+        &controller, "canSkipWorkflowTask", Q_RETURN_ARG(bool, sttAllowed),
+        Q_ARG(QString, QStringLiteral("stt"))));
+    QVERIFY(QMetaObject::invokeMethod(
+        &controller, "canSkipWorkflowTask", Q_RETURN_ARG(bool, ocrAllowed),
+        Q_ARG(QString, QStringLiteral("subtitle-ocr"))));
+    QVERIFY(sttAllowed);
+    QVERIFY(ocrAllowed);
+
+    bool importAllowed = true;
+    QVERIFY(QMetaObject::invokeMethod(
+        &controller, "canSkipWorkflowTask", Q_RETURN_ARG(bool, importAllowed),
+        Q_ARG(QString, QStringLiteral("import"))));
+    QVERIFY(!importAllowed);
 }
 
 void TestDubbingProject::dubbingUiUsesExactModelWorkers()
@@ -3376,12 +4123,16 @@ void TestDubbingProject::transcribeUiSeparatesSttAndOcrCards()
 
 void TestDubbingProject::separationKeepsAnalysisAndVocalsArtifactsDistinct()
 {
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
     DubbingProject project;
-    project.projectPath = QStringLiteral("/tmp/distinct.ladub.json");
-    project.masterAudioPath = QStringLiteral("/cache/master.wav");
-    project.analysisAudioPath = QStringLiteral("/cache/analysis.wav");
-    project.vocalsAudioPath = QStringLiteral("/cache/vocals.wav");
-    project.backgroundAudioPath = QStringLiteral("/cache/background.wav");
+    project.projectPath = directory.filePath(QStringLiteral("distinct.ladub.json"));
+    const QString externalCache = QDir::tempPath();
+    project.masterAudioPath = QDir(externalCache).filePath(QStringLiteral("master.wav"));
+    project.analysisAudioPath = QDir(externalCache).filePath(QStringLiteral("analysis.wav"));
+    project.vocalsAudioPath = QDir(externalCache).filePath(QStringLiteral("vocals.wav"));
+    project.backgroundAudioPath = QDir(externalCache).filePath(QStringLiteral("background.wav"));
 
     const QJsonObject json = project.toJson();
     QCOMPARE(json.value(QStringLiteral("schemaVersion")).toInt(),
@@ -3623,7 +4374,19 @@ void TestDubbingProject::transcriptOcrRunControlRemainsAvailableAlongsideStt()
     QVERIFY(controllerSource.contains(QStringLiteral("canRunIndependentAudioSttAlongsideCurrentWork")));
     QVERIFY(controllerSource.contains(QStringLiteral("Subtitle OCR can run beside STT only")));
     QVERIFY(controllerSource.contains(QStringLiteral("The only controller-owned work that can coexist with audio STT")));
-    QVERIFY(controllerSource.contains(QStringLiteral("m_runner->stage() == QStringLiteral(\"transcribe\")")));
+    QVERIFY(controllerSource.contains(QStringLiteral(
+        "bool DubbingController::isTranscriptionRunnerActive() const")));
+    QVERIFY(controllerSource.contains(QStringLiteral(
+        "const QString stage = m_runner->stage().trimmed().toLower();")));
+    QVERIFY(controllerSource.contains(QStringLiteral(
+        "stage == QStringLiteral(\"transcription\")")));
+    QVERIFY(controllerSource.contains(QStringLiteral(
+        "|| stage == QStringLiteral(\"transcribe\")")));
+    QCOMPARE(controllerSource.count(QStringLiteral("isTranscriptionRunnerActive();")), 4);
+    QVERIFY(readWorkspaceFile(
+                QDir(QStringLiteral(LASTUDIO_SOURCE_DIR)),
+                QStringLiteral("src/controllers/dubbing/parts/DubbingController_Artifacts.cpp"))
+                .contains(QStringLiteral("isTranscriptionRunnerActive()")));
 }
 
 void TestDubbingProject::targetLanguageUpdatesVoiceNodeLanguage()
@@ -4638,6 +5401,45 @@ void TestDubbingProject::audioMixRunsAsynchronously()
     QVERIFY(qAbs(mixedUploadedVoice.samples.constFirst() - 0.25f) < 0.01f);
 }
 
+void TestDubbingProject::workflowRequiresEveryNonSkippedCueForMix()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    DubbingController controller(nullptr, nullptr);
+    QVERIFY(controller.newProject(directory.filePath(QStringLiteral("coverage.ladub.json"))));
+    controller.addSegment(0, 1000, QStringLiteral("First"));
+    controller.addSegment(1000, 2000, QStringLiteral("Second"));
+    controller.updateSegment(0, {{QStringLiteral("targetText"), QStringLiteral("Một")}});
+    controller.updateSegment(1, {{QStringLiteral("targetText"), QStringLiteral("Hai")}});
+
+    const auto workflowNodeById = [](const QVariantList &nodes, const QString &id) {
+        for (const QVariant &value : nodes) {
+            const QVariantMap node = value.toMap();
+            if (node.value(QStringLiteral("id")).toString() == id) return node;
+        }
+        return QVariantMap();
+    };
+    QCOMPARE(workflowNodeById(controller.workflowNodes(), QStringLiteral("mix"))
+                 .value(QStringLiteral("state")).toString(), QStringLiteral("blocked"));
+
+    const QVector<float> samples(48000, 0.25f);
+    const QString firstClip = directory.filePath(QStringLiteral("first.wav"));
+    QVERIFY(WavIO::saveFloat(firstClip, samples.constData(), samples.size(), 48000));
+    controller.updateSegment(0, {{QStringLiteral("clipPath"), firstClip}});
+    const QVariantMap partiallyReady = workflowNodeById(controller.workflowNodes(), QStringLiteral("mix"));
+    QCOMPARE(partiallyReady.value(QStringLiteral("state")).toString(), QStringLiteral("blocked"));
+    QCOMPARE(partiallyReady.value(QStringLiteral("detail")).toString(),
+             QStringLiteral("Generated 1/2 required clips"));
+
+    // A deliberate skip is the only way a missing generated clip may be
+    // excluded from coverage; a missing file alone must never be treated as a
+    // skipped line of dialogue.
+    controller.updateSegment(1, {{QStringLiteral("skipped"), true}});
+    QCOMPARE(workflowNodeById(controller.workflowNodes(), QStringLiteral("mix"))
+                 .value(QStringLiteral("state")).toString(), QStringLiteral("ready"));
+}
+
 void TestDubbingProject::audioMixCreatesIndependentVocalStem()
 {
     QTemporaryDir dir;
@@ -4669,6 +5471,68 @@ void TestDubbingProject::audioMixCreatesIndependentVocalStem()
     QVERIFY(!mixed.samples.isEmpty());
     QVERIFY(qAbs(vocals.samples.constFirst() - 0.25f) < 0.01f);
     QVERIFY(qAbs(mixed.samples.constFirst() - 0.425f) < 0.01f);
+}
+
+void TestDubbingProject::audioMixKeepsSourceDurationWhenSpeechEndsEarly()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    constexpr int sampleRate = 48000;
+    const QVector<float> clipSamples(sampleRate, 0.25f);
+    const QString clipPath = directory.filePath(QStringLiteral("short-speech.wav"));
+    const QString previewPath = directory.filePath(QStringLiteral("source-length-preview.wav"));
+    QVERIFY(WavIO::saveFloat(clipPath, clipSamples.constData(), clipSamples.size(), sampleRate));
+
+    const QVariantList segments{QVariantMap{{QStringLiteral("startMs"), 0},
+                                            {QStringLiteral("endMs"), 1000},
+                                            {QStringLiteral("clipPath"), clipPath}}};
+    QString error;
+    QVERIFY2(AudioTimelineMixer::mixSegments(
+                  segments, previewPath, QString(), QString(), &error, nullptr,
+                  QVariantMap{{QStringLiteral("sourceDurationMs"), 2500}}),
+              qPrintable(error));
+    const WavIO::WavData rendered = WavIO::loadAsFloat(previewPath);
+    QCOMPARE(rendered.sampleRate, sampleRate);
+    QCOMPARE(rendered.channels, 1);
+    QCOMPARE(rendered.samples.size(), sampleRate * 5 / 2);
+}
+
+void TestDubbingProject::audioMixResamplesCommonTtsRatesWithoutDropouts()
+{
+    constexpr double kPi = 3.14159265358979323846;
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    const QList<int> inputRates{16000, 22050, 24000, 44100, 48000};
+    for (const int inputRate : inputRates) {
+        QVector<float> source(inputRate / 2);
+        for (int index = 0; index < source.size(); ++index)
+            source[index] = 0.25f * std::sin(2.0 * kPi
+                                              * 440.0 * index / inputRate);
+        const QString clipPath = directory.filePath(QStringLiteral("tts-%1.wav").arg(inputRate));
+        const QString outputPath = directory.filePath(QStringLiteral("rendered-%1.wav").arg(inputRate));
+        QVERIFY2(WavIO::saveFloat(clipPath, source.constData(), source.size(), inputRate),
+                 qPrintable(clipPath));
+        const QVariantList segments{QVariantMap{{QStringLiteral("startMs"), 0},
+                                                {QStringLiteral("endMs"), 500},
+                                                {QStringLiteral("clipPath"), clipPath}}};
+        QString error;
+        QVERIFY2(AudioTimelineMixer::mixSegments(
+                      segments, outputPath, QString(), QString(), &error, nullptr,
+                      QVariantMap{{QStringLiteral("sourceDurationMs"), 500}}),
+                  qPrintable(QStringLiteral("%1 Hz: %2").arg(inputRate).arg(error)));
+        const WavIO::WavData rendered = WavIO::loadAsFloat(outputPath);
+        QCOMPARE(rendered.sampleRate, 48000);
+        QCOMPARE(rendered.samples.size(), 24000);
+        double meanAbsoluteSample = 0.0;
+        for (const float sample : rendered.samples)
+            meanAbsoluteSample += std::abs(sample);
+        meanAbsoluteSample /= qMax(1, rendered.samples.size());
+        QVERIFY2(meanAbsoluteSample > 0.11,
+                 qPrintable(QStringLiteral("%1 Hz output is sparse/silent (%2)")
+                                .arg(inputRate).arg(meanAbsoluteSample, 0, 'f', 4)));
+    }
 }
 
 void TestDubbingProject::audioMixAppliesSidechainDuckingToBackground()
@@ -5595,7 +6459,7 @@ void TestDubbingProject::fusesMatchingAndShiftedTranscriptWithoutDuplicates()
     QCOMPARE(fused.at(1).toMap().value(QStringLiteral("fusionStatus")).toString(), QStringLiteral("matched"));
 }
 
-void TestDubbingProject::defaultsToSttWhenSttAndOcrDoNotMatch()
+void TestDubbingProject::defaultsToOcrWhenSttAndOcrDoNotMatch()
 {
     const QVariantList stt{
         QVariantMap{{QStringLiteral("id"), QStringLiteral("stt-canonical")},
@@ -5616,22 +6480,24 @@ void TestDubbingProject::defaultsToSttWhenSttAndOcrDoNotMatch()
                     {QStringLiteral("confidence"), 0.98}}
     };
 
-    // The default is intentionally deterministic: STT remains the canonical
-    // editable script, while OCR is retained as evidence and unmatched OCR
-    // cues do not silently change the downstream dubbing timeline.
+    // The default is intentionally deterministic: OCR remains canonical for
+    // visible subtitle dialogue, while STT is retained as timing/speech
+    // evidence. OCR-only cues are retained rather than dropped.
     const QVariantList fused = DubbingTranscriptFusionService::fuse(stt, ocr);
-    QCOMPARE(fused.size(), stt.size());
+    QCOMPARE(fused.size(), 3);
     QCOMPARE(fused.at(0).toMap().value(QStringLiteral("sourceText")).toString(),
-             QStringLiteral("STT source dialogue"));
+             QStringLiteral("OCR unrelated text"));
     QCOMPARE(fused.at(1).toMap().value(QStringLiteral("sourceText")).toString(),
              QStringLiteral("Second STT cue"));
     QCOMPARE(fused.at(0).toMap().value(QStringLiteral("fusionPolicy")).toString(),
-             QStringLiteral("prefer-stt"));
+             QStringLiteral("prefer-ocr"));
     QCOMPARE(fused.at(0).toMap().value(QStringLiteral("fusionSttText")).toString(),
              QStringLiteral("STT source dialogue"));
     QCOMPARE(fused.at(0).toMap().value(QStringLiteral("fusionOcrText")).toString(),
              QStringLiteral("OCR unrelated text"));
     QVERIFY(fused.at(0).toMap().value(QStringLiteral("transcriptProvenance")).toList().size() >= 2);
+    QCOMPARE(fused.at(2).toMap().value(QStringLiteral("sourceText")).toString(),
+             QStringLiteral("OCR-only hallucinated cue"));
 }
 
 void TestDubbingProject::exposesConflictEvidenceWithoutSilentChoice()
@@ -6387,8 +7253,8 @@ void TestDubbingProject::mediaBatchQueueWiresSerialRealOutputs()
     QVERIFY(controllerText.contains(QStringLiteral("source.srt")));
     QVERIFY(controllerText.contains(QStringLiteral("translated.srt")));
     QVERIFY(controllerText.contains(QStringLiteral("voice.wav")));
-    QVERIFY(controllerText.contains(QStringLiteral("vocals.wav")));
-    QVERIFY(controllerText.contains(QStringLiteral("background.wav")));
+    QVERIFY(controllerText.contains(QStringLiteral("vocals.flac")));
+    QVERIFY(controllerText.contains(QStringLiteral("background.flac")));
     QVERIFY(controllerText.contains(QStringLiteral("item.remove(QStringLiteral(\"sourceUrl\"))")));
 
     QVERIFY(queuePageText.contains(QStringLiteral("ColabMediaAcquisitionPanel")));

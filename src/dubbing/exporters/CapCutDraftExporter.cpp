@@ -64,6 +64,12 @@ bool copyAsset(const QString &sourcePath, const QString &destinationPath,
     return true;
 }
 
+QString assetFileName(const QString &stem, const QString &sourcePath, const QString &fallbackSuffix)
+{
+    const QString suffix = QFileInfo(sourcePath).suffix().trimmed().toLower();
+    return QStringLiteral("%1.%2").arg(stem, suffix.isEmpty() ? fallbackSuffix : suffix);
+}
+
 bool writeJson(const QString &path, const QJsonObject &object, QString *error)
 {
     QSaveFile file(path);
@@ -533,7 +539,8 @@ bool CapCutDraftExporter::exportDraft(const QString &parentDirectory,
         QStringLiteral("source-original.%1").arg(sourceInfo.suffix().isEmpty()
                                                     ? QStringLiteral("media") : sourceInfo.suffix()));
     if (!copyAsset(sourceMediaPath, copiedSource, true, error)) return abort();
-    const QString copiedMix = QDir(assetRoot).filePath(QStringLiteral("dubbed-mix.wav"));
+    const QString copiedMix = QDir(assetRoot).filePath(
+        assetFileName(QStringLiteral("dubbed-mix"), dubbedMixPath, QStringLiteral("wav")));
     if (!copyAsset(dubbedMixPath, copiedMix, true, error)) return abort();
 
     // A custom subtitle font must travel with an editable draft. Leaving the
@@ -558,17 +565,20 @@ bool CapCutDraftExporter::exportDraft(const QString &parentDirectory,
 
     QString copiedMaster;
     if (!masterAudioPath.trimmed().isEmpty() && QFileInfo(masterAudioPath).isFile()) {
-        copiedMaster = QDir(assetRoot).filePath(QStringLiteral("source-audio.wav"));
+        copiedMaster = QDir(assetRoot).filePath(
+            assetFileName(QStringLiteral("source-audio"), masterAudioPath, QStringLiteral("flac")));
         if (!copyAsset(masterAudioPath, copiedMaster, false, error)) return abort();
     }
     QString copiedVocals;
     if (!vocalsAudioPath.trimmed().isEmpty() && QFileInfo(vocalsAudioPath).isFile()) {
-        copiedVocals = QDir(assetRoot).filePath(QStringLiteral("source-vocals.wav"));
+        copiedVocals = QDir(assetRoot).filePath(
+            assetFileName(QStringLiteral("source-vocals"), vocalsAudioPath, QStringLiteral("flac")));
         if (!copyAsset(vocalsAudioPath, copiedVocals, false, error)) return abort();
     }
     QString copiedBackground;
     if (!backgroundAudioPath.trimmed().isEmpty() && QFileInfo(backgroundAudioPath).isFile()) {
-        copiedBackground = QDir(assetRoot).filePath(QStringLiteral("background.wav"));
+        copiedBackground = QDir(assetRoot).filePath(
+            assetFileName(QStringLiteral("background"), backgroundAudioPath, QStringLiteral("flac")));
         if (!copyAsset(backgroundAudioPath, copiedBackground, false, error)) return abort();
     }
 

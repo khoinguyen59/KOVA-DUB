@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import importlib.util
+import ast
+import hashlib
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -34,6 +37,35 @@ def load_coordinator():
     return module
 
 
+def code_sources(notebook: dict) -> list[str]:
+    return [
+        "".join(cell.get("source", []))
+        for cell in notebook.get("cells", [])
+        if cell.get("cell_type") == "code"
+    ]
+
+
+def embedded_files_from_notebook(notebook: dict) -> dict[str, str]:
+    """Extract the static bundle literal from the generated bundle cell."""
+    for source in code_sources(notebook):
+        if "EMBEDDED_UNIFIED_FILES" not in source:
+            continue
+        tree = ast.parse(source)
+        for statement in ast.walk(tree):
+            if not isinstance(statement, ast.Assign):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "EMBEDDED_UNIFIED_FILES"
+                       for target in statement.targets):
+                continue
+            value = ast.literal_eval(statement.value)
+            assert isinstance(value, dict), "Unified embedded bundle must be a dict"
+            assert all(isinstance(key, str) and isinstance(payload, str)
+                       for key, payload in value.items()), \
+                "Unified embedded bundle must map string paths to string payloads"
+            return value
+    raise AssertionError("Missing static EMBEDDED_UNIFIED_FILES bundle")
+
+
 def main() -> None:
     module = load_generator()
     expected_document = module.make_notebook()
@@ -54,26 +86,57 @@ def main() -> None:
     ), "Generated notebook core drift: run generate_unified_dubbing_colab_notebook.py"
     metadata = notebook["metadata"]["la_studio"]
     assert metadata["role"] == "unified-dubbing-coordinator"
-    sources = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
+    sources = "\n".join(code_sources(notebook))
     for required in (
         "UNIFIED_WORKERS", "LA_STUDIO_UNIFIED_DUBBING_URL=",
         "/v1/unified/{capability}/{model}/{route:path}", "httpx.AsyncClient",
         "wait_for_exact_health", "Cloudflare tunnel", "LA_STUDIO_UNIFIED_DUBBING_TOKEN",
+        "EMBEDDED_UNIFIED_FILES", "SOURCE_ROOT = Path('/content/la-studio-unified-source')",
+        "target = SOURCE_ROOT / relative_path",
     ):
         assert required in sources, f"Missing unified contract: {required}"
+    runtime_sources = "\n".join(
+        source for source in code_sources(notebook)
+        if "EMBEDDED_UNIFIED_FILES" not in source
+    )
+    for forbidden in ("SOURCE_REPOSITORY", "SOURCE_COMMIT", "git clone",
+                      "https://github.com/khoinguyen59/KOVA-DUB.git"):
+        assert forbidden not in runtime_sources, \
+            f"Unified notebook still has runtime repository dependency: {forbidden}"
+
+    embedded_files = embedded_files_from_notebook(notebook)
+    expected_files = module.embedded_unified_files()
+    assert set(embedded_files) == set(expected_files), \
+        "Embedded Unified bundle file set differs from local exact notebook sources"
+    assert metadata["worker_source"] == "embedded-local"
+    assert metadata["embedded_files"] == sorted(expected_files)
+    expected_hashes = {
+        relative_path: hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        for relative_path, payload in expected_files.items()
+    }
+    assert metadata["embedded_file_sha256"] == expected_hashes
+    assert embedded_files == expected_files, \
+        "Embedded Unified bundle payload differs from local exact notebook sources"
+
     coordinator = load_coordinator()
-    defaults = json.loads(next(
-        source for source in ("".join(cell.get("source", [])) for cell in notebook["cells"])
-        if "UNIFIED_WORKERS" in source
-    ).split("UNIFIED_WORKERS = ", 1)[1].split("\n                CONFIG_PATH", 1)[0])
-    for selection in defaults:
-        capability = selection["capability"]
-        model = selection["model"]
-        exact_notebook = coordinator.discover_exact_notebook(ROOT, capability, model)
-        worker_source = coordinator.worker_source_for(
-            coordinator.WorkerSpec(capability, model, exact_notebook), ROOT
-        )
-        compile(worker_source, str(exact_notebook), "exec")
+    config_source = next(source for source in code_sources(notebook) if "UNIFIED_WORKERS" in source)
+    defaults = json.loads(config_source.split("UNIFIED_WORKERS = ", 1)[1].split(
+        "\n                CONFIG_PATH", 1
+    )[0])
+    with tempfile.TemporaryDirectory(prefix="la-studio-unified-bundle-") as directory:
+        bundle_root = Path(directory)
+        for relative_path, payload in embedded_files.items():
+            target = bundle_root / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(payload, encoding="utf-8")
+        for selection in defaults:
+            capability = selection["capability"]
+            model = selection["model"]
+            exact_notebook = coordinator.discover_exact_notebook(bundle_root, capability, model)
+            worker_source = coordinator.worker_source_for(
+                coordinator.WorkerSpec(capability, model, exact_notebook), bundle_root
+            )
+            compile(worker_source, str(exact_notebook), "exec")
     print("Unified Dubbing notebook contract: PASS")
 
 

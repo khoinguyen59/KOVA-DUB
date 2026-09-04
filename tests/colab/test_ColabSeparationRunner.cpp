@@ -66,9 +66,11 @@ class SeparationMock final : public QObject
 {
 public:
     explicit SeparationMock(bool permanentlyQueued = false, bool cudaFailure = false,
-                            bool stuckAtNinety = false, bool legacyWav = false)
+                            bool stuckAtNinety = false, bool legacyWav = false,
+                            bool stuckArtifact = false, bool stuckStatus = false)
         : m_permanentlyQueued(permanentlyQueued), m_cudaFailure(cudaFailure),
-          m_stuckAtNinety(stuckAtNinety), m_legacyWav(legacyWav)
+          m_stuckAtNinety(stuckAtNinety), m_legacyWav(legacyWav),
+          m_stuckArtifact(stuckArtifact), m_stuckStatus(stuckStatus)
     {
         connect(&m_server, &QTcpServer::newConnection, this, [this] {
             while (QTcpSocket *socket = m_server.nextPendingConnection()) {
@@ -102,9 +104,11 @@ private:
                 : R"({"job_id":"job-direct","status":"queued","progress":10,"artifact_format":"flac"})";
         } else if (request.startsWith("GET /v1/audio/separations/job-direct/artifacts/vocals ")
                    || request.startsWith("GET /v1/audio/separations/job-direct/artifacts/background ")) {
+            if (m_stuckArtifact) return;
             body = m_legacyWav ? tinyWav() : tinyFlac();
             contentType = m_legacyWav ? "audio/wav" : "audio/flac";
         } else if (request.startsWith("GET /v1/audio/separations/job-direct ")) {
+            if (m_stuckStatus) return;
             body = m_cudaFailure
                 ? R"({"job_id":"job-direct","status":"failed","progress":0,"detail":"RuntimeError: CUDNN_FE failure 8: HEURISTIC_QUERY_FAILED; a deliberately long remote CUDA trace follows"})"
                 : (m_stuckAtNinety ? R"({"job_id":"job-direct","status":"running","progress":90,"detail":"Writing separated CUDA stems"})"
@@ -131,13 +135,15 @@ private:
     bool m_cudaFailure = false;
     bool m_stuckAtNinety = false;
     bool m_legacyWav = false;
+    bool m_stuckArtifact = false;
+    bool m_stuckStatus = false;
 };
 
 QString sourceFile(QTemporaryDir *directory)
 {
-    const QString path = directory->filePath(QStringLiteral("source.wav"));
+    const QString path = directory->filePath(QStringLiteral("source.flac"));
     QFile file(path); if (!file.open(QIODevice::WriteOnly)) return {};
-    file.write(tinyWav()); file.close(); return path;
+    file.write(tinyFlac()); file.close(); return path;
 }
 
 ColabSeparationRequest makeRequest(const QString &url, const QString &source, const QString &output,
@@ -203,8 +209,8 @@ void TestColabSeparationRunner::testUsesDirectJobAndArtifactContract()
     QVERIFY(requests.contains("name=\"output_format\"")); QVERIFY(requests.contains("flac"));
     QVERIFY(requests.contains("name=\"model\""));
     QVERIFY(requests.contains("sherpa-onnx-spleeter-2stems-fp16"));
-    QVERIFY(requests.contains("name=\"file\"; filename=\"source.wav\""));
-    QVERIFY(requests.toLower().contains("content-type: audio/wav"));
+    QVERIFY(requests.contains("name=\"file\"; filename=\"source.flac\""));
+    QVERIFY(requests.toLower().contains("content-type: audio/flac"));
     QVERIFY(requests.contains("GET /v1/audio/separations/job-direct/artifacts/vocals HTTP/1.1"));
     QVERIFY(requests.contains("GET /v1/audio/separations/job-direct/artifacts/background HTTP/1.1"));
     QVERIFY(!requests.contains("gateway")); QVERIFY(!requests.contains("chat/completions"));
@@ -254,6 +260,75 @@ void TestColabSeparationRunner::finalizingAtNinetyTimesOutWithNoLocalFallback()
     QVERIFY(message.contains(QStringLiteral("No local model was started")));
     QVERIFY(server.requests().contains("DELETE /v1/audio/separations/job-direct HTTP/1.1"));
     QVERIFY(phases.count() >= 2);
+    thread.quit(); QVERIFY(thread.wait(5000));
+}
+
+void TestColabSeparationRunner::statusRequestTimesOutAndReleasesWorker()
+{
+    SeparationMock server(false, false, false, false, false, true); QVERIFY(server.start());
+    QTemporaryDir directory; QVERIFY(directory.isValid());
+    qRegisterMetaType<ColabSeparationRequest>("ColabSeparationRequest");
+    QThread thread; auto *runner = new ColabSeparationRunner; runner->moveToThread(&thread);
+    connect(&thread, &QThread::finished, runner, &QObject::deleteLater); thread.start();
+    QSignalSpy finished(runner, &ColabSeparationRunner::finished);
+    QSignalSpy failures(runner, &ColabSeparationRunner::failed);
+    ColabSeparationRequest request = makeRequest(server.baseUrl(), sourceFile(&directory),
+                                                  directory.filePath(QStringLiteral("status-timeout")));
+    request.statusRequestTimeoutMs = 100;
+    QVERIFY(QMetaObject::invokeMethod(runner, "separate", Qt::QueuedConnection,
+                                      Q_ARG(ColabSeparationRequest, request)));
+    QVERIFY2(failures.wait(3000), "A stalled separation status request did not fail within its timeout.");
+    QCOMPARE(finished.count(), 0);
+    const QString message = failures.takeFirst().at(0).toString();
+    QVERIFY(message.contains(QStringLiteral("timed out"), Qt::CaseInsensitive));
+    thread.quit(); QVERIFY(thread.wait(5000));
+}
+
+void TestColabSeparationRunner::artifactDownloadCancellationReleasesWorker()
+{
+    SeparationMock server(false, false, false, false, true); QVERIFY(server.start());
+    QTemporaryDir directory; QVERIFY(directory.isValid());
+    const auto flag = std::make_shared<std::atomic_bool>(false);
+    qRegisterMetaType<ColabSeparationRequest>("ColabSeparationRequest");
+    QThread thread; auto *runner = new ColabSeparationRunner; runner->moveToThread(&thread);
+    connect(&thread, &QThread::finished, runner, &QObject::deleteLater); thread.start();
+    QSignalSpy finished(runner, &ColabSeparationRunner::finished);
+    QSignalSpy failures(runner, &ColabSeparationRunner::failed);
+    ColabSeparationRequest request = makeRequest(server.baseUrl(), sourceFile(&directory),
+                                                  directory.filePath(QStringLiteral("artifact-cancelled")), flag);
+    QVERIFY(QMetaObject::invokeMethod(runner, "separate", Qt::QueuedConnection,
+                                      Q_ARG(ColabSeparationRequest, request)));
+    QTRY_VERIFY_WITH_TIMEOUT(server.requests().contains(
+        "GET /v1/audio/separations/job-direct/artifacts/vocals HTTP/1.1"), 2000);
+    flag->store(true, std::memory_order_relaxed);
+    QVERIFY2(failures.wait(3000), "Cancelling a stalled separation artifact download did not terminate the worker.");
+    QCOMPARE(finished.count(), 0);
+    QVERIFY(failures.takeFirst().at(0).toString().contains(QStringLiteral("cancelled"), Qt::CaseInsensitive));
+    QVERIFY(server.requests().contains("DELETE /v1/audio/separations/job-direct HTTP/1.1"));
+    thread.quit(); QVERIFY(thread.wait(5000));
+}
+
+void TestColabSeparationRunner::artifactDownloadTimesOutAndReleasesWorker()
+{
+    SeparationMock server(false, false, false, false, true); QVERIFY(server.start());
+    QTemporaryDir directory; QVERIFY(directory.isValid());
+    qRegisterMetaType<ColabSeparationRequest>("ColabSeparationRequest");
+    QThread thread; auto *runner = new ColabSeparationRunner; runner->moveToThread(&thread);
+    connect(&thread, &QThread::finished, runner, &QObject::deleteLater); thread.start();
+    QSignalSpy finished(runner, &ColabSeparationRunner::finished);
+    QSignalSpy failures(runner, &ColabSeparationRunner::failed);
+    ColabSeparationRequest request = makeRequest(server.baseUrl(), sourceFile(&directory),
+                                                  directory.filePath(QStringLiteral("artifact-timeout")));
+    request.artifactTransferTimeoutMs = 1000;
+    request.artifactIdleTimeoutMs = 100;
+    QVERIFY(QMetaObject::invokeMethod(runner, "separate", Qt::QueuedConnection,
+                                      Q_ARG(ColabSeparationRequest, request)));
+    QTRY_VERIFY_WITH_TIMEOUT(server.requests().contains(
+        "GET /v1/audio/separations/job-direct/artifacts/vocals HTTP/1.1"), 2000);
+    QVERIFY2(failures.wait(3000), "A stalled separation artifact download did not fail within its timeout.");
+    QCOMPARE(finished.count(), 0);
+    const QString message = failures.takeFirst().at(0).toString();
+    QVERIFY(message.contains(QStringLiteral("timed out"), Qt::CaseInsensitive));
     thread.quit(); QVERIFY(thread.wait(5000));
 }
 

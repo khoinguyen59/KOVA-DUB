@@ -8,7 +8,6 @@
 #include "controllers/dubbing/DubbingTranslationJob.h"
 #include "controllers/dubbing/DubbingTranslationFixService.h"
 #include "controllers/subtitles/SubtitleOcrController.h"
-#include "audio/io/WavIO.h"
 #include "translation/engine/TranslationEngine.h"
 #include "dubbing/timing/DubbingTimingService.h"
 #include "dubbing/fusion/DubbingTranscriptFusionService.h"
@@ -23,6 +22,7 @@
 #include "core/utils/Logger.h"
 #include "core/models/ModelManager.h"
 #include "core/models/RuntimeManager.h"
+#include "core/hardware/InferenceThreadPolicy.h"
 #include "remote/colab/ColabSession.h"
 #include "remote/gateway/ExecutionProvider.h"
 
@@ -169,7 +169,11 @@ DubbingJobRunner::DubbingJobRunner(SttSessionController *sttSession, TtsEngine *
         m_pendingSourceAudioPath.clear();
         m_colabSeparationActivityStatus.clear();
         m_colabSeparationTransferActive = false;
-        setError(message);
+        if (message.contains(QStringLiteral("cancel"), Qt::CaseInsensitive)) {
+            setProcessing(false, QStringLiteral("cancelled"), m_run.progress());
+        } else {
+            setError(message);
+        }
     });
     m_colabSeparationThread.start();
 
@@ -507,11 +511,24 @@ DubbingJobRunner::~DubbingJobRunner()
     if (m_colabSeparationRunner && m_colabSeparationThread.isRunning())
         QMetaObject::invokeMethod(m_colabSeparationRunner, "cancel", Qt::QueuedConnection);
     m_colabSeparationThread.quit();
-    m_colabSeparationThread.wait();
+    if (!m_colabSeparationThread.wait(5'000)) {
+        // The request watchdogs should normally make this path unnecessary.
+        // Keep application shutdown bounded if a third-party network backend
+        // ignores abort(), and never wait forever while the window is closing.
+        Logger::warning(QStringLiteral("DubbingPipeline"), QStringLiteral(
+            "Direct Colab worker did not stop within 5 seconds during shutdown; terminating the worker thread."));
+        m_colabSeparationThread.terminate();
+        m_colabSeparationThread.wait(2'000);
+    }
     if (m_timingWatcher) {
         if (m_timingCancel) m_timingCancel->storeRelease(true);
         m_timingWatcher->cancel();
-        m_timingWatcher->waitForFinished();
+        // The worker captures no runner state. It can finish in the global
+        // pool after this QObject goes away; waiting here made close unbounded
+        // when a timing backend stalled.
+        if (m_timingWatcher->isRunning())
+            Logger::warning(QStringLiteral("DubbingPipeline"),
+                            QStringLiteral("Detached cancelled timing job during shutdown."));
     }
 }
 
@@ -535,6 +552,14 @@ void DubbingJobRunner::startSourceSeparation(const QString &audioPath,
 {
     if (m_run.processing()) {
         setBusyError(QStringLiteral("A dubbing operation is already running."));
+        return;
+    }
+    // A native source-separation call cannot be interrupted in the middle of
+    // inference. The runner must reject a new request while the previous
+    // worker is draining, even if an older caller already cleared run state.
+    if (m_sourceSeparation && m_sourceSeparation->processing()) {
+        setBusyError(QStringLiteral(
+            "The previous source-separation request is still finishing. Wait for cancellation to complete before running it again."));
         return;
     }
     m_colabSeparationActivityStatus.clear();
@@ -635,7 +660,8 @@ void DubbingJobRunner::startSourceSeparation(const QString &audioPath,
     request.sourcePath = audioPath;
     request.outputRoot = PathUtils::cacheDir() + QStringLiteral("/dubbing/source-separation/");
     request.configuration = config;
-    request.numThreads = 4;
+    request.numThreads = InferenceThreadPolicy::recommendedThreadCount(
+        InferenceBackendProfile::SourceSeparationCpu);
     QString error;
     if (!m_sourceSeparation->isolate(request, &error)) {
         m_pendingSourceAudioPath.clear();
@@ -813,7 +839,10 @@ void DubbingJobRunner::cancel()
     if ((m_run.stageId() == DubbingStage::Mix || m_run.stageId() == DubbingStage::Export) && m_exportJob)
         m_exportJob->cancel();
     if (m_run.stageId() == DubbingStage::Import && m_mediaIngest) m_mediaIngest->cancel();
+    bool sourceSeparationCancellationPending = false;
     if (m_run.stageId() == DubbingStage::SourceSeparation) {
+        sourceSeparationCancellationPending = m_colabSeparationCancellation
+            || (m_sourceSeparation && m_sourceSeparation->processing());
         m_colabSeparationActivityStatus.clear();
         m_colabSeparationTransferActive = false;
         if (m_colabSeparationCancellation) {
@@ -830,6 +859,13 @@ void DubbingJobRunner::cancel()
         m_autoTranslationFix->cancel();
     Logger::warning(QStringLiteral("DubbingPipeline"),
                     QStringLiteral("[%1] cancelled at %2%%").arg(m_run.stageName()).arg(m_run.progress()));
+    if (sourceSeparationCancellationPending) {
+        // Keep the run busy until the worker emits its terminal result. This
+        // prevents a second request from colliding with the native call and
+        // prevents a late result from being silently discarded.
+        emit stateChanged();
+        return;
+    }
     setProcessing(false, QStringLiteral("cancelled"), m_run.progress());
 }
 
@@ -856,18 +892,15 @@ bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString
     // only for the real mixer, so the next Export/Output task can continue.
     const QFileInfo uploadedVoiceInfo(m_dubbedVocalPath);
     if (!hasSegmentClip && uploadedVoiceInfo.isFile()) {
-        const WavIO::WavData voice = WavIO::loadAsFloat(m_dubbedVocalPath);
-        const int channels = qMax(1, voice.channels);
-        const qint64 durationMs = voice.sampleRate > 0
-            ? (static_cast<qint64>(voice.samples.size() / channels) * 1000 / voice.sampleRate)
-            : 0;
-        if (voice.samples.isEmpty() || durationMs <= 0) {
-            setError(QStringLiteral("The uploaded timed voice WAV cannot be decoded for mixing."));
-            return false;
-        }
+        // The uploaded voice bed already represents the full programme. Do
+        // not synchronously decode an entire FLAC/MP3/WAV on the controller
+        // thread merely to derive its duration; the streaming renderer reads
+        // it in the background and sourceDurationMs anchors the timeline.
         mixSegments = QVariantList{QVariantMap{{QStringLiteral("clipPath"), m_dubbedVocalPath},
                                                 {QStringLiteral("startMs"), 0},
-                                                {QStringLiteral("endMs"), durationMs}}};
+                                                {QStringLiteral("endMs"), mixConfiguration.value(
+                                                    QStringLiteral("sourceDurationMs")).toLongLong()},
+                                                {QStringLiteral("fullProgramClip"), true}}};
     }
     Logger::info(QStringLiteral("DubbingPipeline"),
                  QStringLiteral("[mix] start run=%1 node=%2 segments=%3 background=%4")
@@ -961,6 +994,10 @@ void DubbingJobRunner::onSourceSeparationFinished(const SeparationResult &result
                      .arg(result.error));
     m_pendingSourceAudioPath.clear();
     if (!result.success) {
+        if (result.errorCode == SeparationErrorCode::Cancelled) {
+            setProcessing(false, QStringLiteral("cancelled"), m_run.progress());
+            return;
+        }
         setError(result.error.isEmpty()
                      ? QStringLiteral("Source separation failed before producing clean speech and background stems.")
                      : result.error);

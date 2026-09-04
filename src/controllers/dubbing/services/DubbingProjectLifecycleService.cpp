@@ -23,6 +23,10 @@ DubbingProjectLifecycleService::DubbingProjectLifecycleService(QObject *parent)
 
 QString DubbingProjectLifecycleService::defaultProjectsDirectory()
 {
+    if (!qEnvironmentVariable("LASTUDIO_DATA_DIR").trimmed().isEmpty()) {
+        const QString isolated = QDir(PathUtils::dataDir()).filePath(QStringLiteral("projects"));
+        if (QDir().mkpath(isolated)) return isolated;
+    }
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString primaryDir = QDir(appDir).filePath(QStringLiteral("projects"));
     if (QDir().mkpath(primaryDir)) {
@@ -89,9 +93,9 @@ void DubbingProjectLifecycleService::setDurationControl(const QVariantMap &ctrl)
 
 QString DubbingProjectLifecycleService::historyFilePath() const
 {
-    const QString appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(appData);
-    return QDir(appData).filePath("dubbing_history.json");
+    const QString historyDirectory = QDir(PathUtils::dataDir()).filePath(QStringLiteral("history"));
+    QDir().mkpath(historyDirectory);
+    return QDir(historyDirectory).filePath(QStringLiteral("dubbing_history.json"));
 }
 
 void DubbingProjectLifecycleService::loadHistory()

@@ -19,6 +19,12 @@ private slots:
     void alignmentResultsExposeRunActions();
     void historyIsAnOverlayAndMoreMenuStaysAnchored();
     void exportOffersDirectCapCutOpenAndThumbnailStaysVisibleUntilPlayback();
+    void thumbnailPropertyGetterDoesNotTouchFilesystem();
+    void pausedVideoKeepsLastFrameVisible();
+    void playerTimelineRemainsInteractiveAboveOcrRoi();
+    void ocrEditorCanCrossPlayerSeekBar();
+    void dubbedPreviewAvoidsUnnecessaryDecodeAndSeekJitter();
+    void aiTranscriptGuideIsImmediateAndProjectScoped();
     void projectSetupResolvesQmlVariantListLanguageDefaults();
     void packagingRequiresPreBuildReleaseGate();
 };

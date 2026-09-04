@@ -14,6 +14,11 @@ Dialog {
     property string requestedNodeId: ""
     property var specs: []
     property var acceptedArtifactNodeIds: []
+    // QML does not discover dependencies hidden inside an invokable. Mirror
+    // the controller's processing notification so the route-scoped skip
+    // policy is reevaluated when either independent transcript worker starts
+    // or finishes.
+    property int skipPolicyRevision: 0
     signal artifactAccepted(string nodeId)
     signal skipRequested(string nodeId)
 
@@ -23,9 +28,32 @@ Dialog {
     width: Math.min(760, Overlay.overlay.width - Theme.paddingXL * 2)
     height: Math.min(650, Overlay.overlay.height - Theme.paddingXL * 2)
     anchors.centerIn: parent
+
+    Connections {
+        target: root.dubbing
+        function onProcessingChanged() { root.skipPolicyRevision += 1 }
+        function onWorkflowChanged() { root.skipPolicyRevision += 1 }
+    }
+
+    function refreshSpecs() {
+        var requested = String(root.requestedNodeId || "").trim().toLowerCase()
+        var resolved = root.dubbing
+                ? root.dubbing.workflowArtifactSpecsForStage(requested) : []
+        // Keep a defensive direct lookup for older project/session state and
+        // presentation aliases. A local upload must never become a blank
+        // dialog merely because the aggregate stage list is stale.
+        if ((!resolved || resolved.length === 0) && root.dubbing) {
+            var directId = requested === "ocr" ? "subtitle-ocr" : requested
+            var direct = root.dubbing.workflowArtifactSpec(directId)
+            if (direct && direct.nodeId !== undefined && direct.nodeId !== "")
+                resolved = [direct]
+        }
+        root.specs = resolved || []
+    }
+
     function openFor(nodeId) {
         requestedNodeId = nodeId || ""
-        specs = dubbing ? dubbing.workflowArtifactSpecsForStage(requestedNodeId) : []
+        refreshSpecs()
         acceptedArtifactNodeIds = []
         open()
     }
@@ -36,8 +64,10 @@ Dialog {
         if (id !== "" && accepted.indexOf(id) < 0)
             accepted.push(id)
         root.acceptedArtifactNodeIds = accepted
-        if (accepted.length >= root.specs.length)
+        if (accepted.length >= root.specs.length) {
             root.artifactAccepted(id)
+            root.close()
+        }
     }
 
     function canSkipTask() {
@@ -69,13 +99,13 @@ Dialog {
         return result.join(", ")
     }
 
-    onOpened: specs = dubbing ? dubbing.workflowArtifactSpecsForStage(requestedNodeId) : []
+    onOpened: refreshSpecs()
 
     contentItem: ColumnLayout {
         spacing: Theme.paddingSmall
         Text {
             Layout.fillWidth: true
-            text: qsTr("Colab is optional. Choose the exact output file(s) already saved on this computer; the app validates the name and format before continuing.")
+            text: qsTr("Colab is optional. Choose the saved file(s) from this computer; the app validates the selected role and format before continuing.")
             color: Theme.textSecondary
             wrapMode: Text.WordWrap
             font.pixelSize: Theme.fontSmall
@@ -154,7 +184,11 @@ Dialog {
                 objectName: "dubbingArtifactSkipButton"
                 text: qsTr("Skip task & continue")
                 iconName: "chevron-right"
-                enabled: root.canSkipTask() && root.dubbing && !root.dubbing.processing
+                enabled: {
+                    var revision = root.skipPolicyRevision
+                    return revision >= 0 && root.canSkipTask() && root.dubbing
+                           && root.dubbing.canSkipWorkflowTask(root.requestedNodeId)
+                }
                 toolTip: qsTr("Do not run this task; continue to the next task")
                 onClicked: {
                     if (root.dubbing.skipWorkflowTask(root.requestedNodeId)) {

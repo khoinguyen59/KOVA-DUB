@@ -58,6 +58,7 @@ private:
     bool readResponse(QLocalSocket *socket,
                       quint64 requestId,
                       RuntimeHostFrame *response,
+                      int inactivityTimeoutMs,
                       QString *error);
     QString protocolError(const RuntimeHostFrame &frame) const;
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);

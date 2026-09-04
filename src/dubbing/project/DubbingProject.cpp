@@ -6,7 +6,9 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QMetaType>
 #include <QSaveFile>
+#include <QSet>
 
 namespace LAStudio {
 
@@ -16,6 +18,77 @@ void setError(QString *error, const QString &message)
     if (error) {
         *error = message;
     }
+}
+
+QString serializeAssetPath(const QString &projectPath, const QString &path)
+{
+    if (path.trimmed().isEmpty() || projectPath.trimmed().isEmpty())
+        return path;
+    const QFileInfo asset(path);
+    if (!asset.isAbsolute())
+        return path;
+    const QDir root(QFileInfo(projectPath).absolutePath());
+    const QString relative = root.relativeFilePath(asset.absoluteFilePath());
+    // Never turn an external source into a misleading relative reference.
+    if (relative == QStringLiteral("..") || relative.startsWith(QStringLiteral("../")))
+        return asset.absoluteFilePath();
+    return relative;
+}
+
+QString deserializeAssetPath(const QString &projectPath, const QString &path)
+{
+    if (path.trimmed().isEmpty() || QFileInfo(path).isAbsolute()
+        || projectPath.trimmed().isEmpty())
+        return path;
+    return QDir(QFileInfo(projectPath).absolutePath()).absoluteFilePath(path);
+}
+
+QVariantMap serializeArtifactMap(const QString &projectPath, QVariantMap value)
+{
+    static const QSet<QString> pathKeys{
+        QStringLiteral("clipPath"), QStringLiteral("path"), QStringLiteral("audioPath"),
+        QStringLiteral("audio"), QStringLiteral("video"), QStringLiteral("media"),
+        QStringLiteral("vocals"), QStringLiteral("background"), QStringLiteral("preview"),
+        QStringLiteral("export"), QStringLiteral("transcript"), QStringLiteral("outputPath")};
+    for (auto it = value.begin(); it != value.end(); ++it) {
+        if (pathKeys.contains(it.key()) && it.value().metaType().id() == QMetaType::QString)
+            it.value() = serializeAssetPath(projectPath, it.value().toString());
+        else if (it.value().metaType().id() == QMetaType::QVariantMap)
+            it.value() = serializeArtifactMap(projectPath, it.value().toMap());
+        else if (it.value().metaType().id() == QMetaType::QVariantList) {
+            QVariantList entries = it.value().toList();
+            for (QVariant &entry : entries) {
+                if (entry.metaType().id() == QMetaType::QVariantMap)
+                    entry = serializeArtifactMap(projectPath, entry.toMap());
+            }
+            it.value() = entries;
+        }
+    }
+    return value;
+}
+
+QVariantMap deserializeArtifactMap(const QString &projectPath, QVariantMap value)
+{
+    static const QSet<QString> pathKeys{
+        QStringLiteral("clipPath"), QStringLiteral("path"), QStringLiteral("audioPath"),
+        QStringLiteral("audio"), QStringLiteral("video"), QStringLiteral("media"),
+        QStringLiteral("vocals"), QStringLiteral("background"), QStringLiteral("preview"),
+        QStringLiteral("export"), QStringLiteral("transcript"), QStringLiteral("outputPath")};
+    for (auto it = value.begin(); it != value.end(); ++it) {
+        if (pathKeys.contains(it.key()) && it.value().metaType().id() == QMetaType::QString)
+            it.value() = deserializeAssetPath(projectPath, it.value().toString());
+        else if (it.value().metaType().id() == QMetaType::QVariantMap)
+            it.value() = deserializeArtifactMap(projectPath, it.value().toMap());
+        else if (it.value().metaType().id() == QMetaType::QVariantList) {
+            QVariantList entries = it.value().toList();
+            for (QVariant &entry : entries) {
+                if (entry.metaType().id() == QMetaType::QVariantMap)
+                    entry = deserializeArtifactMap(projectPath, entry.toMap());
+            }
+            it.value() = entries;
+        }
+    }
+    return value;
 }
 }
 
@@ -36,12 +109,12 @@ QJsonObject DubbingProject::toJson() const
 {
     QJsonObject json;
     json.insert(QStringLiteral("schemaVersion"), CurrentSchemaVersion);
-    json.insert(QStringLiteral("sourceMediaPath"), sourceMediaPath);
+    json.insert(QStringLiteral("sourceMediaPath"), serializeAssetPath(projectPath, sourceMediaPath));
     json.insert(QStringLiteral("sourceHash"), sourceHash);
-    json.insert(QStringLiteral("masterAudioPath"), masterAudioPath);
-    json.insert(QStringLiteral("analysisAudioPath"), analysisAudioPath);
-    json.insert(QStringLiteral("vocalsAudioPath"), vocalsAudioPath);
-    json.insert(QStringLiteral("backgroundAudioPath"), backgroundAudioPath);
+    json.insert(QStringLiteral("masterAudioPath"), serializeAssetPath(projectPath, masterAudioPath));
+    json.insert(QStringLiteral("analysisAudioPath"), serializeAssetPath(projectPath, analysisAudioPath));
+    json.insert(QStringLiteral("vocalsAudioPath"), serializeAssetPath(projectPath, vocalsAudioPath));
+    json.insert(QStringLiteral("backgroundAudioPath"), serializeAssetPath(projectPath, backgroundAudioPath));
     json.insert(QStringLiteral("sourceDurationMs"), sourceDurationMs);
     json.insert(QStringLiteral("sourceSampleRate"), sourceSampleRate);
     json.insert(QStringLiteral("sourceChannels"), sourceChannels);
@@ -66,7 +139,19 @@ QJsonObject DubbingProject::toJson() const
     json.insert(QStringLiteral("customRewriteConfiguration"),
                 QJsonObject::fromVariantMap(customRewriteConfiguration));
     json.insert(QStringLiteral("speakers"), QJsonArray::fromVariantList(speakers));
-    json.insert(QStringLiteral("segments"), QJsonArray::fromVariantList(segments));
+    QVariantList serializedSegments;
+    serializedSegments.reserve(segments.size());
+    for (const QVariant &segment : segments)
+        serializedSegments.append(serializeArtifactMap(projectPath, segment.toMap()));
+    json.insert(QStringLiteral("segments"), QJsonArray::fromVariantList(serializedSegments));
+    json.insert(QStringLiteral("workflowCurrentStepId"), workflowCurrentStepId);
+    json.insert(QStringLiteral("workflowLastCompletedStepId"), workflowLastCompletedStepId);
+    json.insert(QStringLiteral("workflowStepOutputs"),
+                QJsonObject::fromVariantMap(serializeArtifactMap(projectPath, workflowStepOutputs)));
+    json.insert(QStringLiteral("previewAudioPath"), serializeAssetPath(projectPath, previewAudioPath));
+    json.insert(QStringLiteral("dubbedVocalAudioPath"), serializeAssetPath(projectPath, dubbedVocalAudioPath));
+    json.insert(QStringLiteral("exportMediaPath"), serializeAssetPath(projectPath, exportMediaPath));
+    json.insert(QStringLiteral("capCutDraftPath"), serializeAssetPath(projectPath, capCutDraftPath));
     return json;
 }
 
@@ -78,15 +163,37 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
         return false;
     }
 
-    project.sourceMediaPath = json.value(QStringLiteral("sourceMediaPath")).toString();
+    // Clear fields introduced by newer schemas before loading so callers may
+    // safely reuse a DubbingProject instance for more than one file.  This is
+    // also important for a legacy project: version-gated fields are not read
+    // below, so leaving their previous values in place would silently merge
+    // the old project with whichever newer project was loaded first.
+    project.workflowEntryMode.clear();
+    project.ttsVoiceId.clear();
+    project.cloneVoicePresetId.clear();
+    project.workflowNodeConfigurations.clear();
+    project.transcriptConfiguration.clear();
+    project.subtitleConfiguration.clear();
+    project.timingConfiguration.clear();
+    project.audioMixConfiguration.clear();
+    project.customRewriteConfiguration.clear();
+    project.workflowCurrentStepId.clear();
+    project.workflowLastCompletedStepId.clear();
+    project.workflowStepOutputs.clear();
+    project.previewAudioPath.clear();
+    project.dubbedVocalAudioPath.clear();
+    project.exportMediaPath.clear();
+    project.capCutDraftPath.clear();
+
+    project.sourceMediaPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("sourceMediaPath")).toString());
     project.sourceHash = json.value(QStringLiteral("sourceHash")).toString();
-    project.masterAudioPath = json.value(QStringLiteral("masterAudioPath")).toString();
-    project.analysisAudioPath = json.value(QStringLiteral("analysisAudioPath")).toString();
+    project.masterAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("masterAudioPath")).toString());
+    project.analysisAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("analysisAudioPath")).toString());
     if (version >= 14)
-        project.vocalsAudioPath = json.value(QStringLiteral("vocalsAudioPath")).toString();
+        project.vocalsAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("vocalsAudioPath")).toString());
     else
         project.vocalsAudioPath.clear();
-    project.backgroundAudioPath = json.value(QStringLiteral("backgroundAudioPath")).toString();
+    project.backgroundAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("backgroundAudioPath")).toString());
     project.sourceDurationMs = json.value(QStringLiteral("sourceDurationMs")).toVariant().toLongLong();
     project.sourceSampleRate = json.value(QStringLiteral("sourceSampleRate")).toInt();
     project.sourceChannels = json.value(QStringLiteral("sourceChannels")).toInt();
@@ -136,9 +243,9 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
     }
     if (project.transcriptConfiguration.isEmpty()) {
         project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
-                                           {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+                                           {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")}};
     } else if (!project.transcriptConfiguration.contains(QStringLiteral("fusionPolicy"))) {
-        project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"));
+        project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr"));
     }
     if (version >= 10) {
         project.subtitleConfiguration =
@@ -158,6 +265,20 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
     }
     project.speakers = json.value(QStringLiteral("speakers")).toArray().toVariantList();
     project.segments = json.value(QStringLiteral("segments")).toArray().toVariantList();
+    for (QVariant &segment : project.segments)
+        segment = deserializeArtifactMap(project.projectPath, segment.toMap());
+    if (version >= 16) {
+        project.workflowCurrentStepId = json.value(QStringLiteral("workflowCurrentStepId"))
+            .toString().trimmed();
+        project.workflowLastCompletedStepId = json.value(QStringLiteral("workflowLastCompletedStepId"))
+            .toString().trimmed();
+        project.workflowStepOutputs = deserializeArtifactMap(project.projectPath,
+            json.value(QStringLiteral("workflowStepOutputs")).toObject().toVariantMap());
+        project.previewAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("previewAudioPath")).toString());
+        project.dubbedVocalAudioPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("dubbedVocalAudioPath")).toString());
+        project.exportMediaPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("exportMediaPath")).toString());
+        project.capCutDraftPath = deserializeAssetPath(project.projectPath, json.value(QStringLiteral("capCutDraftPath")).toString());
+    }
     return true;
 }
 
@@ -207,6 +328,8 @@ bool DubbingProject::load(const QString &path, DubbingProject &project, QString 
     }
 
     DubbingProject loaded;
+    // `fromJson` needs the root to resolve schema 17 relative artifact paths.
+    loaded.projectPath = QFileInfo(path).absoluteFilePath();
     if (!fromJson(document.object(), loaded, error)) {
         return false;
     }

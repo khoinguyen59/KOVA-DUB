@@ -3,6 +3,7 @@
 #include "ExecutionProvider.h"
 
 #include <QBuffer>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
@@ -13,6 +14,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QTimer>
 
 namespace LAStudio {
 
@@ -25,6 +27,8 @@ constexpr int kInferenceRequestTimeoutMs = 300'000;
 // inherit the long upload/inference timeout, otherwise a disappeared tunnel
 // could keep the worker thread occupied for several minutes.
 constexpr int kJobStatusRequestTimeoutMs = 30'000;
+constexpr int kSeparationArtifactTransferTimeoutMs = 15 * 60 * 1000;
+constexpr int kSeparationArtifactIdleTimeoutMs = 45 * 1000;
 constexpr qint64 kChunkedSttUploadBytes = 2LL * 1024LL * 1024LL;
 
 QString responseError(const QByteArray &body, int statusCode)
@@ -681,24 +685,55 @@ bool ColabWorkerClient::createSeparationJob(const QString &audioPath, const QStr
     return ok;
 }
 
-bool ColabWorkerClient::separationJobStatus(const QString &jobId, QJsonObject *job, QString *errorMessage)
+bool ColabWorkerClient::separationJobStatus(
+    const QString &jobId, QJsonObject *job, QString *errorMessage, int timeoutMs,
+    const std::shared_ptr<std::atomic_bool> &cancelToken)
 {
     if (job) *job = {};
     if (!m_workerUrl.isValid() || m_bearerToken.isEmpty() || jobId.trimmed().isEmpty()) {
         if (errorMessage) *errorMessage = QStringLiteral("Colab separation job is unavailable");
         return false;
     }
+    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
     QNetworkAccessManager manager;
     QNetworkRequest request(appendRemotePath(m_workerUrl, QStringLiteral("v1/audio/separations/%1").arg(jobId.trimmed())));
-    request.setTransferTimeout(kInferenceRequestTimeoutMs);
+    const int boundedTimeoutMs = timeoutMs > 0 ? timeoutMs : kJobStatusRequestTimeoutMs;
+    request.setTransferTimeout(boundedTimeoutMs);
     request.setRawHeader("Authorization", QByteArray("Bearer ") + m_bearerToken.toUtf8());
     request.setRawHeader("Accept", "application/json");
     QNetworkReply *reply = manager.get(request);
     m_activeReply = reply;
     QEventLoop eventLoop;
+    QTimer watchdog;
+    watchdog.setSingleShot(true);
+    bool timedOut = false;
+    bool cancelled = false;
     QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    QObject::connect(&watchdog, &QTimer::timeout, &eventLoop, [&]() {
+        if (cancelToken && cancelToken->load(std::memory_order_relaxed)) {
+            cancelled = true;
+        } else {
+            timedOut = true;
+        }
+        if (!reply->isFinished()) reply->abort();
+        eventLoop.quit();
+    });
+    watchdog.start(boundedTimeoutMs);
+    if (!reply->isFinished()) eventLoop.exec();
+    watchdog.stop();
+    const bool requestTimedOut = timedOut || reply->error() == QNetworkReply::TimeoutError;
     m_activeReply = nullptr;
+    if (cancelled) {
+        reply->deleteLater();
+        return false;
+    }
+    if (requestTimedOut) {
+        if (errorMessage) *errorMessage = QStringLiteral(
+            "Colab separation status request timed out after %1 seconds. Check the Colab tunnel and reconnect.")
+                .arg(qMax(1, boundedTimeoutMs / 1000));
+        reply->deleteLater();
+        return false;
+    }
     const bool ok = parseJsonResponse(reply, nullptr, job, errorMessage,
                                       QStringLiteral("Colab worker returned an invalid separation status"));
     reply->deleteLater();
@@ -709,7 +744,8 @@ bool ColabWorkerClient::downloadSeparationArtifact(const QString &jobId, const Q
                                                    const QString &artifactFormat,
                                                    const std::shared_ptr<std::atomic_bool> &cancelToken,
                                                    QByteArray *artifactData, QString *errorMessage,
-                                                   const DownloadProgressCallback &downloadProgress)
+                                                   const DownloadProgressCallback &downloadProgress,
+                                                   int transferTimeoutMs, int idleTimeoutMs)
 {
     if (artifactData) artifactData->clear();
     if (!m_workerUrl.isValid() || m_bearerToken.isEmpty() || jobId.trimmed().isEmpty()
@@ -717,10 +753,20 @@ bool ColabWorkerClient::downloadSeparationArtifact(const QString &jobId, const Q
         if (errorMessage) *errorMessage = QStringLiteral("Colab separation artifact is unavailable");
         return false;
     }
+    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
     QNetworkAccessManager manager;
     QNetworkRequest request(appendRemotePath(m_workerUrl,
         QStringLiteral("v1/audio/separations/%1/artifacts/%2").arg(jobId.trimmed(), stem)));
-    request.setTransferTimeout(kInferenceRequestTimeoutMs);
+    const int hardTimeoutMs = transferTimeoutMs > 0
+        ? transferTimeoutMs : kSeparationArtifactTransferTimeoutMs;
+    const int inactivityTimeoutMs = idleTimeoutMs > 0
+        ? idleTimeoutMs : kSeparationArtifactIdleTimeoutMs;
+    // QNetworkRequest's transfer timeout is an inactivity timeout. The
+    // separate watchdog below also enforces a total transfer deadline.
+    // Leave a little headroom for the explicit watchdog below. If the Qt
+    // transport timeout fires first, the reply may report a generic abort
+    // error and the caller cannot distinguish it from a real server failure.
+    request.setTransferTimeout(qMax(1'000, inactivityTimeoutMs + 1'000));
     request.setRawHeader("Authorization", QByteArray("Bearer ") + m_bearerToken.toUtf8());
     const bool wantsWav = artifactFormat.trimmed().compare(QStringLiteral("wav"), Qt::CaseInsensitive) == 0;
     request.setRawHeader("Accept", wantsWav ? "audio/wav, application/octet-stream"
@@ -729,24 +775,61 @@ bool ColabWorkerClient::downloadSeparationArtifact(const QString &jobId, const Q
     m_activeReply = reply;
     qint64 lastReceived = -1;
     qint64 lastTotal = -1;
+    QElapsedTimer hardTimer;
+    QElapsedTimer idleTimer;
+    hardTimer.start();
+    idleTimer.start();
     if (downloadProgress) {
         QObject::connect(reply, &QNetworkReply::downloadProgress,
-                         [&downloadProgress, &lastReceived, &lastTotal](qint64 received, qint64 total) {
+                         [&downloadProgress, &lastReceived, &lastTotal, &idleTimer](qint64 received, qint64 total) {
             lastReceived = received;
             lastTotal = total;
+            idleTimer.restart();
             downloadProgress(received, total);
         });
     }
     QEventLoop eventLoop;
+    QTimer watchdog;
+    watchdog.setInterval(250);
+    bool timedOut = false;
+    QObject::connect(&watchdog, &QTimer::timeout, &eventLoop, [&]() {
+        if (cancelToken && cancelToken->load(std::memory_order_relaxed)) {
+            if (!reply->isFinished()) reply->abort();
+            eventLoop.quit();
+            return;
+        }
+        if (hardTimer.elapsed() >= hardTimeoutMs || idleTimer.elapsed() >= inactivityTimeoutMs) {
+            timedOut = true;
+            if (!reply->isFinished()) reply->abort();
+            eventLoop.quit();
+        }
+    });
     QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
-    const QByteArray body = reply->readAll();
+    watchdog.start();
+    if (!reply->isFinished()) eventLoop.exec();
+    watchdog.stop();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QNetworkReply::NetworkError networkError = reply->error();
     const QString networkErrorText = reply->errorString();
+    const bool transferTimedOut = timedOut
+        || hardTimer.elapsed() >= hardTimeoutMs
+        || idleTimer.elapsed() >= inactivityTimeoutMs
+        || networkError == QNetworkReply::TimeoutError;
+    // A timed-out/aborted QNetworkReply may already have closed its device.
+    // Do not read from it in that state; apart from being unnecessary, that
+    // produces a noisy "device not open" warning during failure handling.
+    const QByteArray body = transferTimedOut ? QByteArray() : reply->readAll();
     m_activeReply = nullptr;
     reply->deleteLater();
     if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
+    if (transferTimedOut) {
+        if (errorMessage) *errorMessage = QStringLiteral(
+            "Colab separation artifact download timed out after %1 seconds or was idle for %2 seconds. "
+            "Check the Colab tunnel and rerun the separation task.")
+                .arg(qMax(1, hardTimeoutMs / 1000))
+                .arg(qMax(1, inactivityTimeoutMs / 1000));
+        return false;
+    }
     if (networkError != QNetworkReply::NoError || statusCode < 200 || statusCode >= 300) {
         if (errorMessage) *errorMessage = statusCode >= 400 ? responseError(body, statusCode)
             : QStringLiteral("Colab worker request failed: %1").arg(networkErrorText);

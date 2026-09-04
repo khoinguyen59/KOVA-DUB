@@ -78,7 +78,7 @@ QString DubbingTranscriptFusionService::normalizePolicy(const QString &policy)
     }
     if (normalized == QStringLiteral("ask"))
         return QStringLiteral("ask");
-    return QStringLiteral("prefer-stt");
+    return QStringLiteral("prefer-ocr");
 }
 
 QVariantList DubbingTranscriptFusionService::normalizeOcrSegments(const QVariantList &ocrSegments)
@@ -207,10 +207,10 @@ QVariantList DubbingTranscriptFusionService::fuse(const QVariantList &sttSegment
         result.append(segment);
     }
 
-    // OCR-only cues are useful evidence, but must not silently create new
-    // dubbing cues when STT exists. The default canonical script is STT when
-    // the two sources do not match. Explicit `ask` keeps those cues visible
-    // for a reviewer; explicit `prefer-ocr` promotes OCR by operator choice.
+    // OCR is the canonical subtitle source when the two independent workers
+    // disagree.  STT remains attached as provenance and is still useful for
+    // speech-only material, but it must not quietly overwrite an on-screen
+    // line selected by the operator's default policy.
     if (normalizedPolicy == QStringLiteral("prefer-stt") && !sttSegments.isEmpty())
         return result;
 

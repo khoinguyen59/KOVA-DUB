@@ -835,6 +835,7 @@ void DubbingController::completeCurrentMediaQueueItem(bool success, const QStrin
     QString finalMessage = message.trimmed();
     if (success) {
         QString saveError;
+        syncProjectStateForPersistence();
         if (!m_project.save(&saveError)) {
             success = false;
             finalMessage = saveError;
@@ -941,6 +942,7 @@ bool DubbingController::promoteSingleImportedMediaQueueProject()
     m_lastCompletedStepId = QStringLiteral("ingest");
 
     QString saveError;
+    syncProjectStateForPersistence();
     if (!m_project.save(&saveError)) {
         Logger::warning(QStringLiteral("DubbingController"),
                         QStringLiteral("Imported media became active but could not be saved: %1")

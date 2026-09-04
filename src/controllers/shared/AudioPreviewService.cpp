@@ -4,6 +4,7 @@
 #include "tts/engine/TtsEngine.h"
 #include "audio/player/AudioPlayer.h"
 #include "audio/io/WaveformProvider.h"
+#include "audio/io/AudioFileDecoder.h"
 #include "audio/io/WavIO.h"
 #include "core/utils/Logger.h"
 
@@ -12,11 +13,6 @@
 #include <QDir>
 #include <QPointer>
 #include <QCoreApplication>
-#include <QAudioBuffer>
-#include <QAudioFormat>
-#include <QUrl>
-#include <cstdint>
-#include <cstring>
 #include <algorithm>
 
 namespace LAStudio {
@@ -27,12 +23,6 @@ AudioPreviewService::AudioPreviewService(TtsEngine* tts, AudioPlayer* player, Wa
     , m_player(player)
     , m_waveformProvider(waveformProvider)
 {
-    connect(&m_decoder, &QAudioDecoder::bufferReady,
-            this, &AudioPreviewService::handleDecoderBufferReady);
-    connect(&m_decoder, &QAudioDecoder::finished,
-            this, &AudioPreviewService::handleDecoderFinished);
-    connect(&m_decoder, qOverload<QAudioDecoder::Error>(&QAudioDecoder::error),
-            this, &AudioPreviewService::handleDecoderError);
 }
 
 void AudioPreviewService::playLastTts()
@@ -65,10 +55,6 @@ void AudioPreviewService::requestWavSamples(const QString &path)
     const quint64 requestId = ++m_wavSamplesRequestId;
 
     if (sourcePath.isEmpty()) {
-        m_decoder.stop();
-        m_decodedSamples.clear();
-        m_decoderSourcePath.clear();
-        m_decoderRequestId = requestId;
         if (!m_wavSamples.isEmpty() || !m_wavSamplesSourcePath.isEmpty()) {
             m_wavSamples.clear();
             m_wavSamplesSourcePath.clear();
@@ -92,34 +78,32 @@ void AudioPreviewService::requestWavSamples(const QString &path)
     m_wavSamplesLoading = true;
     emit wavSamplesLoadingChanged();
 
-    m_decoder.stop();
-    m_decodedSamples.clear();
-
-    // WavIO is faster and more reliable for WAV. Use Qt Multimedia for
-    // compressed audio such as MP3/M4A, which WavIO cannot decode.
-    if (!cleanPath.endsWith(QStringLiteral(".wav"), Qt::CaseInsensitive)) {
-        m_decoderSourcePath = sourcePath;
-        m_decoderRequestId = requestId;
-        m_decoder.setSource(QUrl::fromLocalFile(cleanPath));
-        m_decoder.start();
-        return;
-    }
-
+    // Decode every supported container in the worker pool. AudioFileDecoder
+    // first uses the native WAV reader, then Qt Multimedia and finally the
+    // bundled FFmpeg fallback. Keeping this off the UI thread makes FLAC,
+    // MP3, M4A and other accepted inputs behave consistently without a
+    // format-specific main-thread decoder path.
     QPointer<AudioPreviewService> weakThis(this);
     QThreadPool::globalInstance()->start([weakThis, cleanPath, sourcePath, requestId]() {
-        WavIO::WavData data = WavIO::loadAsFloat(cleanPath);
+        QString decodeError;
+        const WavIO::WavData data = AudioFileDecoder::decode(cleanPath, &decodeError);
         QVariantList list;
         if (!data.samples.isEmpty()) {
-            int step = std::max<int>(1, data.samples.size() / 1000);
-            list.reserve(data.samples.size() / step + 1);
-            for (int i = 0; i < data.samples.size(); i += step) {
-                list.append(data.samples[i]);
+            const int channels = std::max(1, data.channels);
+            const int frameCount = data.samples.size() / channels;
+            const int step = std::max(1, frameCount / 1000);
+            list.reserve(frameCount / step + 1);
+            for (int frame = 0; frame < frameCount; frame += step) {
+                float value = 0.0f;
+                for (int channel = 0; channel < channels; ++channel)
+                    value += data.samples.at(frame * channels + channel);
+                list.append(value / channels);
             }
         }
 
         QCoreApplication* app = QCoreApplication::instance();
         if (app) {
-            QMetaObject::invokeMethod(app, [weakThis, requestId, sourcePath, list]() {
+            QMetaObject::invokeMethod(app, [weakThis, requestId, sourcePath, list, decodeError]() {
                 if (!weakThis)
                     return;
 
@@ -134,91 +118,11 @@ void AudioPreviewService::requestWavSamples(const QString &path)
                     weakThis->m_wavSamplesLoading = false;
                     emit weakThis->wavSamplesLoadingChanged();
                 }
+                if (list.isEmpty() && !decodeError.isEmpty())
+                    Logger::warning(QStringLiteral("AudioPreviewService"), decodeError);
             });
         }
     });
-}
-
-void AudioPreviewService::handleDecoderBufferReady()
-{
-    const QAudioBuffer buffer = m_decoder.read();
-    if (!buffer.isValid() || buffer.sampleCount() <= 0)
-        return;
-
-    const QAudioFormat format = buffer.format();
-    const int count = buffer.sampleCount();
-    const int offset = m_decodedSamples.size();
-    m_decodedSamples.resize(offset + count);
-    float *destination = m_decodedSamples.data() + offset;
-
-    switch (format.sampleFormat()) {
-    case QAudioFormat::UInt8: {
-        const auto *source = buffer.constData<uint8_t>();
-        for (int i = 0; i < count; ++i)
-            destination[i] = (static_cast<float>(source[i]) - 128.0f) / 128.0f;
-        break;
-    }
-    case QAudioFormat::Int16: {
-        const auto *source = buffer.constData<int16_t>();
-        for (int i = 0; i < count; ++i)
-            destination[i] = static_cast<float>(source[i]) / 32768.0f;
-        break;
-    }
-    case QAudioFormat::Int32: {
-        const auto *source = buffer.constData<int32_t>();
-        for (int i = 0; i < count; ++i)
-            destination[i] = static_cast<float>(source[i]) / 2147483648.0f;
-        break;
-    }
-    case QAudioFormat::Float:
-        std::memcpy(destination, buffer.constData<float>(), count * sizeof(float));
-        break;
-    default:
-        m_decoder.stop();
-        m_decodedSamples.clear();
-        break;
-    }
-}
-
-void AudioPreviewService::handleDecoderFinished()
-{
-    publishDecodedSamples(m_decoderSourcePath, m_decoderRequestId);
-}
-
-void AudioPreviewService::handleDecoderError(QAudioDecoder::Error error)
-{
-    Q_UNUSED(error);
-    Logger::warning("AudioPreviewService", "Audio preview decode failed: " + m_decoder.errorString());
-    m_decodedSamples.clear();
-    publishDecodedSamples(m_decoderSourcePath, m_decoderRequestId);
-}
-
-void AudioPreviewService::publishDecodedSamples(const QString &sourcePath, quint64 requestId)
-{
-    if (requestId != m_wavSamplesRequestId)
-        return;
-
-    const QAudioFormat format = m_decoder.audioFormat();
-    const int channels = std::max(1, format.channelCount());
-    const int frameCount = m_decodedSamples.size() / channels;
-    QVariantList list;
-    if (frameCount > 0) {
-        const int step = std::max(1, frameCount / 1000);
-        list.reserve(frameCount / step + 1);
-        for (int frame = 0; frame < frameCount; frame += step) {
-            float value = 0.0f;
-            for (int channel = 0; channel < channels; ++channel)
-                value += m_decodedSamples[frame * channels + channel];
-            list.append(value / channels);
-        }
-    }
-
-    m_wavSamples = list;
-    m_wavSamplesSourcePath = sourcePath;
-    emit wavSamplesChanged();
-    m_wavSamplesLoading = false;
-    emit wavSamplesLoadingChanged();
-    m_decodedSamples.clear();
 }
 
 void AudioPreviewService::saveWav(const QString &path)

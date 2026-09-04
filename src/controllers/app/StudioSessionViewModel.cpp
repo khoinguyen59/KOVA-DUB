@@ -491,7 +491,17 @@ void StudioSessionViewModel::commitSelectionInternal(bool loadAfterCommit)
     }
 
     if (m_repository) {
-        m_repository->saveActiveSelection(config);
+        QString saveError;
+        if (!m_repository->saveActiveSelection(config, &saveError)) {
+            // IStudioAction owns the visible action error state; this view model
+            // must not invent a second state machine.  Log the persistence
+            // failure and notify bindings so the existing status surface can
+            // refresh without turning a successful model load into a false
+            // runtime failure.
+            Logger::error(QStringLiteral("StudioSessionViewModel"), saveError);
+            emit stateChanged();
+            return;
+        }
     }
 
     m_selectionCommitted = true;
@@ -557,7 +567,12 @@ void StudioSessionViewModel::activateLoadedModel(const QString &modelId)
             m_familiesModel->setSelectedFamilyId(m_pendingFamilyId);
         }
         if (m_repository) {
-            m_repository->saveActiveSelection(active->selection);
+            QString saveError;
+            if (!m_repository->saveActiveSelection(active->selection, &saveError)) {
+                Logger::error(QStringLiteral("StudioSessionViewModel"), saveError);
+                emit stateChanged();
+                return;
+            }
         }
         emit selectionChanged();
         emit studioContextChanged(active->selection.familyId, active->selection.runtimeId, active->selection.runtimeVersion);

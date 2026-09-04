@@ -15,7 +15,7 @@ public:
     ~SeparationWorker() override = default;
 
 public slots:
-    void process(const SeparationRequest &request, QAtomicInt *cancelFlag);
+    void process(const SeparationRequest &request, std::shared_ptr<QAtomicInt> cancelFlag);
 
 signals:
     void progress(int percent, const QString &stage);

@@ -123,6 +123,84 @@ function Normalize-AppVersion {
     return $Value
 }
 
+function Get-TextSha256 {
+    param([Parameter(Mandatory = $true)][string] $Text)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
+        return ([System.BitConverter]::ToString($sha256.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
+function Invoke-GitQuiet {
+    param(
+        [Parameter(Mandatory = $true)][string] $RepositoryRoot,
+        [Parameter(Mandatory = $true)][string[]] $Arguments
+    )
+
+    # Git can emit a safe-CRLF advisory on stderr while successfully producing
+    # a diff.  Under this release script's Stop policy PowerShell turns that
+    # advisory into NativeCommandError, which used to abort packaging after the
+    # executable smoke and before the release manifest.  Disable only that
+    # advisory for this read-only provenance query and still require a zero
+    # Git exit code.
+    $previousErrorActionPreference = $ErrorActionPreference
+    $exitCode = 1
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = @(& git -c core.safecrlf=false -C $RepositoryRoot @Arguments 2>$null)
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($exitCode -ne 0) {
+        throw "Git provenance query failed: git $($Arguments -join ' ') (exit $exitCode)."
+    }
+    return $output
+}
+
+function Write-ReleaseSourceManifest {
+    param(
+        [Parameter(Mandatory = $true)][string] $RepositoryRoot,
+        [Parameter(Mandatory = $true)][string] $StageRoot,
+        [Parameter(Mandatory = $true)][string] $ApplicationExecutable,
+        [Parameter(Mandatory = $true)][string] $AppVersion
+    )
+
+    # Store attestable hashes rather than source contents. This keeps a local,
+    # dirty-tree build traceable without placing credentials or user changes in
+    # the distributed payload.
+    $baseCommit = (Invoke-GitQuiet -RepositoryRoot $RepositoryRoot -Arguments @("rev-parse", "HEAD") |
+        Select-Object -First 1).Trim()
+    if ([string]::IsNullOrWhiteSpace($baseCommit)) { $baseCommit = "unavailable" }
+    $status = @(Invoke-GitQuiet -RepositoryRoot $RepositoryRoot -Arguments @(
+            "status", "--porcelain=v1", "--untracked-files=all"))
+    $diff = @(Invoke-GitQuiet -RepositoryRoot $RepositoryRoot -Arguments @(
+            "diff", "--no-ext-diff", "--binary", "HEAD", "--", "."))
+    $manifest = [ordered]@{
+        schemaVersion = 1
+        generatedAtUtc = [DateTime]::UtcNow.ToString("o")
+        applicationVersion = $AppVersion
+        source = [ordered]@{
+            baseCommit = $baseCommit
+            dirty = ($status.Count -gt 0)
+            statusSha256 = Get-TextSha256 -Text ($status -join "`n")
+            trackedDiffSha256 = Get-TextSha256 -Text ($diff -join "`n")
+        }
+        artifact = [ordered]@{
+            file = [IO.Path]::GetFileName($ApplicationExecutable)
+            sha256 = Get-LaStudioFileSha256 -Path $ApplicationExecutable
+        }
+    }
+    $outputPath = Join-Path $StageRoot "release-source-manifest.json"
+    [IO.File]::WriteAllText($outputPath, ($manifest | ConvertTo-Json -Depth 6),
+                            [Text.UTF8Encoding]::new($false))
+    Write-Host ">> Wrote release source manifest: $outputPath" -ForegroundColor Green
+}
+
 function Get-VersionedApplicationExecutableName {
     param([Parameter(Mandatory = $true)][string] $AppVersion)
     return "LA-Studio-$AppVersion.exe"
@@ -265,6 +343,14 @@ function Resolve-QtRoot {
             Sort-Object { [version]$_.Name } -Descending |
             Select-Object -First 1
         if ($latestQtRoot) { return $latestQtRoot.FullName }
+    }
+    $managedQtRoot = Join-Path $RepoRoot ".tools\Qt"
+    if (Test-Path $managedQtRoot) {
+        $latestManagedQtRoot = Get-ChildItem $managedQtRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            Select-Object -First 1
+        if ($latestManagedQtRoot) { return $latestManagedQtRoot.FullName }
     }
     return $null
 }
@@ -422,7 +508,7 @@ function Ensure-Bsdtar {
         Write-Host ">> Downloading libarchive $version source" -ForegroundColor Cyan
         Invoke-WebRequest -Uri $sourceUrl -OutFile $sourceArchive -UseBasicParsing
     }
-    $actualSha256 = (Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualSha256 = Get-LaStudioFileSha256 -Path $sourceArchive
     if ($actualSha256 -ne $sourceSha256) {
         throw "libarchive source SHA-256 mismatch. Expected $sourceSha256 but got $actualSha256."
     }
@@ -464,8 +550,9 @@ function Ensure-Bsdtar {
     # newer CMake releases.  This is a pinned third-party runtime build, and
     # those diagnostics are not build failures; suppress only developer
     # warnings while preserving the explicit exit-code gate below.
-    & cmake -Wno-dev -S $sourceRoot -B $bsdtarBuildDir -G Ninja `
+    & $script:CMakeExecutable -Wno-dev -S $sourceRoot -B $bsdtarBuildDir -G Ninja `
         "-DCMAKE_BUILD_TYPE=Release" `
+        "-DCMAKE_MAKE_PROGRAM=$($script:NinjaExecutable.Replace('\', '/'))" `
         "-DCMAKE_PREFIX_PATH=$prefixPath" `
         "-DENABLE_TAR=ON" `
         "-DENABLE_CPIO=OFF" `
@@ -477,7 +564,7 @@ function Ensure-Bsdtar {
         "-DENABLE_LZMA=OFF" `
         "-DENABLE_ZSTD=OFF"
     if ($LASTEXITCODE -ne 0) { throw "Failed to configure pinned bsdtar source." }
-    & cmake --build $bsdtarBuildDir --target bsdtar --parallel $MaxParallelJobs
+    & $script:CMakeExecutable --build $bsdtarBuildDir --target bsdtar --parallel $MaxParallelJobs
     if ($LASTEXITCODE -ne 0) { throw "Failed to build pinned bsdtar source." }
 
     $builtBsdtar = Get-ChildItem -Path $bsdtarBuildDir -Filter "bsdtar.exe" -Recurse -File |
@@ -573,7 +660,7 @@ function Stage-ThirdPartyLicenseTexts {
         if (-not (Test-Path -LiteralPath $cachedPath -PathType Leaf)) {
             Invoke-WebRequest -Uri $entry.Url -OutFile $cachedPath -UseBasicParsing
         }
-        $actualHash = (Get-FileHash -LiteralPath $cachedPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $actualHash = Get-LaStudioFileSha256 -Path $cachedPath
         if ($actualHash -ne $entry.Sha256) {
             throw "Canonical license hash mismatch for $($entry.File). Expected $($entry.Sha256) but got $actualHash."
         }
@@ -642,7 +729,7 @@ function Stage-SubtitleOcrRuntimeManifest {
     if ($LASTEXITCODE -ne 0 -or $healthOutput -notmatch '(?i)tesseract') {
         throw "Bundled Tesseract did not pass its package health check. Exit=$LASTEXITCODE Output=$healthOutput"
     }
-    $manifest.runtime.binarySha256 = (Get-FileHash -LiteralPath $tesseractTarget -Algorithm SHA256).Hash.ToLowerInvariant()
+    $manifest.runtime.binarySha256 = Get-LaStudioFileSha256 -Path $tesseractTarget
     $manifest.runtime.healthCheckPassed = $true
     $manifest.runtime.healthCheckOutput = (($healthOutput -split "`r?`n")[0]).Trim()
     Copy-Item -LiteralPath $noticeSource -Destination (Join-Path $runtimeRoot "README.txt") -Force
@@ -681,8 +768,8 @@ function Stage-PaddleOcrRuntime {
             throw "PaddleOCR runtime preparation is incomplete: $required"
         }
     }
-    if ((Get-FileHash -LiteralPath $adapterSource -Algorithm SHA256).Hash.ToLowerInvariant() -ne
-        (Get-FileHash -LiteralPath $workerSource -Algorithm SHA256).Hash.ToLowerInvariant()) {
+    if ((Get-LaStudioFileSha256 -Path $adapterSource) -ne
+        (Get-LaStudioFileSha256 -Path $workerSource)) {
         throw "Prepared PaddleOCR worker differs from the reviewed source adapter."
     }
     try {
@@ -937,6 +1024,14 @@ function Invoke-PackagedQmlSmoke {
     }
 }
 
+# Prefer the repository-managed CMake before checking PATH. Keeping the Qt and
+# CMake toolchain paired prevents missing generated QML resource sources.
+$bundledCmake = Get-ChildItem -LiteralPath (Join-Path $RepoRoot ".deps\vcpkg\downloads\tools") `
+    -Filter "cmake.exe" -File -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if ($bundledCmake) {
+    Add-PathIfExists -PathEntry $bundledCmake.DirectoryName
+}
 Ensure-Command -Name "cmake" -FallbackPaths @(
     "C:\Qt\Tools\CMake_64\bin",
     "C:\Program Files\CMake\bin"
@@ -945,6 +1040,17 @@ Ensure-Command -Name "ninja" -FallbackPaths @(
     "C:\Qt\Tools\Ninja",
     "C:\Program Files\Ninja"
 )
+$script:CMakeExecutable = if ($bundledCmake) {
+    (Resolve-Path -LiteralPath $bundledCmake.FullName).Path
+} else {
+    (Get-Command "cmake.exe" -ErrorAction Stop).Source
+}
+$script:CMakeBinDirectory = Split-Path -Parent $script:CMakeExecutable
+$script:NinjaExecutable = if (Test-Path -LiteralPath (Join-Path $script:CMakeBinDirectory "ninja.exe") -PathType Leaf) {
+    (Resolve-Path -LiteralPath (Join-Path $script:CMakeBinDirectory "ninja.exe")).Path
+} else {
+    (Get-Command "ninja.exe" -ErrorAction Stop).Source
+}
 if ($Preset -like "*mingw*") {
     Add-PathIfExists -PathEntry "C:\Qt\Tools\mingw1310_64\bin"
 } else {
@@ -964,6 +1070,10 @@ $PaddleRuntimeRoot = if ([string]::IsNullOrWhiteSpace($PaddleRuntimeRoot)) {
     [IO.Path]::GetFullPath($PaddleRuntimeRoot)
 }
 $Version = Normalize-AppVersion -Value $Version
+$sourceVersion = Get-SourceAppVersion
+if ($Version -ne $sourceVersion) {
+    throw "Package version '$Version' does not match CMake LASTUDIO_VERSION '$sourceVersion'. Update the source version before packaging."
+}
 $ReleaseSuffix = Normalize-ReleaseSuffix -Value $ReleaseSuffix
 $applicationExecutableName = Get-VersionedApplicationExecutableName -AppVersion $Version
 $portableLayout = $SkipInstaller -and ($PortableInternalLayout -or [string]::IsNullOrWhiteSpace($StageDir))
@@ -1054,6 +1164,7 @@ if ($Preset -notlike "*mingw*" -and (Test-Path -LiteralPath $buildDir)) {
 
 $cmakeArgs = @(
     "--preset", $Preset,
+    "-DCMAKE_MAKE_PROGRAM=$($script:NinjaExecutable.Replace('\', '/'))",
     "-DCMAKE_INSTALL_PREFIX=$($stageDir.Replace('\', '/'))",
     "-DCMAKE_PREFIX_PATH=$($qtPrefixPath.Replace('\', '/'))",
     "-DCMAKE_TOOLCHAIN_FILE=$($toolchainFile.Replace('\', '/'))",
@@ -1072,6 +1183,7 @@ if ($Preset -like "*mingw*") {
     $archiverCommand = Get-Command "lib.exe" -ErrorAction Stop
     $cmakeArgs += "-DCMAKE_LINKER=$($linkerCommand.Source.Replace('\', '/'))"
     $cmakeArgs += "-DCMAKE_AR=$($archiverCommand.Source.Replace('\', '/'))"
+    $cmakeArgs += "-DCMAKE_RANLIB="
 }
 $cmakeArgs += "-DVCPKG_TARGET_TRIPLET=$vcpkgTriplet"
 $cmakeArgs += "-DLASTUDIO_VERSION=$Version"
@@ -1080,15 +1192,15 @@ $cmakeArgs += "-DLASTUDIO_PORTABLE_INTERNAL_LAYOUT=$(if ($portableLayout) { 'ON'
 $cmakeArgs += "-DBUILD_TESTING=OFF"
 
 $env:VCPKG_ROOT = $VcpkgRoot
-& cmake @cmakeArgs
+& $script:CMakeExecutable @cmakeArgs
 if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed." }
 
 Write-Host ">> Building application..." -ForegroundColor Cyan
-& cmake --build --preset $Preset --parallel $MaxParallelJobs
+& $script:CMakeExecutable --build --preset $Preset --parallel $MaxParallelJobs
 if ($LASTEXITCODE -ne 0) { throw "CMake build failed." }
 
 Write-Host ">> Installing to staging folder..." -ForegroundColor Cyan
-& cmake --install $buildDir
+& $script:CMakeExecutable --install $buildDir
 if ($LASTEXITCODE -ne 0) { throw "CMake install failed." }
 
 # 4. Deploy Qt libraries and DLLs
@@ -1124,6 +1236,8 @@ Assert-StagedMsvcRuntime -DeployRoot $deployRoot
 Assert-StagedRuntimeManifest -DeployRoot $deployRoot -ApplicationExecutableName $applicationExecutableName
 Assert-StagedLicenseManifest -StageRoot $stageDir
 Invoke-PackagedQmlSmoke -ExecutablePath $stagedExe -RepositoryRoot $RepoRoot -AppVersion $Version
+Write-ReleaseSourceManifest -RepositoryRoot $RepoRoot -StageRoot $stageDir `
+    -ApplicationExecutable $stagedExe -AppVersion $Version
 
 # 5. Build installer using Inno Setup
 if ($SkipInstaller) {

@@ -169,8 +169,9 @@ void TestDubbingWorkspaceContract::productionQmlExposesTheWorkspaceContract()
     QVERIFY(preview.contains(QStringLiteral("asynchronous: true")));
     QVERIFY(preview.contains(QStringLiteral("Image {")));
     QVERIFY(preview.contains(QStringLiteral("readonly property rect sourceContent")));
-    QVERIFY(preview.contains(QStringLiteral("var controlsTop = previewControls.y - Theme.paddingSmall")));
-    QVERIFY(preview.contains(QStringLiteral("dubbingOcrRoiOverlay.y + dubbingOcrRoiOverlay.height")));
+    QVERIFY(preview.contains(QStringLiteral("readonly property rect content: sourceContent")));
+    QVERIFY(preview.contains(QStringLiteral("z: 8")));
+    QVERIFY(preview.contains(QStringLiteral("enabled: mediaPlayer.duration > 0")));
     QVERIFY(shelf.contains(QStringLiteral("contextRequested")));
     QVERIFY(shelf.contains(QStringLiteral("runStepRequested")));
     QVERIFY(header.contains(QStringLiteral("shortTitle")));
@@ -262,7 +263,160 @@ void TestDubbingWorkspaceContract::exportOffersDirectCapCutOpenAndThumbnailStays
     QVERIFY(exportStep.contains(QStringLiteral("openCapCutDraft")));
     QVERIFY(exportDialog.contains(QStringLiteral("Open in CapCut")));
     QVERIFY(preview.contains(QStringLiteral(
-        "visible: root.isVideoSource && (!root.thumbnailReady")));
+        "visible: root.isVideoSource && !root.thumbnailReady")));
+}
+
+void TestDubbingWorkspaceContract::thumbnailPropertyGetterDoesNotTouchFilesystem()
+{
+    const QString implementation = readSourceFile(
+        QStringLiteral("src/controllers/dubbing/DubbingController.cpp"));
+    const int getterStart = implementation.indexOf(
+        QStringLiteral("QUrl DubbingController::sourceThumbnailUrl() const"));
+    const int nextFunction = implementation.indexOf(
+        QStringLiteral("bool DubbingController::requestSourceThumbnail()"), getterStart);
+
+    QVERIFY2(getterStart >= 0, "The source thumbnail property getter is missing.");
+    QVERIFY2(nextFunction > getterStart, "The thumbnail getter boundary could not be found.");
+    const QString getter = implementation.mid(getterStart, nextFunction - getterStart);
+
+    // QML can reevaluate a property getter many times per frame.  Filesystem
+    // stat calls belong to the async request/finished paths, never this getter.
+    QVERIFY2(!getter.contains(QStringLiteral("QFileInfo")),
+             "sourceThumbnailUrl() must not perform synchronous filesystem I/O.");
+    QVERIFY(getter.contains(QStringLiteral("QUrl::fromLocalFile")));
+}
+
+void TestDubbingWorkspaceContract::pausedVideoKeepsLastFrameVisible()
+{
+    const QString preview = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingSourceMediaPanel.qml"));
+
+    // Pausing or stopping the preview must leave VideoOutput's current frame
+    // visible.  The first-frame poster is only a loading fallback; it must
+    // never be selected merely because playback is not currently running.
+    const int posterStart = preview.indexOf(QStringLiteral("id: thumbnailPoster"));
+    const int roiStart = preview.indexOf(QStringLiteral("id: dubbingOcrRoiOverlay"), posterStart);
+    QVERIFY2(posterStart >= 0, "The thumbnail poster is missing.");
+    QVERIFY2(roiStart > posterStart, "The thumbnail poster boundary could not be found.");
+    const QString poster = preview.mid(posterStart, roiStart - posterStart);
+
+    QVERIFY2(poster.contains(QStringLiteral(
+                 "visible: root.isVideoSource && !root.thumbnailReady")),
+             "The thumbnail poster must not cover the last paused video frame.");
+    QVERIFY(!poster.contains(QStringLiteral(
+        "mediaPlayer.playbackState !== MediaPlayer.PlayingState")));
+}
+
+void TestDubbingWorkspaceContract::playerTimelineRemainsInteractiveAboveOcrRoi()
+{
+    const QString preview = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingSourceMediaPanel.qml"));
+    const int roi = preview.indexOf(QStringLiteral("id: dubbingOcrRoiOverlay"));
+    const int controls = preview.indexOf(QStringLiteral("id: previewControls"));
+    const int seek = preview.indexOf(QStringLiteral("id: seekArea"));
+    const int roiZ = preview.indexOf(QStringLiteral("z: 8"), roi);
+    const int controlsZ = preview.indexOf(QStringLiteral("z: 20"), controls);
+
+    QVERIFY2(roi >= 0, "The OCR ROI overlay is missing.");
+    QVERIFY2(controls > roi, "The shared player controls must follow the OCR overlay.");
+    QVERIFY2(seek > controls, "The player seek area is missing from the controls.");
+    QVERIFY2(roiZ > roi, "The OCR overlay stacking contract is missing.");
+    QVERIFY2(controlsZ > controls, "The player controls need an explicit higher z-order.");
+    QVERIFY2(preview.contains(QStringLiteral("previewControls.z > dubbingOcrRoiOverlay.z")),
+             "The player controls must remain above the OCR editor.");
+    QVERIFY2(preview.contains(QStringLiteral("preventStealing: true")),
+             "An ROI drag must retain its pointer grab while crossing the controls.");
+    QVERIFY(preview.contains(QStringLiteral("z: 20")));
+}
+
+void TestDubbingWorkspaceContract::ocrEditorCanCrossPlayerSeekBar()
+{
+    const QString preview = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingSourceMediaPanel.qml"));
+    const int roi = preview.indexOf(QStringLiteral("id: dubbingOcrRoiOverlay"));
+    const int controls = preview.indexOf(QStringLiteral("id: previewControls"));
+    const int seek = preview.indexOf(QStringLiteral("id: seekArea"));
+
+    QVERIFY2(roi >= 0, "The OCR ROI overlay is missing.");
+    QVERIFY2(controls > roi, "The player controls must follow the OCR overlay in source order.");
+    QVERIFY2(seek > controls, "The player seek area is missing from the controls.");
+
+    // Editing must use the full source content rect.  The old safe-height
+    // calculation stopped the ROI at the seek bar and made downward drags
+    // appear locked at the lower-region boundary.
+    QVERIFY2(preview.contains(QStringLiteral("readonly property rect content: sourceContent")),
+             "OCR ROI editing must use the full source content rect.");
+    QVERIFY2(!preview.contains(QStringLiteral(
+                 "var controlsTop = previewControls.y - Theme.paddingSmall")),
+             "OCR ROI editing must not shrink its coordinate space to avoid controls.");
+    QVERIFY2(preview.contains(QStringLiteral("z: 8")),
+             "OCR ROI must remain below player controls so a new seek gesture always works.");
+    QVERIFY2(preview.contains(QStringLiteral("enabled: mediaPlayer.duration > 0")),
+             "The seek bar must stay interactive while the OCR editor is active.");
+    QVERIFY2(preview.contains(QStringLiteral("preventStealing: true")),
+             "A drag already started on the ROI must continue over the player controls.");
+}
+
+void TestDubbingWorkspaceContract::dubbedPreviewAvoidsUnnecessaryDecodeAndSeekJitter()
+{
+    const QString preview = readSourceFile(
+        QStringLiteral("qml/components/dubbing/DubbingSourceMediaPanel.qml"));
+
+    // Auxiliary stem players should not preload or decode large FLAC files in
+    // the source-preview mode.  During a seek gesture every player must pause;
+    // otherwise the two stems continue advancing while the video is scrubbed.
+    QVERIFY2(preview.contains(QStringLiteral("source: root.showingDubbedMedia"))
+                 && preview.contains(QStringLiteral(
+                     "root.localMediaUrl(root.dubbing.dubbedVocalPath) : \"\"")),
+             "The vocal player must load only for dubbed preview.");
+    QVERIFY2(preview.contains(QStringLiteral("source: root.showingDubbedMedia"))
+                 && preview.contains(QStringLiteral(
+                     "root.localMediaUrl(root.dubbing.backgroundPath) : \"\"")),
+             "The background player must load only for dubbed preview.");
+    QVERIFY2(preview.contains(QStringLiteral("if (wasPlaying) root.pauseAll()")),
+             "Seeking must pause video and both auxiliary players together.");
+    QVERIFY2(preview.contains(QStringLiteral("Math.abs(vocalPlayer.position - mediaPlayer.position) > 500")),
+             "Small playback drift must not trigger a visible hard seek.");
+    QVERIFY2(preview.contains(QStringLiteral("interval: 1000")),
+             "Playback synchronization must not hard-correct twice per second.");
+}
+
+void TestDubbingWorkspaceContract::aiTranscriptGuideIsImmediateAndProjectScoped()
+{
+    const QString guide = readSourceFile(
+        QStringLiteral("docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md"));
+    QVERIFY2(!guide.isEmpty(), "The single AI transcript/translation guide is missing.");
+    QVERIFY2(guide.contains(QStringLiteral("STT input"))
+                 && guide.contains(QStringLiteral("OCR input"))
+                 && guide.contains(QStringLiteral("Translation input"))
+                 && guide.contains(QStringLiteral("Translation output")),
+             "The AI guide must define the four app-supplied path roles.");
+    QVERIFY2(guide.contains(QStringLiteral("Prefer OCR text and OCR timing"))
+                 && guide.contains(QStringLiteral("Use STT as reference"))
+                 && guide.contains(QStringLiteral("Match cues by timestamp overlap")),
+             "The AI guide must define deterministic STT/OCR reconciliation.");
+    QVERIFY2(guide.contains(QStringLiteral("cue order, cue count, numbering, and timestamps unchanged")),
+             "The AI guide must make the timeline immutable.");
+    QVERIFY2(guide.contains(QStringLiteral("Chinese to Vietnamese"))
+                 && guide.contains(QStringLiteral("natural Vietnamese pronouns"))
+                 && guide.contains(QStringLiteral("Wang` → `Vương")),
+             "The AI guide must define the requested Vietnamese translation rules.");
+    QVERIFY2(guide.contains(QStringLiteral("every cue non-empty, meaningful"))
+                 && guide.contains(QStringLiteral("identical timestamps in identical order")),
+             "The AI guide must require meaningful output and final validation.");
+    QVERIFY2(!guide.contains(QStringLiteral("PROJECT_MANIFEST"))
+                 && !guide.contains(QStringLiteral("workflowStepOutputs"))
+                 && !guide.contains(QStringLiteral("PathUtils::cacheDir"))
+                 && !guide.contains(QStringLiteral("cacheDir()")),
+             "The AI guide must not require app-internal manifest or cache inspection.");
+    QVERIFY2(!guide.contains(QStringLiteral("https://github.com"))
+                 && !guide.contains(QStringLiteral("C:\\Users\\Nguyen Trong Khoi\\Downloads\\TTS\\LA-Studio")),
+             "The guide link belongs in the chat prompt, not inside the guide.");
+    QVERIFY2(!guide.contains(QStringLiteral("reviewed-transcript.srt"))
+                 && !guide.contains(QStringLiteral("translated.srt"))
+                 && !guide.contains(QStringLiteral("03-review"))
+                 && !guide.contains(QStringLiteral("04-translation")),
+             "The guide must not prescribe fixed basenames or internal folders.");
 }
 
 void TestDubbingWorkspaceContract::projectSetupResolvesQmlVariantListLanguageDefaults()
@@ -301,8 +455,11 @@ void TestDubbingWorkspaceContract::packagingRequiresPreBuildReleaseGate()
     QVERIFY(gate.contains(QStringLiteral("verify_remote_feature_surface.ps1")));
     QVERIFY(gate.contains(QStringLiteral("verify_colab_model_bindings.py")));
     QVERIFY(gate.contains(QStringLiteral("verify_generated_colab_notebooks.py")));
+    QVERIFY(gate.contains(QStringLiteral("test_notebook_repository_dependencies.py")));
     QVERIFY(gate.contains(QStringLiteral("test_colab_worker_pins.py")));
     QVERIFY(gate.contains(QStringLiteral("verify_colab_worker_pins.py")));
+    QVERIFY(gate.contains(QStringLiteral("test_unified_dubbing_bundle.py")));
+    QVERIFY(gate.contains(QStringLiteral("verify_legacy_voice_clone_compat_notebook.py")));
     QVERIFY(gate.contains(QStringLiteral("verify_unified_dubbing_colab_notebook.py")));
     QVERIFY(checklist.contains(QStringLiteral("Self-contained Colab worker gate")));
     QVERIFY(checklist.contains(QStringLiteral("Embedded worker integrity")));

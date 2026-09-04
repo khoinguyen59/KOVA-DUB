@@ -15,8 +15,11 @@ private slots:
     void testWavIoRejectsMalformedChunks();
     void testSharedAudioDecoderNormalizesReferenceAudio();
     void testServiceReentryBusy();
+    void testServiceStartReturnsBeforeInferenceCompletes();
     void testCancellation();
     void testDestroyServiceRunning();
+    void testDestroyServiceDoesNotBlockOnUninterruptibleWorker();
+    void testSourceSeparationThreadPolicyProtectsUiCapacity();
 
 private:
     QTemporaryDir m_tempDir;

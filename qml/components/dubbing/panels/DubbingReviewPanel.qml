@@ -32,8 +32,37 @@ Rectangle {
                                   ? root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
                                   : []
     property var acceptedArtifactNodeIds: []
-    onActionNodeIdChanged: acceptedArtifactNodeIds = []
+    // Keep bindings around the C++ invokable live while independent STT/OCR
+    // workers change aggregate processing state.
+    property int skipPolicyRevision: 0
+    function refreshArtifactSpecs() {
+        root.artifactSpecs = root.dubbing
+                ? root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
+                : []
+    }
+    function formatTime(ms) {
+        if (!ms || ms < 0) return "00:00"
+        var totalSec = Math.floor(ms / 1000)
+        var min = Math.floor(totalSec / 60)
+        var sec = totalSec % 60
+        return (min < 10 ? "0" : "") + min + ":" + (sec < 10 ? "0" : "") + sec
+    }
+    onActionNodeIdChanged: {
+        acceptedArtifactNodeIds = []
+        refreshArtifactSpecs()
+    }
     onArtifactSpecsChanged: acceptedArtifactNodeIds = []
+
+    // Invokable C++ methods are not automatically re-evaluated by QML when
+    // their internal project state changes. Refresh after a project/workflow
+    // update so the Data & Handoff tab never retains an empty/stale upload
+    // contract after entering the Dubbing page or switching transcript mode.
+    Connections {
+        target: root.dubbing
+        function onProjectChanged() { root.refreshArtifactSpecs() }
+        function onWorkflowChanged() { root.refreshArtifactSpecs() }
+        function onProcessingChanged() { root.skipPolicyRevision += 1 }
+    }
 
     signal configureNodeRequested(string nodeId)
     signal runStepRequested(string nodeId)
@@ -298,7 +327,11 @@ Rectangle {
                             objectName: "dubbingArtifactReviewSkipButton"
                             text: qsTr("Skip task & continue")
                             iconName: "chevron-right"
-                            enabled: root.dubbing && !root.dubbing.processing
+                            enabled: {
+                                var revision = root.skipPolicyRevision
+                                return revision >= 0 && root.dubbing
+                                       && root.dubbing.canSkipWorkflowTask(root.actionNodeId)
+                            }
                             toolTip: qsTr("Do not run this task; continue to the next task")
                             onClicked: root.skipArtifactTask()
                         }
@@ -483,7 +516,26 @@ Rectangle {
                     Layout.fillWidth: true
                     spacing: Theme.paddingSmall
                     TextField { Layout.fillWidth: true; placeholderText: qsTr("Tìm kiếm phân đoạn...") }
-                    Text { text: qsTr("%1 / %1").arg(root.dubbing.segments.length); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    Text { text: qsTr("%1 phân đoạn").arg(root.dubbing.segments.length); color: Theme.textSecondary; font.pixelSize: Theme.fontSmall }
+                    PrimaryButton {
+                        text: qsTr("+ Thêm câu thoại")
+                        iconName: "plus"
+                        quiet: true
+                        Layout.preferredHeight: 32
+                        enabled: !root.dubbing.processing
+                        onClicked: {
+                            var segs = root.dubbing.segments || []
+                            var startMs = 0
+                            var endMs = 3000
+                            if (segs.length > 0) {
+                                var lastSeg = segs[segs.length - 1]
+                                var lastEnd = (lastSeg.endMs !== undefined) ? Number(lastSeg.endMs) : 0
+                                startMs = lastEnd + 200
+                                endMs = startMs + 3000
+                            }
+                            root.dubbing.addSegment(startMs, endMs, "")
+                        }
+                    }
                 }
 
                 Rectangle {
@@ -496,7 +548,7 @@ Rectangle {
                         anchors.leftMargin: Theme.paddingSmall
                         anchors.rightMargin: Theme.paddingSmall
                         spacing: Theme.paddingSmall
-                        Text { text: qsTr("THỜI GIAN"); Layout.preferredWidth: 68; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
+                        Text { text: qsTr("THỜI GIAN"); Layout.preferredWidth: 80; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
                         Text { text: qsTr("VĂN BẢN GỐC / DỊCH"); Layout.fillWidth: true; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true }
                         Text { text: qsTr("TRẠNG THÁI"); Layout.preferredWidth: 50; color: Theme.textSecondary; font.pixelSize: 10; font.bold: true; visible: root.width > 380 }
                         Item { Layout.preferredWidth: root.displayedStepId === "translate" ? 64 : 32 }
@@ -526,7 +578,6 @@ Rectangle {
 
                         MouseArea {
                             anchors.fill: parent
-                            z: -1
                             onClicked: {
                                 root.selectedSegment = index
                                 root.segmentSelected(index)
@@ -539,10 +590,12 @@ Rectangle {
                             spacing: Theme.paddingSmall
 
                             Text {
-                                text: "%1–%2".arg(modelData.startMs).arg(modelData.endMs)
+                                text: "%1 – %2".arg(root.formatTime(modelData.startMs || 0))
+                                               .arg(root.formatTime(modelData.endMs || 0))
                                 color: Theme.textSecondary
                                 font.pixelSize: 10
-                                Layout.preferredWidth: 68
+                                font.family: "Monospace"
+                                Layout.preferredWidth: 80
                                 elide: Text.ElideRight
                             }
 

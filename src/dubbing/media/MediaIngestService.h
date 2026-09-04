@@ -65,6 +65,8 @@ private:
     QString m_workspace;
     QString m_masterPath;
     QString m_analysisPath;
+    QString m_cacheMasterPath;
+    QString m_cacheAnalysisPath;
     QString m_masterStagingPath;
     QString m_analysisStagingPath;
     QByteArray m_stderr;

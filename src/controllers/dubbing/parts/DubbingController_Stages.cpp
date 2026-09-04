@@ -43,6 +43,11 @@ QVariantMap DubbingController::audioMixConfiguration() const
                          qBound(0, configuration.value(QStringLiteral("originalGainPercent"), 0).toInt(), 100));
     configuration.insert(QStringLiteral("dubbedGainPercent"),
                          qBound(0, configuration.value(QStringLiteral("dubbedGainPercent"), 100).toInt(), 100));
+    // Keep the complete source/BGM duration even when the last synthesized
+    // cue finishes early. This value is intentionally a render snapshot, not
+    // user-editable project configuration.
+    configuration.insert(QStringLiteral("sourceDurationMs"),
+                         qMax<qint64>(0, m_project.sourceDurationMs));
     return configuration;
 }
 
@@ -412,7 +417,7 @@ bool DubbingController::canRunIndependentSubtitleOcrAlongsideCurrentWork() const
     }
     // The only runner operation which is independent from OCR is audio STT.
     return !m_runner || !m_runner->processing()
-        || m_runner->stage() == QStringLiteral("transcribe");
+        || isTranscriptionRunnerActive();
 }
 
 bool DubbingController::canRunIndependentAudioSttAlongsideCurrentWork() const
@@ -441,7 +446,7 @@ bool DubbingController::reconcileTranscriptSources()
     }
 
     const QString policy = m_project.transcriptConfiguration
-                               .value(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")).toString();
+                               .value(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")).toString();
     const QVariantList reconciled = DubbingTranscriptFusionService::fuse(sttSegments, ocrSegments, policy);
     if (reconciled.isEmpty()) {
         setError(QStringLiteral("Reconcile produced no usable transcript segments. Keep the STT/OCR results and review their source timing."));
@@ -454,6 +459,11 @@ bool DubbingController::reconcileTranscriptSources()
     QVariantMap reconciliationOutput;
     reconciliationOutput.insert(QStringLiteral("transcript"), reconciled);
     reconciliationOutput.insert(QStringLiteral("transcriptSource"), QStringLiteral("reconcile"));
+    QString artifactPath;
+    if (persistWorkflowTranscriptArtifact(
+            QStringLiteral("review-transcript"), reconciled, false, &artifactPath)) {
+        reconciliationOutput.insert(QStringLiteral("path"), artifactPath);
+    }
     m_stepOutputs.insert(QStringLiteral("review-transcript"), reconciliationOutput);
     m_lastCompletedStepId = QStringLiteral("review-transcript");
     clearError();

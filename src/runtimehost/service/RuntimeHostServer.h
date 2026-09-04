@@ -44,6 +44,7 @@ private:
     };
 
     void handleFrame(QLocalSocket *socket, const RuntimeHostFrame &frame);
+    void processSocketInput(QLocalSocket *socket);
     void send(QLocalSocket *socket,
               RuntimeHostMessage message,
               quint64 requestId,

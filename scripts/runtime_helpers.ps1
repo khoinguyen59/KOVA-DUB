@@ -45,13 +45,34 @@ function Ensure-EspeakNgRuntime {
     if ($actualSha256 -ne $expectedSha256) {
         throw "eSpeak NG MSI SHA-256 mismatch. Expected $expectedSha256 but got $actualSha256."
     }
-    $signature = Get-AuthenticodeSignature -LiteralPath $msiPath
-    if ($signature.Status -ne "Valid") {
+    $signature = $null
+    $signatureError = $null
+    try {
+        # Some constrained PowerShell hosts expose the cmdlet through
+        # Microsoft.PowerShell.Security but cannot auto-load that module.
+        # Keep the SHA-256 check authoritative and make signature handling
+        # explicit instead of leaking a command-not-found exception.
+        $signature = Get-AuthenticodeSignature -LiteralPath $msiPath -ErrorAction Stop
+    } catch {
+        $signatureError = $_.Exception.Message
+    }
+    $signatureStatus = if ($null -ne $signature) { $signature.Status } else { "Unavailable" }
+    if ($signatureStatus -ne "Valid") {
         if (-not $AllowUnsignedEspeakForInternalBuild) {
-            throw "eSpeak NG MSI Authenticode signature is not valid: $($signature.Status)"
+            $detail = if ([string]::IsNullOrWhiteSpace($signatureError)) {
+                "status $signatureStatus"
+            } else {
+                "status $signatureStatus ($signatureError)"
+            }
+            throw "eSpeak NG MSI Authenticode signature is not valid: $detail"
         }
 
-        Write-Warning "INTERNAL BUILD ONLY: eSpeak NG MSI signature status is $($signature.Status). The SHA-256 was verified, but this payload must not be used for a distributable release."
+        $detail = if ([string]::IsNullOrWhiteSpace($signatureError)) {
+            "status $signatureStatus"
+        } else {
+            "status $signatureStatus ($signatureError)"
+        }
+        Write-Warning "INTERNAL BUILD ONLY: eSpeak NG MSI signature $detail. The SHA-256 was verified, but this payload must not be used for a distributable release."
     }
 
     if ((Test-Path -LiteralPath $dllTarget) -and

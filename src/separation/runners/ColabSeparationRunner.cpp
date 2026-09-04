@@ -26,6 +26,12 @@ QString normalizedArtifactFormat(const QString &value)
 QString failureForUser(const QString &detail)
 {
     const QString normalized = detail.simplified();
+    if (normalized.contains(QStringLiteral("timed out"), Qt::CaseInsensitive)
+        || normalized.contains(QStringLiteral("timeout"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "The Direct Colab separation request timed out. Check that the Colab notebook is still running, "
+            "verify the worker URL and token, then reconnect and run the task again. No local fallback was used.");
+    }
     if (normalized.contains(QStringLiteral("cudnn"), Qt::CaseInsensitive)
         || normalized.contains(QStringLiteral("cudaexecutionprovider"), Qt::CaseInsensitive)) {
         return QStringLiteral(
@@ -102,7 +108,9 @@ void ColabSeparationRunner::separate(const ColabSeparationRequest &request)
         ? request.statusPollIntervalMs : kDefaultStatusPollIntervalMs;
     while (!request.cancellation.isCancelled()) {
         QJsonObject status;
-        if (!d->client.separationJobStatus(d->activeJobId, &status, &error)) {
+        if (!d->client.separationJobStatus(d->activeJobId, &status, &error,
+                                           request.statusRequestTimeoutMs,
+                                           request.cancellation.sharedFlag())) {
             if (request.cancellation.isCancelled() && !d->activeJobId.isEmpty()) {
                 d->client.cancelSeparationJob(d->activeJobId);
                 d->activeJobId.clear();
@@ -110,7 +118,7 @@ void ColabSeparationRunner::separate(const ColabSeparationRequest &request)
                 return;
             }
             d->activeJobId.clear();
-            emit failed(error);
+            emit failed(failureForUser(error));
             return;
         }
         const QString state = status.value(QStringLiteral("status")).toString().toLower();
@@ -182,13 +190,14 @@ void ColabSeparationRunner::separate(const ColabSeparationRequest &request)
             d->activeJobId, artifact, artifactFormat, request.cancellation.sharedFlag(), data, &error,
             [this, artifact](qint64 received, qint64 total) {
                 emit artifactTransferProgress(artifact, received, total);
-            });
+            }, request.artifactTransferTimeoutMs, request.artifactIdleTimeoutMs);
     };
     if (!downloadArtifact(QStringLiteral("vocals"), &vocals)
         || !downloadArtifact(QStringLiteral("background"), &background)) {
         if (!d->activeJobId.isEmpty()) d->client.cancelSeparationJob(d->activeJobId);
         d->activeJobId.clear();
-        emit failed(request.cancellation.isCancelled() ? QStringLiteral("Colab separation cancelled") : error);
+        emit failed(request.cancellation.isCancelled() ? QStringLiteral("Colab separation cancelled")
+                                                       : failureForUser(error));
         return;
     }
     if (request.cancellation.isCancelled() || request.outputRoot.trimmed().isEmpty()) {

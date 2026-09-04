@@ -6,3 +6,7 @@ cd "$repo_root"
 
 python scripts/test_colab_worker_pins.py
 python scripts/verify_colab_worker_pins.py
+python scripts/test_unified_dubbing_bundle.py
+python scripts/verify_legacy_voice_clone_compat_notebook.py
+python scripts/verify_unified_dubbing_colab_notebook.py
+python scripts/test_notebook_repository_dependencies.py

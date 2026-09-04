@@ -69,13 +69,21 @@ DubbingTranscriptionJob::~DubbingTranscriptionJob()
 {
     cancel();
     if (m_alignmentWatcher) {
+        if (m_alignmentCancel) m_alignmentCancel->storeRelease(true);
         m_alignmentWatcher->cancel();
-        m_alignmentWatcher->waitForFinished();
+        if (m_alignmentWatcher->isRunning())
+            Logger::warning(QStringLiteral("DubbingTranscriptionJob"),
+                            QStringLiteral("Detached cancelled local alignment job during shutdown."));
     }
     if (m_colabAlignmentRunner && m_colabAlignmentThread.isRunning())
         QMetaObject::invokeMethod(m_colabAlignmentRunner, "cancel", Qt::QueuedConnection);
     m_colabAlignmentThread.quit();
-    m_colabAlignmentThread.wait();
+    if (!m_colabAlignmentThread.wait(5'000)) {
+        Logger::warning(QStringLiteral("DubbingTranscriptionJob"),
+                        QStringLiteral("Colab alignment worker did not stop within 5 seconds; terminating it."));
+        m_colabAlignmentThread.terminate();
+        m_colabAlignmentThread.wait(1'000);
+    }
 }
 
 void DubbingTranscriptionJob::setAlignmentSession(ColabSession *session)

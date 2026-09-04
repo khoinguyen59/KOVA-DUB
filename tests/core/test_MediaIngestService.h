@@ -31,6 +31,7 @@ private slots:
     void manualMediaLibraryHasNoSourceUrls();
     void sharedVideoTextIsExtractedForLocalDownloader();
     void singleImportedMediaBecomesTheActiveProject();
+    void ingestUsesFlacCacheAndKeepsLegacyWavCompatibility();
     void mediaLibraryRunsOnlyTheLaterSelectedActionSubset();
     void mediaBatchContinuesAfterARealWorkerFailure();
     void mediaBatchCanRunEachStageAcrossTheSelectedQueue();

@@ -87,12 +87,14 @@ QVariantMap StudioSelectionRepository::fileSelectionForFamily(const QString &cap
         : QVariantMap{};
 }
 
-void StudioSelectionRepository::saveFileSelectionForFamily(const QString &capabilityId,
+bool StudioSelectionRepository::saveFileSelectionForFamily(const QString &capabilityId,
                                                             const QString &familyId,
-                                                            const QVariantMap &selectedFiles)
+                                                            const QVariantMap &selectedFiles,
+                                                            QString *error)
 {
     if (capabilityId.isEmpty() || familyId.isEmpty()) {
-        return;
+        if (error) *error = QStringLiteral("Capability and family are required.");
+        return false;
     }
 
     QSqlQuery query(db());
@@ -109,21 +111,37 @@ void StudioSelectionRepository::saveFileSelectionForFamily(const QString &capabi
         QJsonDocument::fromVariant(selectedFiles).toJson(QJsonDocument::Compact)));
 
     if (!query.exec()) {
-        Logger::error(QStringLiteral("StudioSelectionRepository"),
-                      QStringLiteral("Failed to save file selection for %1/%2: %3")
-                          .arg(capabilityId, familyId, query.lastError().text()));
+        const QString message = QStringLiteral("Failed to save file selection for %1/%2: %3")
+            .arg(capabilityId, familyId, query.lastError().text());
+        Logger::error(QStringLiteral("StudioSelectionRepository"), message);
+        if (error) *error = message;
+        return false;
     }
+    return true;
 }
 
-void StudioSelectionRepository::saveActiveSelection(const StudioConfiguration &selection)
+bool StudioSelectionRepository::saveActiveSelection(const StudioConfiguration &selection, QString *error)
 {
-    if (!selection.isValid()) return;
-
-    saveFileSelectionForFamily(selection.capabilityId,
-                               selection.familyId,
-                               selection.selectedFiles);
+    if (!selection.isValid()) {
+        if (error) *error = QStringLiteral("Selection capability and family are required.");
+        return false;
+    }
 
     QSqlDatabase database = db();
+    if (!database.transaction()) {
+        const QString message = QStringLiteral("Could not start model selection transaction: %1")
+            .arg(database.lastError().text());
+        Logger::error(QStringLiteral("StudioSelectionRepository"), message);
+        if (error) *error = message;
+        return false;
+    }
+    QString fileError;
+    if (!saveFileSelectionForFamily(selection.capabilityId, selection.familyId,
+                                    selection.selectedFiles, &fileError)) {
+        database.rollback();
+        if (error) *error = fileError;
+        return false;
+    }
     QSqlQuery query(database);
     query.prepare(QStringLiteral(
         "INSERT INTO active_capability_selections (capability_id, family_id, runtime_id, runtime_version, selected_files_json, updated_at) "
@@ -147,9 +165,22 @@ void StudioSelectionRepository::saveActiveSelection(const StudioConfiguration &s
     query.addBindValue(filesJson);
 
     if (!query.exec()) {
-        Logger::error(QStringLiteral("StudioSelectionRepository"),
-                      QStringLiteral("Failed to save selection for %1: %2").arg(selection.capabilityId, query.lastError().text()));
+        const QString message = QStringLiteral("Failed to save selection for %1: %2")
+            .arg(selection.capabilityId, query.lastError().text());
+        database.rollback();
+        Logger::error(QStringLiteral("StudioSelectionRepository"), message);
+        if (error) *error = message;
+        return false;
     }
+    if (!database.commit()) {
+        const QString message = QStringLiteral("Could not commit model selection transaction: %1")
+            .arg(database.lastError().text());
+        database.rollback();
+        Logger::error(QStringLiteral("StudioSelectionRepository"), message);
+        if (error) *error = message;
+        return false;
+    }
+    return true;
 }
 
 void StudioSelectionRepository::clearActiveSelection(const QString &capabilityId)

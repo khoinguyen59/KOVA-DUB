@@ -640,7 +640,7 @@ Rectangle {
                     text: qsTr("Tiếp tục: Trộn Âm Thanh ➔")
                     iconName: "chevron-right"
                     buttonColor: Theme.accent
-                    enabled: !root.dubbing.processing && (root.generatedClipCount > 0 || root.synthesisComplete || (root.dubbing && root.dubbing.hasSynthesizedAudio) || (root.dubbing.segments || []).length > 0)
+                    enabled: !root.dubbing.processing && (root.generatedClipCount > 0 || root.synthesisComplete)
                     Layout.preferredHeight: 38
                     Layout.fillWidth: true
                     onClicked: root.nextStepRequested()

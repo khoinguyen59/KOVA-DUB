@@ -31,6 +31,7 @@ WAV = b"RIFF" + (36).to_bytes(4, "little") + b"WAVEfmt " + (16).to_bytes(4, "lit
     + (1).to_bytes(2, "little") + (1).to_bytes(2, "little") + (16000).to_bytes(4, "little") \
     + (32000).to_bytes(4, "little") + (2).to_bytes(2, "little") + (16).to_bytes(2, "little") \
     + b"data" + (0).to_bytes(4, "little")
+FLAC = b"fLaC" + b"\x00\x00\x00\x00"
 
 MODELS = {
     "stt": "whisper.cpp",
@@ -75,6 +76,13 @@ class AcceptanceFixture(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(WAV)))
         self.end_headers()
         self.wfile.write(WAV)
+
+    def send_flac(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/flac")
+        self.send_header("Content-Length", str(len(FLAC)))
+        self.end_headers()
+        self.wfile.write(FLAC)
 
     def selected(self) -> tuple[str, str] | None:
         authorization = self.headers.get("Authorization", "")
@@ -135,7 +143,7 @@ class AcceptanceFixture(BaseHTTPRequestHandler):
             self.send_json(200, {"status": "ready", "progress": 100})
             return
         if path.startswith("/v1/audio/separations/separation-job/artifacts/"):
-            self.send_wav()
+            self.send_flac()
             return
         if path == "/v2/jobs/profile-job":
             self.send_json(200, {"status": "succeeded", "percent": 100,
@@ -199,7 +207,7 @@ class AcceptanceFixture(BaseHTTPRequestHandler):
         elif path == "/v1/ocr/subtitles":
             self.send_json(200, {"text": "ready", "confidence": 0.99})
         elif path == "/v1/audio/separations":
-            self.send_json(200, {"job_id": "separation-job"})
+            self.send_json(200, {"job_id": "separation-job", "artifact_format": "flac"})
         elif path == "/v2/jobs/profile":
             self.send_json(200, {"id": "profile-job"})
         elif path == "/v2/jobs/generation":
@@ -235,6 +243,8 @@ def worker_config(base_url: str, audio_path: Path, image_path: Path) -> list[dic
             worker["reference_text"] = "ready"
         if capability == "voice-design":
             worker["voice_description"] = "calm narrator"
+        if capability == "voice-isolation":
+            worker["artifact_format"] = "flac"
         if capability == "subtitle-ocr":
             worker["image_path"] = str(image_path)
             worker["language"] = "en"

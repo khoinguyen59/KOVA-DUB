@@ -331,14 +331,23 @@ public:
     // deliberately narrow: an upload for a later task must never cancel the
     // current task or mutate its result.
     Q_INVOKABLE bool canOverrideRunningWorkflowArtifact(const QString &nodeId) const;
+    // Manual artifact import is available without Colab.  When one transcript
+    // worker is running, the sibling STT/OCR handoff remains available because
+    // those workers have independent state and cancellation boundaries.
+    Q_INVOKABLE bool canImportWorkflowArtifactNow(const QString &nodeId) const;
     // Read-only state for the task-level upload UI.  Percent is supplied only
     // when the running worker has measured it; otherwise the UI shows phase
     // text rather than an invented progress value.
     Q_INVOKABLE QVariantMap workflowArtifactHandoffStatus(const QString &nodeId) const;
     Q_INVOKABLE bool importWorkflowArtifactFiles(const QString &nodeId,
                                                  const QVariantList &paths);
+    // Creates/refreshes the project-scoped handoff scripts for an external
+    // translation editor. It never calls an AI service and never stores a
+    // credential; returned paths are all below this project's artifact root.
+    Q_INVOKABLE QVariantMap prepareTranscriptAiHandoff();
     // Explicitly bypasses one task without starting a worker. Upload and skip
     // are local handoff actions and never require a Colab connection.
+    Q_INVOKABLE bool canSkipWorkflowTask(const QString &nodeId) const;
     Q_INVOKABLE bool skipWorkflowTask(const QString &nodeId);
     Q_INVOKABLE bool setSubtitleStyle(const QVariantMap &style);
     Q_INVOKABLE bool setSubtitleTextSource(const QString &source);
@@ -471,6 +480,11 @@ private slots:
 
 private:
     bool ensureProject(const QString &path);
+    void syncProjectStateForPersistence();
+    bool persistWorkflowTranscriptArtifact(const QString &nodeId,
+                                           const QVariantList &segments,
+                                           bool useTargetText,
+                                           QString *path = nullptr);
     void setError(const QString &message);
     void setBusyError(const QString &message);
     void persistAfterEdit();
@@ -496,6 +510,7 @@ private:
     // Subtitle OCR owns a separate worker and may run beside an active STT
     // transcription only.  It must never bypass a batch, automatic workflow,
     // translation fix, or another non-STT production stage.
+    bool isTranscriptionRunnerActive() const;
     bool canRunIndependentSubtitleOcrAlongsideCurrentWork() const;
     bool canRunIndependentAudioSttAlongsideCurrentWork() const;
     QVariantMap firstCustomSetupIssue() const;

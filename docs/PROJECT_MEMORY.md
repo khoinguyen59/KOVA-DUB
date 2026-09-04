@@ -1,5 +1,103 @@
 # Tri nho du an LA Studio
 
+## 2026-09-05 - Runtime Host handshake race gate
+
+- Race đã tái hiện: client có thể gửi `Hello` vào named pipe trước khi server
+  kết nối slot `readyRead`, nên không có signal thứ hai và app chờ timeout.
+  Không được đổi inference timeout dài để che race này.
+- `RuntimeHostServer` phải xử lý ngay bytes đã buffer khi accept socket;
+  `RuntimeHostClient` dùng Hello idempotent cùng request id và retry bounded
+  trong handshake window. Inference request vẫn có inactivity timeout riêng.
+- Regression bắt buộc: `rapidlyRestartsHostWithoutLosingHandshake`; trước
+  package chạy 5 batch để đạt tối thiểu **100** restart/auth. Kết quả hiện
+  tại: PASS, cùng full CTest 41/41 và prebuild gate 10/10.
+- Portable internal candidate `out/LA-Studio-0.0.9.1/LA-Studio-0.0.9.1.exe`
+  được tạo sau gate. Package ghi `release-source-manifest.json`, kiểm tồn kho
+  runtime và chạy packaged QML smoke 19 interaction events. Đây là evidence
+  tự động; không được diễn giải thành live Colab, CapCut hay kiểm thử GUI dài.
+
+## 2026-09-03 - Persistence reuse va dubbed preview drift guard
+
+- `DubbingProject::fromJson()` phai reset cac field version-gated truoc khi doc
+  schema cu vao object da tung chua project moi. Neu khong, model/voice,
+  subtitle/timing/rewrite va output path co the ro ri tu project truoc sang
+  project sau. Regression `fromJsonClearsFieldsWhenLoadingLegacySchema` da
+  bat loi truoc patch va PASS sau patch.
+- Dubbed preview chi hard-seek khi drift lon hon 500 ms va kiem tra moi 1000 ms;
+  drift nho dung playback-rate correction. Stem player van chi load trong
+  Dubbed mode, seek/pause deu dong bo voi video. Regression workspace ve
+  playback drift PASS.
+- Full MSVC CTest sau hai patch: **41/41 PASS**; QML lint exit 0; khong con
+  process CTest/LAStudioUnitTests mo sau suite. Day la source/test evidence,
+  khong tu dong dong nghia voi package release moi.
+- Portable package sau batch nay da duoc tao bang `scripts/package.ps1`:
+  `out/LA-Studio-0.0.9.0/LA-Studio-0.0.9.0.exe`, FileVersion/ProductVersion
+  `0.0.9.0`, size `28,238,848` bytes, SHA-256
+  `98722CF0C56D42E0D33420DD167037D8478FBE1521912F3873411448683692B1`.
+  Packaged QML smoke PASS voi 19 interaction events; `stderr.log` rong.
+
+## 2026-09-03 - Canonical AI-IDE merge and translation contract
+
+- The only guide for the external AI IDE is
+  `docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md`. It defines four
+  app-supplied path roles: optional `STT input`, optional `OCR input`,
+  `Translation input`, and `Translation output`.
+- When both source scripts are supplied, the AI IDE reconciles them before
+  translation. OCR text/timing has priority; STT is reference, gap filler and
+  fallback. Cue order, count, numbering and timestamps are immutable.
+- Translation is Chinese → Vietnamese with context, speaker hierarchy,
+  natural Vietnamese/Hán-Việt names (`Wang` → `Vương`), meaningful non-empty
+  cues and fixed timing. The guide does not contain app architecture,
+  repository links, auth/cache instructions, hardcoded basenames or disk search.
+- The app creates and supplies the project paths; the guide only states how to
+  read the supplied inputs and write the supplied translation output. A short
+  chat prompt should link the guide and pass the exact paths; it must not make
+  the IDE invent paths or filenames.
+- Auto-created project names now allocate a collision-free `.ladub.json` path,
+  preventing a second project with the same display name from overwriting the
+  first.
+- Verification after this change: full MSVC CTest **41/41 PASS**. The build
+  scripts now inspect only real archive-tool entries, not harmless `mingw` text
+  in a bundled CMake path.
+
+## 2026-08-29 - Subtitle OCR Colab Pillow patch-version compatibility
+
+- Colab OCR traceback `AssertionError: 12.3.0` xay ra vi probe cu assert cung
+  patch `Pillow==12.0.0`; `No ccache found` chi la UserWarning cua Paddle,
+  khong phai nguyen nhan worker khong launch.
+- `scripts/generate_subtitle_ocr_colab_notebook.py` da doi sang
+  `Pillow>=12.0.0,<13.0.0`, probe `ImageText`/`_Ink`, package isolation va
+  inference CUDA. Revision desktop/notebook dong bo la
+  `subtitle-ocr-2026-08-23.18`.
+- Notebook canonical: `notebooks/subtitle_ocr/LA_STUDIO_SUBTITLE_OCR_PP_OCRV5_GPU.ipynb`.
+  Unified bundle da regenerate. Generated notebooks **32/32** va Unified
+  contract **PASS**; focused Dubbing artifact/STT/OCR tests cung PASS. Notebook
+  da mo truoc trong Colab khong tu cap nhat, phai mo ban moi tren runtime moi.
+
+## 2026-08-29 - Recheck dependency Colab tren toan bo notebook
+
+- Khi Colab bao 404/khong tai duoc worker, phai quet toan bo `notebooks/`,
+  khong chi sua notebook vua bao loi. Hai offender cung loai da duoc xu ly:
+  Unified Dubbing va legacy `LA_STUDIO_VOICE_CLONE_GPU.ipynb`.
+- Unified Dubbing embed 34 file exact local (32 exact-model notebooks,
+  coordinator, Spleeter worker), ghi ra `/content/la-studio-unified-source`,
+  verify SHA-256 va chay local. Tuyet doi khong clone repo code ung dung LA
+  Studio tu GitHub trong runtime.
+- Legacy Voice Clone la compatibility alias cua canonical OmniVoice notebook,
+  khong duoc co `kova-voice-studio`, `KOVA-DUB`, `REPO_URL`, `REPO_REF` hay
+  runtime clone.
+- Cac clone/download con lai chi duoc chap nhan neu la repo model/runtime
+  upstream chinh thuc ma notebook do thuc su can; khong dong nhat chung voi
+  app-worker dependency.
+- Truoc commit/push/build phai chay:
+  `python scripts/test_notebook_repository_dependencies.py`,
+  `python scripts/test_unified_dubbing_bundle.py`,
+  `python scripts/verify_legacy_voice_clone_compat_notebook.py`,
+  `python scripts/verify_unified_dubbing_colab_notebook.py`.
+- Ket qua moi nhat: dependency scan PASS, bundle **5/5**, notebooks **32/32**,
+  bindings **31/31**, remote surface **8/8**, CTest **41/41**, full pre-build
+  gate PASS. Notebook-only fix khong tu dong tao EXE moi.
+
 ## 2026-08-29 - Self-contained Spleeter Colab worker integrity
 
 - Model provenance and application-code provenance are separate. The model is
@@ -113,8 +211,9 @@
   cancel va thay artifact phai dung dung worker theo node: STT khong duoc
   cancel OCR, OCR khong duoc cancel STT. Cancel chung phai dung ca OCR doc lap.
 - `showOcrTools` chi duoc true o `displayedStepId === "transcribe"`.
-- Source regression contract da them; QML lint/diff check pass. Chua co
-  CTest/build moi vi may hien tai thieu Qt 6 MSVC dev kit va test build tree.
+- Source regression contract da them; QML lint/diff check pass. Sau fix
+  upload role-based audio, CTest full da pass 41/41 va QML lint pass; portable
+  EXE chua duoc build lai cho thay doi nay.
 
 ## 2026-08-29 - Manual artifact upload khong phu thuoc Colab
 
@@ -124,7 +223,11 @@
 - `workflowArtifactSpecsForStage()` phai nhan ca durable node id va
   presentation id (`separate`, `stt`, `ocr`, `alignment`, `export-output`) de
   dialog khong bao gio mo rong. Dialog phai hien ten file bat buoc va suffix
-  duoc phep.
+  duoc phep. Ngoai le quan trong: handoff local cua `source-separate` chi
+  yeu cau hai file audio dung dinh dang; ten file bat ky, file thu nhat la
+  `vocals` cho STT va file thu hai la `background` cho final mix. Contract
+  exact `vocals.flac`/`background.flac` chi ap dung cho output tu dong cua
+  notebook Colab, khong ap dung cho file nguoi dung tu chon.
 - STT + OCR la hai handoff doc lap; dialog hien hai output. Reconciliation
   van la buoc sau, khong duoc bien STT/OCR thanh mot file review duy nhat khi
   nguoi dung dang upload nguon.
@@ -135,7 +238,7 @@
 ## 2026-08-24 - Dong bo revision OCR va artifact upload
 
 - `subtitle-ocr` desktop handshake va generated exact notebook la mot cap
-  versioned. Gia tri hien hanh la `subtitle-ocr-2026-08-23.17` (nguon la
+  versioned. Gia tri hien hanh la `subtitle-ocr-2026-08-23.18` (nguon la
   `scripts/generate_subtitle_ocr_colab_notebook.py`). Doi revision notebook
   phai doi `requiredWorkerRevision()` trong `src/remote/ColabSession.cpp` va
   regression verification cung luc.
@@ -1216,3 +1319,33 @@ media/worker deu da xac nhan thuc te.
   durable preset ID as well as reference metadata.
 - Validation on 2026-08-24: focused Dubbing/remote/runner CTest 3/3 and full
   CTest 39/39. This was not a live-Colab or visible-GUI acceptance run.
+
+### 2026-08-30 - Source separation must not starve or deadlock the desktop
+
+- Local sherpa-onnx source separation remains a dedicated-worker operation;
+  its native `SherpaOnnxOfflineSourceSeparationProcess` call is blocking and
+  cannot observe cancellation until it returns. Do not move it to the UI
+  thread, and do not force-terminate the DLL in the middle of that call.
+- The runner now uses `InferenceBackendProfile::SourceSeparationCpu`, reserving
+  CPU capacity for QML/input and capping the native engine at three threads.
+  The worker QThread starts at `LowPriority`; standalone Voice Isolator uses the
+  same bound so a stale thread-count value cannot oversubscribe the machine.
+- Cancellation keeps the Dubbing run busy until the worker emits its terminal
+  result. A second separation request is rejected while the native call drains;
+  this avoids stale-result races and overlapping engines.
+- `SourceSeparationService` shutdown is bounded to a graceful 1000 ms window.
+  If native inference is still active, the worker/thread are detached and
+  self-clean after return so closing the app does not wait forever. FFmpeg
+  post-kill recovery is also bounded.
+- Required verification: `TestSourceSeparation` must cover busy re-entry,
+  non-blocking start, cancellation, uninterruptible-worker bounded destruction and source-thread
+  policy; then run the full CTest/QML gates and the mandatory 8-task
+  cross-task regression sweep before any package/build sign-off.
+- The cancellation flag is a `std::shared_ptr<QAtomicInt>` copied into the
+  queued worker invocation. This is required because bounded shutdown may
+  detach a worker while a native call is still active; a raw pointer to a
+  service member would become a use-after-free after the window closes.
+- Final verification after this lifetime fix: full CTest **41/41 PASS**,
+  `TestSourceSeparation` **11/11 PASS**, QML lint **PASS**, and QML route smoke
+  **PASS**. The expected bounded-shutdown warning is retained as evidence that
+  the non-cooperative native-worker path was exercised.

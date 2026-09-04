@@ -44,6 +44,8 @@ ThreadBounds boundsFor(InferenceBackendProfile profile)
         return {2, 8, 1, 0.75};
     case InferenceBackendProfile::RealtimeTts:
         return {2, 4, 1, 0.60};
+    case InferenceBackendProfile::SourceSeparationCpu:
+        return {1, 3, 2, 0.50};
     }
     return {4, 16, 1, 1.00};
 }
@@ -116,7 +118,10 @@ int InferenceThreadPolicy::recommendedThreadCount(const InferenceThreadRequest &
 {
     const ThreadBounds bounds = boundsFor(request.profile);
     if (request.requestedThreads > 0) {
-        return qBound(1, request.requestedThreads, 64);
+        // An explicit request is still bounded by the profile. A caller must
+        // not be able to accidentally defeat the UI-reservation policy with a
+        // stale project value or a slider left at an old maximum.
+        return qBound(1, request.requestedThreads, bounds.maxThreads);
     }
 
     const int jobs = std::max(1, request.activeInferenceJobs);
@@ -149,6 +154,8 @@ QString InferenceThreadPolicy::describeProfile(InferenceBackendProfile profile)
         return QStringLiteral("Kokoro");
     case InferenceBackendProfile::RealtimeTts:
         return QStringLiteral("Realtime TTS");
+    case InferenceBackendProfile::SourceSeparationCpu:
+        return QStringLiteral("Source separation CPU");
     }
     return QStringLiteral("Inference");
 }

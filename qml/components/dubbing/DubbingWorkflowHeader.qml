@@ -232,6 +232,43 @@ Rectangle {
                 policy: workflowStepsFlickable.contentWidth > workflowStepsFlickable.width
                         ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
             }
+
+            // A scrollbar alone was too subtle at 1280/1600px: operators
+            // could miss the last Dubbing tasks. These edge controls make the
+            // horizontal rail discoverable without taking permanent layout
+            // width from the right review panel.
+            ToolButton {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                z: 4
+                width: 26
+                height: 32
+                visible: workflowStepsFlickable.contentWidth > workflowStepsFlickable.width
+                         && workflowStepsFlickable.contentX > 0
+                text: "‹"
+                font.pixelSize: 24
+                onClicked: workflowStepsFlickable.contentX = Math.max(0,
+                    workflowStepsFlickable.contentX - workflowStepsFlickable.width * 0.7)
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Earlier tasks")
+            }
+            ToolButton {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                z: 4
+                width: 26
+                height: 32
+                visible: workflowStepsFlickable.contentWidth > workflowStepsFlickable.width
+                         && workflowStepsFlickable.contentX + workflowStepsFlickable.width
+                            < workflowStepsFlickable.contentWidth - 1
+                text: "›"
+                font.pixelSize: 24
+                onClicked: workflowStepsFlickable.contentX = Math.min(
+                    workflowStepsFlickable.contentWidth - workflowStepsFlickable.width,
+                    workflowStepsFlickable.contentX + workflowStepsFlickable.width * 0.7)
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Later tasks")
+            }
         }
 
         // The action cluster never scrolls or shares width with the task rail.

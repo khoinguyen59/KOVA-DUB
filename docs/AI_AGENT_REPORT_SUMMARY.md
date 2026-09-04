@@ -1,4 +1,63 @@
-# 2026-08-29 - Self-contained Spleeter Colab worker gate
+# 2026-09-03 - Canonical STT/OCR merge and translation guide
+
+- Rewrote the single guide `docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md`
+  to cover the complete AI-IDE task: read the app-supplied STT/OCR inputs,
+  reconcile them when both exist, then translate the canonical script.
+- The guide now uses only the four path roles supplied by the app/prompt:
+  `STT input`, `OCR input`, `Translation input`, and `Translation output`.
+  It contains no repository link, application architecture, auth/cache details,
+  fixed filename, or disk-search instructions.
+- Reconciliation is deterministic: OCR text/timing has priority, STT is the
+  reference and fallback, and cue order/count/numbering/timestamps are fixed.
+  Translation remains Chinese → Vietnamese with context, speaker hierarchy,
+  natural Vietnamese names (`Wang` → `Vương`), meaningful cue text, and no
+  third output.
+- Updated the C++ guide contract test and the pre-delivery checklist so the
+  old translation-only/two-path contract cannot return.
+- Fixed auto-project filename allocation so repeated display names receive a
+  collision-safe suffix instead of overwriting an existing `.ladub.json`.
+- Verification: MSVC cache/toolchain check no longer mistakes the bundled CMake
+  path for MinGW; full CTest **41/41 PASS** after the source and guide changes.
+  QML lint, prebuild gate and Graphify refresh completed; the portable 0.0.9.1
+  package was then staged with a 19-event packaged QML smoke and release
+  source manifest. Git integration remains deliberately separate from a
+  massive pre-existing dirty working tree.
+
+## 2026-08-29 - Self-contained Spleeter Colab worker gate
+
+## 2026-08-29 - Subtitle OCR Pillow patch-version compatibility
+
+- Lỗi Colab `AssertionError: 12.3.0` không phải do thiếu `ccache`: `ccache` chỉ
+  là warning không chặn worker. Nguyên nhân là probe OCR assert cứng
+  `Pillow==12.0.0` trong khi Colab có thể resolver một patch release `12.x`
+  tương thích.
+- Generator `scripts/generate_subtitle_ocr_colab_notebook.py` nay cài
+  `Pillow>=12.0.0,<13.0.0`, probe `ImageText`/`_Ink`, package isolation và
+  inference CUDA trước khi mở worker. Revision desktop/notebook đã đồng bộ
+  thành `subtitle-ocr-2026-08-23.18`.
+- Notebook canonical nằm tại
+  `notebooks/subtitle_ocr/LA_STUDIO_SUBTITLE_OCR_PP_OCRV5_GPU.ipynb`; Unified
+  bundle đã regenerate để nhúng bản mới. Verifier generated notebooks **32/32**
+  và Unified contract **PASS**. Notebook đã mở trong Colab không tự cập nhật;
+  phải mở bản mới trên runtime mới.
+
+## 2026-08-29 - Cross-notebook dependency recheck
+
+- Rà soát toàn bộ notebook đã tìm thấy và xử lý cả hai notebook từng tải code
+  ứng dụng LA Studio từ GitHub khi chạy runtime: Unified Dubbing và legacy
+  Voice Clone.
+- Unified Dubbing nay nhúng 34 file cục bộ (32 notebook exact-model cùng
+  coordinator và Spleeter worker), kiểm tra SHA-256 rồi chạy từ
+  `/content/la-studio-unified-source`; không còn clone repo ứng dụng ở runtime.
+- Legacy Voice Clone nay là compatibility alias của OmniVoice canonical, không
+  còn `kova-voice-studio`, `REPO_URL`, `REPO_REF` hay runtime clone.
+- Các `git clone` còn lại trong notebook là repo model/runtime upstream chính
+  thức, được giữ nguyên vì đó là dependency của model chứ không phải code
+  worker của ứng dụng.
+- Đã thêm scan/gate toàn repository và đưa vào hook, CI, Windows release và
+  pre-build: dependency scan **PASS**, Unified bundle **5/5**, notebooks
+  **32/32**, bindings **31/31**, remote surface **8/8**, CTest **41/41**, full
+  pre-build gate **PASS**. Chưa build EXE cho thay đổi notebook này.
 
 - The public `k2-fsa/sherpa-onnx-spleeter-2stems-fp16` repository supplies the
   model artifact only. LA Studio's worker and launcher are now embedded from
@@ -92,6 +151,20 @@ report and checklist after packaging.
 
 # Bao cao tong hop LA Studio
 
+## 2026-09-05 — remediation audit 0.0.9.1: gate before package
+
+- Runtime Host đã sửa race pipe handshake bằng cách server xử lý frame đã
+  buffer và client retry Hello idempotent trong deadline 5 giây. Stress mới:
+  **100** restart/auth liên tiếp PASS.
+- Regression Dubbing hiện bao gồm coverage clip bắt buộc, duration mix theo
+  source, resample 16/22.05/24/44.1/48 kHz, persistence/rebase project,
+  workflow artifact handoff và QML ROI/player contract.
+- Gate mới nhất: full CTest **41/41 PASS**, QML lint **PASS**, whitespace
+  **PASS**, Graphify refresh **PASS**, prebuild **10/10 PASS**.
+- Package 0.0.9.1 chưa được ghi là hoàn tất trong mục này: package phải tự
+  xác minh version, inventory, QML smoke và SHA-256 trước khi được thêm bằng
+  chứng thực tế.
+
 ## 2026-08-29 - Fusion STT/OCR, thứ tự workflow và Align audio
 
 - Khi có đủ cả STT và OCR, `Reconcile & Continue` tạo một script canonical
@@ -132,7 +205,7 @@ report and checklist after packaging.
 
 - Sua false-positive **outdated notebook** cua Subtitle OCR: desktop da doi
   `subtitle-ocr-2026-08-01.1` trong khi exact notebook hien hanh xuat
-  `subtitle-ocr-2026-08-23.17`. Hai ben nay da duoc dong bo; worker hien hanh
+  `subtitle-ocr-2026-08-23.18`. Hai ben nay da duoc dong bo; worker hien hanh
   se qua Check Colab khi capability, model va token deu dung.
 - Sua panel **Upload completed Reviewed STT + OCR transcript** va cac artifact
   upload Dubbing dung chung: FileDialog nay duoc tao/mo theo click, giu dung

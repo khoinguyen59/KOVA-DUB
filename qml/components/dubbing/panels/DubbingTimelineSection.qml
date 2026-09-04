@@ -53,7 +53,24 @@ ColumnLayout {
         }
     }
 
-    // Timeline Panel
+    function aggregateTimelineSamples() {
+        var segs = root.dubbing ? (root.dubbing.segments || []) : []
+        if (segs.length === 0) return []
+        var combined = []
+        for (var i = 0; i < segs.length; ++i) {
+            var wf = segs[i].waveformSamples
+            if (wf && wf.length > 0) {
+                var step = Math.max(1, Math.floor(wf.length / 30))
+                for (var j = 0; j < wf.length; j += step) {
+                    combined.push(wf[j])
+                    if (combined.length >= 600) break
+                }
+            }
+            if (combined.length >= 600) break
+        }
+        return combined
+    }
+
     Rectangle {
         id: dubbingTimelinePanel
         objectName: "dubbingTimelinePanel"
@@ -124,7 +141,21 @@ ColumnLayout {
                 color: Qt.rgba(0, 0, 0, 0.25)
                 waveColor: Theme.accent
                 playedWaveColor: Theme.accentLight
-                showPlaybackProgress: true
+                samples: root.aggregateTimelineSamples()
+                placeholderText: (root.dubbing && (root.dubbing.segments || []).length > 0)
+                                 ? qsTr("Dữ liệu sóng âm sẽ hiển thị chi tiết khi các clip thoại TTS được tạo")
+                                 : qsTr("Chưa có dữ liệu âm thanh phân đoạn")
+                showPlaceholder: !samples || samples.length === 0
+                playbackProgress: (root.sourceMediaPanel && root.sourceMediaPanel.playbackDuration > 0)
+                                  ? root.sourceMediaPanel.playbackPosition / root.sourceMediaPanel.playbackDuration
+                                  : 0
+                showPlaybackProgress: root.sourceMediaPanel && root.sourceMediaPanel.isPlaying
+                seekEnabled: root.sourceMediaPanel && root.sourceMediaPanel.playbackDuration > 0
+                onSeekRequested: function(progress) {
+                    if (root.sourceMediaPanel && root.sourceMediaPanel.playbackDuration > 0) {
+                        root.sourceMediaPanel.seekAll(progress * root.sourceMediaPanel.playbackDuration)
+                    }
+                }
             }
         }
     }

@@ -468,7 +468,7 @@ Rectangle {
 
             SequentialAnimation on pulseOpacity {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 NumberAnimation { from: 0.18; to: 0.18; duration: 0 }
                 NumberAnimation { to: 0.48; duration: 900; easing.type: Easing.InOutQuad }
                 NumberAnimation { to: 0.18; duration: 900; easing.type: Easing.InOutQuad }
@@ -476,7 +476,7 @@ Rectangle {
 
             SequentialAnimation on pulseScale {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 NumberAnimation { from: 0.92; to: 0.92; duration: 0 }
                 NumberAnimation { to: 1.07; duration: 900; easing.type: Easing.InOutQuad }
                 NumberAnimation { to: 0.92; duration: 900; easing.type: Easing.InOutQuad }
@@ -484,7 +484,7 @@ Rectangle {
 
             SequentialAnimation on buttonScale {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 NumberAnimation { from: 1.0; to: 1.0; duration: 0 }
                 PauseAnimation { duration: 450 }
                 NumberAnimation { to: 1.14; duration: 180; easing.type: Easing.OutCubic }
@@ -496,7 +496,7 @@ Rectangle {
 
             SequentialAnimation on buttonRotation {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 NumberAnimation { from: 0; to: 0; duration: 0 }
                 PauseAnimation { duration: 360 }
                 NumberAnimation { to: -13; duration: 80; easing.type: Easing.OutCubic }
@@ -510,7 +510,7 @@ Rectangle {
 
             SequentialAnimation on badgeLift {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 NumberAnimation { from: 0; to: 0; duration: 0 }
                 PauseAnimation { duration: 520 }
                 NumberAnimation { to: -5; duration: 150; easing.type: Easing.OutCubic }
@@ -522,7 +522,7 @@ Rectangle {
 
             NumberAnimation on orbitRotation {
                 running: communityItem.spotlight
-                loops: Animation.Infinite
+                loops: 1
                 from: 0
                 to: 360
                 duration: 1350

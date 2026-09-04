@@ -124,6 +124,21 @@ void TestRuntimeHostProtocol::startsAndPingsHostProcess()
     QVERIFY2(client.shutdown(&error), qPrintable(error));
 }
 
+void TestRuntimeHostProtocol::rapidlyRestartsHostWithoutLosingHandshake()
+{
+    const QString hostPath = QDir(QCoreApplication::applicationDirPath())
+                                 .absoluteFilePath(QStringLiteral("LAStudioRuntimeHost.exe"));
+    QVERIFY2(QFileInfo(hostPath).isFile(), qPrintable(hostPath));
+
+    RuntimeHostClient client;
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        QString error;
+        QVERIFY2(client.start(hostPath, &error), qPrintable(error));
+        QVERIFY2(client.ping(&error), qPrintable(error));
+        QVERIFY2(client.shutdown(&error), qPrintable(error));
+    }
+}
+
 void TestRuntimeHostProtocol::limitsGpuHostAdmission()
 {
     RuntimeHostManager &manager = RuntimeHostManager::instance();

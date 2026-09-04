@@ -85,6 +85,16 @@ function Resolve-QtRoot {
             return $latestQtRoot.FullName
         }
     }
+    $managedQtRoot = Join-Path $RepoRoot ".tools\Qt"
+    if (Test-Path $managedQtRoot) {
+        $latestManagedQtRoot = Get-ChildItem $managedQtRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            Select-Object -First 1
+        if ($latestManagedQtRoot) {
+            return $latestManagedQtRoot.FullName
+        }
+    }
     return $null
 }
 
@@ -327,6 +337,14 @@ function Ensure-ArchiveExtractor {
     }
 }
 
+# Prefer the repository-managed CMake before checking PATH. Keeping the Qt and
+# CMake toolchain paired prevents missing generated QML resource sources.
+$bundledCmake = Get-ChildItem -LiteralPath (Join-Path $RepoRoot ".deps\vcpkg\downloads\tools") `
+    -Filter "cmake.exe" -File -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if ($bundledCmake) {
+    Add-PathIfExists -PathEntry $bundledCmake.DirectoryName
+}
 Ensure-Command -Name "cmake" -FallbackPaths @(
     "C:\Qt\Tools\CMake_64\bin",
     "C:\Program Files\CMake\bin"
@@ -335,6 +353,17 @@ Ensure-Command -Name "ninja" -FallbackPaths @(
     "C:\Qt\Tools\Ninja",
     "C:\Program Files\Ninja"
 )
+$script:CMakeExecutable = if ($bundledCmake) {
+    (Resolve-Path -LiteralPath $bundledCmake.FullName).Path
+} else {
+    (Get-Command "cmake.exe" -ErrorAction Stop).Source
+}
+$script:CMakeBinDirectory = Split-Path -Parent $script:CMakeExecutable
+$script:NinjaExecutable = if (Test-Path -LiteralPath (Join-Path $script:CMakeBinDirectory "ninja.exe") -PathType Leaf) {
+    (Resolve-Path -LiteralPath (Join-Path $script:CMakeBinDirectory "ninja.exe")).Path
+} else {
+    (Get-Command "ninja.exe" -ErrorAction Stop).Source
+}
 if ($Preset -like "*mingw*") {
     Add-PathIfExists -PathEntry "C:\Qt\Tools\mingw1310_64\bin"
 } else {
@@ -349,8 +378,7 @@ $ReleaseSuffix = Normalize-ReleaseSuffix -Value $ReleaseSuffix
 
 $cmakeArgs = @()
 $kitName = Get-QtKitName -BuildPreset $Preset
-$ninjaCommand = Get-Command ninja -ErrorAction Stop
-$cmakeArgs += "-DCMAKE_MAKE_PROGRAM=$($ninjaCommand.Source.Replace('\', '/'))"
+$cmakeArgs += "-DCMAKE_MAKE_PROGRAM=$($script:NinjaExecutable.Replace('\', '/'))"
 
 if ([string]::IsNullOrWhiteSpace($QtRoot)) {
     throw "Qt root not found. Pass -QtRoot or set LA_QT environment variable."
@@ -407,6 +435,7 @@ if ($Preset -like "*mingw*") {
     $archiverCommand = Get-Command "lib.exe" -ErrorAction Stop
     $cmakeArgs += "-DCMAKE_LINKER=$($linkerCommand.Source.Replace('\', '/'))"
     $cmakeArgs += "-DCMAKE_AR=$($archiverCommand.Source.Replace('\', '/'))"
+    $cmakeArgs += "-DCMAKE_RANLIB="
 }
 
 if ($Clean) {
@@ -451,11 +480,11 @@ if ($Preset -notlike "*mingw*" -and (Test-Path -LiteralPath $buildDir)) {
 }
 
 Write-Host ">> Configuring CMake preset: $Preset" -ForegroundColor Cyan
-cmake --preset $Preset $cmakeArgs
+& $script:CMakeExecutable --preset $Preset $cmakeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ">> Building CMake preset: $Preset" -ForegroundColor Cyan
-cmake --build --preset $Preset --parallel $MaxParallelJobs
+& $script:CMakeExecutable --build --preset $Preset --parallel $MaxParallelJobs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $exePath = Join-Path $buildDir "LA-Studio-$Version.exe"

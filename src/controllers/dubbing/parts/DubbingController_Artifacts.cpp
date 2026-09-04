@@ -17,12 +17,22 @@ bool DubbingController::exportPackage(const QString &directoryPath)
     }
 
     QString error;
+    syncProjectStateForPersistence();
+    // These are byte-for-byte handoff copies. Never label FLAC/MP3 input as
+    // WAV: downstream editors select a decoder from the extension and a
+    // misleading suffix turns a valid artifact into an import failure.
+    const auto packageAsset = [&directory](const QString &name, const QString &source,
+                                           const QString &fallbackSuffix) {
+        const QString suffix = QFileInfo(source).suffix().trimmed().toLower();
+        return directory.filePath(QStringLiteral("%1.%2").arg(
+            name, suffix.isEmpty() ? fallbackSuffix : suffix));
+    };
     if (!m_project.save(&error)
         || !replaceCopy(m_project.projectPath, directory.filePath(QStringLiteral("project.ladub.json")), &error)
-        || !replaceCopy(previewPath(), directory.filePath(QStringLiteral("dubbed-mix.wav")), &error)
-        || !replaceCopy(dubbedVocalPath(), directory.filePath(QStringLiteral("dubbed-vocals.wav")), &error)
-        || !replaceCopy(m_project.vocalsAudioPath, directory.filePath(QStringLiteral("source-vocals.wav")), &error)
-        || !replaceCopy(m_project.backgroundAudioPath, directory.filePath(QStringLiteral("background.wav")), &error)) {
+        || !replaceCopy(previewPath(), packageAsset(QStringLiteral("dubbed-mix"), previewPath(), QStringLiteral("wav")), &error)
+        || !replaceCopy(dubbedVocalPath(), packageAsset(QStringLiteral("dubbed-vocals"), dubbedVocalPath(), QStringLiteral("wav")), &error)
+        || !replaceCopy(m_project.vocalsAudioPath, packageAsset(QStringLiteral("source-vocals"), m_project.vocalsAudioPath, QStringLiteral("flac")), &error)
+        || !replaceCopy(m_project.backgroundAudioPath, packageAsset(QStringLiteral("background"), m_project.backgroundAudioPath, QStringLiteral("flac")), &error)) {
         setError(error);
         return false;
     }
@@ -82,7 +92,7 @@ bool DubbingController::importSubtitlesInternal(const QString &path,
         && !(m_translationFix && m_translationFix->busy())
         && !(m_workflowRunner && m_workflowRunner->running())
         && ((m_runner && m_runner->processing()
-             && m_runner->stage() == QStringLiteral("transcribe"))
+             && isTranscriptionRunnerActive())
             || subtitleOcrProcessing());
     if (processing() && !(allowIndependentTranscriptWorker
                           && onlyIndependentTranscriptWorkersActive)) {
@@ -162,19 +172,30 @@ QVariantMap DubbingController::workflowArtifactSpec(const QString &nodeId) const
         const QString transferFormat = parameters.value(QStringLiteral("artifactTransferFormat"),
                                                         QStringLiteral("flac")).toString().trimmed().toLower()
             == QStringLiteral("wav") ? QStringLiteral("wav") : QStringLiteral("flac");
-        const QString vocalsName = QStringLiteral("vocals.") + transferFormat;
-        const QString backgroundName = QStringLiteral("background.") + transferFormat;
+        // Direct/manual handoff is intentionally independent from the names
+        // produced by a Colab worker.  The picker order assigns roles:
+        // vocals first (the later STT input), background second (the final
+        // mix input).  Keep the broad audio allow-list here so a user can
+        // supply a personal voice take or a replacement music track.
+        const QStringList supportedAudioExtensions{
+            QStringLiteral(".wav"), QStringLiteral(".mp3"), QStringLiteral(".m4a"),
+            QStringLiteral(".aac"), QStringLiteral(".flac"), QStringLiteral(".ogg"),
+            QStringLiteral(".opus"), QStringLiteral(".wma"), QStringLiteral(".aiff"),
+            QStringLiteral(".aif"), QStringLiteral(".ac3"), QStringLiteral(".amr"),
+            QStringLiteral(".webm")};
         spec.insert(QStringLiteral("artifactTransferFormat"), transferFormat);
         spec.insert(QStringLiteral("description"), QStringLiteral(
-            "Upload the two %1 stems saved by the Spleeter/UVR Colab notebook. Both files are required. %2")
-                        .arg(transferFormat.toUpper(), transferFormat == QStringLiteral("flac")
-                             ? QStringLiteral("FLAC is lossless and greatly reduces Colab transfer size.")
-                             : QStringLiteral("WAV is uncompressed for compatibility.")));
+            "Choose one audio file for Vocals and one audio file for Background. "
+            "File names are unrestricted; the first selected file is used for STT "
+            "and the second is used for the final mix. Colab is optional."));
         spec.insert(QStringLiteral("workerPath"), QStringLiteral(
-            "In Colab Files, open la-studio-separation-jobs/<model-id>/<job-id>/ and download %1 plus %2. The job-id directory is created by this run; source.wav is input and must not be uploaded.")
-                        .arg(vocalsName, backgroundName));
-        spec.insert(QStringLiteral("expectedFiles"), QStringList{vocalsName, backgroundName});
-        spec.insert(QStringLiteral("allowedExtensions"), QStringList{QStringLiteral(".") + transferFormat});
+            "Choose the audio file that should feed STT as Vocals and the audio "
+            "file that should be mixed as Background. Files may come from any "
+            "source; only a supported audio format is required."));
+        spec.insert(QStringLiteral("expectedFiles"), QStringList{
+            QStringLiteral("vocals audio (any accepted filename)"),
+            QStringLiteral("background audio (any accepted filename)")});
+        spec.insert(QStringLiteral("allowedExtensions"), supportedAudioExtensions);
         const QString modelId = configuration.value(
             QStringLiteral("modelId"), parameters.value(QStringLiteral("modelId"))).toString().trimmed();
         if (!modelId.isEmpty()) {
@@ -200,8 +221,12 @@ QVariantList DubbingController::workflowArtifactSpecsForStage(const QString &nod
         productionIds << QStringLiteral("source-separate");
     } else if (id == QStringLiteral("stt") || id == QStringLiteral("transcribe-stt")) {
         productionIds << QStringLiteral("stt");
-    } else if (id == QStringLiteral("ocr")) {
-        productionIds << QStringLiteral("ocr");
+    } else if (id == QStringLiteral("ocr") || id == QStringLiteral("subtitle-ocr")) {
+        // The Transcribe screen emits the durable OCR id "subtitle-ocr",
+        // while the task shelf may emit the short presentation id "ocr".
+        // Both must resolve to the same local artifact contract even when
+        // no Colab session has ever been configured.
+        productionIds << QStringLiteral("subtitle-ocr");
     } else if (id == QStringLiteral("transcribe")) {
         // workflowArtifactSpec deliberately keeps the presentation id
         // "transcribe" for the visible task.  Resolve the underlying
@@ -255,6 +280,32 @@ bool DubbingController::canOverrideRunningWorkflowArtifact(const QString &nodeId
             || (m_subtitleOcr && m_subtitleOcr->processing());
     if (!m_runner || !m_runner->processing()) return false;
     return artifactMatchesActiveStage(nodeId, m_runner->stage());
+}
+
+bool DubbingController::canImportWorkflowArtifactNow(const QString &nodeId) const
+{
+    // A local handoff is deliberately independent of Colab configuration.
+    // The only time it is blocked is when another non-compatible Dubbing
+    // operation owns the shared project/output mutation boundary.
+    if (!processing()) return true;
+    if (canOverrideRunningWorkflowArtifact(nodeId)) return true;
+
+    const QString requested = nodeId.trimmed().toLower();
+    const QString productionId = artifactProductionNodeId(requested);
+    if (productionId == QStringLiteral("subtitle-ocr"))
+        return isTranscriptionRunnerActive();
+    if (productionId != QStringLiteral("transcribe")) return false;
+
+    // Explicit STT upload is safe while the independent OCR worker is active.
+    // The generic presentation id follows the selected transcript source.
+    if (requested == QStringLiteral("transcribe")) {
+        const QString source = normalizedTranscriptSource(
+            m_project.transcriptConfiguration.value(
+                QStringLiteral("transcriptSource"), QStringLiteral("stt")).toString());
+        return source == QStringLiteral("ocr")
+            ? isTranscriptionRunnerActive() : subtitleOcrProcessing();
+    }
+    return subtitleOcrProcessing();
 }
 
 QVariantMap DubbingController::workflowArtifactHandoffStatus(const QString &nodeId) const
@@ -312,7 +363,11 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         return false;
     }
     const bool overrideRunningWorker = canOverrideRunningWorkflowArtifact(id);
-    if (processing() && !overrideRunningWorker) {
+    // Use the same route-scoped policy as the Upload button.  In particular,
+    // an offline STT handoff must remain importable while the independent OCR
+    // worker is active, and vice versa; only the matching active worker may
+    // be cancelled below.
+    if (processing() && !canImportWorkflowArtifactNow(requestedId)) {
         setBusyError(QStringLiteral("A different Dubbing task is active. Upload may replace only the output of the currently-running task."));
         return false;
     }
@@ -331,7 +386,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     const int expectedCount = multiple ? 2 : 1;
     if (sourcePaths.size() != expectedCount) {
         setError(multiple
-                     ? QStringLiteral("Voice isolation requires exactly the declared vocals and background stem files.")
+                     ? QStringLiteral("Voice isolation requires exactly two audio files: Vocals first and Background second.")
                      : QStringLiteral("This task requires exactly one output file; select only the declared workflow artifact."));
         return false;
     }
@@ -346,19 +401,17 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         }
     }
     const QStringList expectedFiles = spec.value(QStringLiteral("expectedFiles")).toStringList();
-    if (id == QStringLiteral("source-separate")) {
-        QSet<QString> names;
-        for (const QString &sourcePath : sourcePaths)
-            names.insert(QFileInfo(sourcePath).fileName().toLower());
-        const QStringList exactNames = spec.value(QStringLiteral("expectedFiles")).toStringList();
-        if (names.size() != 2 || exactNames.size() != 2
-            || !names.contains(exactNames.at(0).toLower())
-            || !names.contains(exactNames.at(1).toLower())) {
-            setError(QStringLiteral("Voice isolation outputs must be named exactly %1 and %2.")
-                         .arg(exactNames.value(0), exactNames.value(1)));
-            return false;
-        }
-    } else if (!expectedFiles.isEmpty()) {
+    // Audio separation is role-based, and transcript handoffs are
+    // project/run-based. For transcript stages the basename is metadata owned
+    // by the user/AI IDE; the extension and parsed content are the contract.
+    // Other stages retain their declared basename validation.
+    const bool acceptsAnyTranscriptBasename =
+        id == QStringLiteral("transcribe")
+        || id == QStringLiteral("subtitle-ocr")
+        || id == QStringLiteral("review-transcript")
+        || id == QStringLiteral("translate");
+    if (id != QStringLiteral("source-separate")
+        && !acceptsAnyTranscriptBasename && !expectedFiles.isEmpty()) {
         const QString expected = expectedFiles.constFirst().section(QStringLiteral(" "), 0, 0)
             .section(QStringLiteral("("), 0, 0).trimmed().toLower();
         const QString actual = QFileInfo(sourcePaths.constFirst()).fileName().toLower();
@@ -371,20 +424,46 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         }
     }
 
-    QString projectStem = QFileInfo(m_project.projectPath).completeBaseName();
-    projectStem.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9._-]+")), QStringLiteral("_"));
-    if (projectStem.isEmpty()) projectStem = QStringLiteral("project");
-    const QString destinationRoot = QDir(PathUtils::cacheDir()).filePath(
-        QStringLiteral("dubbing-artifacts/%1/%2").arg(projectStem, id));
+    const QString destinationRoot = dubbingArtifactStageDirectory(m_project.projectPath, id);
     if (!QDir().mkpath(destinationRoot)) {
-        setError(QStringLiteral("Cannot create the Dubbing artifact cache: %1").arg(destinationRoot));
+        setError(QStringLiteral("Cannot create the project artifact folder: %1").arg(destinationRoot));
         return false;
     }
 
     QStringList copiedPaths;
     QString copyError;
-    for (const QString &sourcePath : sourcePaths) {
-        const QString destination = QDir(destinationRoot).filePath(QFileInfo(sourcePath).fileName());
+    for (int index = 0; index < sourcePaths.size(); ++index) {
+        const QString &sourcePath = sourcePaths.at(index);
+        const QString fileName = QFileInfo(sourcePath).fileName();
+        QString destination = QDir(destinationRoot).filePath(fileName);
+        if (id == QStringLiteral("source-separate")
+            && copiedPaths.contains(destination, Qt::CaseInsensitive)) {
+            // Two user-owned files can legitimately share a basename. Keep
+            // both artifacts distinct in the cache so the second role cannot
+            // overwrite the first one.
+            const QString rolePrefix = index == 0
+                ? QStringLiteral("vocals-") : QStringLiteral("background-");
+            destination = QDir(destinationRoot).filePath(rolePrefix + fileName);
+        }
+        // Preserve every manual handoff. A repeated run or two AI IDE runs
+        // may legitimately use the same basename; never replace an existing
+        // project artifact just because the picker supplied that name again.
+        const QString absoluteSource = QFileInfo(sourcePath).absoluteFilePath();
+        if (QFileInfo::exists(destination)
+            && QFileInfo(destination).absoluteFilePath().compare(
+                   absoluteSource, Qt::CaseInsensitive) != 0) {
+            const QFileInfo sourceInfo(fileName);
+            const QString baseName = sourceInfo.completeBaseName();
+            const QString suffix = sourceInfo.completeSuffix();
+            int collisionIndex = 1;
+            do {
+                const QString collisionName = suffix.isEmpty()
+                    ? QStringLiteral("%1__%2").arg(baseName).arg(collisionIndex)
+                    : QStringLiteral("%1__%2.%3").arg(baseName).arg(collisionIndex).arg(suffix);
+                destination = QDir(destinationRoot).filePath(collisionName);
+                ++collisionIndex;
+            } while (QFileInfo::exists(destination));
+        }
         if (!replaceCopy(sourcePath, destination, &copyError)) {
             setError(copyError);
             return false;
@@ -453,13 +532,13 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
                                              {QStringLiteral("colabFolder"), spec.value(QStringLiteral("colabFolder"))},
                                              {QStringLiteral("workerPath"), spec.value(QStringLiteral("workerPath"))}});
     } else if (id == QStringLiteral("source-separate")) {
-        QString vocalsPath;
-        QString backgroundPath;
-        for (const QString &path : copiedPaths) {
-            if (QFileInfo(path).fileName().startsWith(QStringLiteral("vocals."), Qt::CaseInsensitive))
-                vocalsPath = path;
-            else if (QFileInfo(path).fileName().startsWith(QStringLiteral("background."), Qt::CaseInsensitive))
-                backgroundPath = path;
+        // The two isolation buttons are the role contract.  Preserve the
+        // user's filenames and map by picker order, not by a Colab filename.
+        const QString vocalsPath = copiedPaths.value(0);
+        const QString backgroundPath = copiedPaths.value(1);
+        if (vocalsPath.isEmpty() || backgroundPath.isEmpty()) {
+            setError(QStringLiteral("Select one Vocals audio file and one Background audio file."));
+            return false;
         }
         cancelMatchingWorker();
         m_project.vocalsAudioPath = vocalsPath;
@@ -630,6 +709,7 @@ bool DubbingController::exportCapCutDraft(const QString &directoryPath)
         return false;
     }
     QString error;
+    syncProjectStateForPersistence();
     if (!m_project.save(&error)) {
         setError(error);
         return false;
@@ -657,7 +737,56 @@ bool DubbingController::exportCapCutDraft(const QString &directoryPath)
     m_capCutDraftWarning = warning;
     clearError();
     emit exportChanged();
+    persistAfterEdit();
     return true;
+}
+
+QVariantMap DubbingController::prepareTranscriptAiHandoff()
+{
+    if (!hasProject()) {
+        setError(QStringLiteral("Save the project before preparing transcript handoff files."));
+        return {};
+    }
+    const QString sttDirectory = dubbingArtifactStageDirectory(
+        m_project.projectPath, QStringLiteral("transcribe"));
+    const QString ocrDirectory = dubbingArtifactStageDirectory(
+        m_project.projectPath, QStringLiteral("subtitle-ocr"));
+    const QString canonicalDirectory = dubbingArtifactStageDirectory(
+        m_project.projectPath, QStringLiteral("review-transcript"));
+    const QString translationDirectory = dubbingArtifactStageDirectory(
+        m_project.projectPath, QStringLiteral("translate"));
+    const QString sttPath = QDir(sttDirectory).filePath(QStringLiteral("transcript.srt"));
+    const QString ocrPath = QDir(ocrDirectory).filePath(QStringLiteral("ocr.srt"));
+    const QString canonicalPath = QDir(canonicalDirectory).filePath(
+        QStringLiteral("canonical-transcript.srt"));
+    const QString translatedPath = QDir(translationDirectory).filePath(
+        QStringLiteral("translated.srt"));
+
+    const QVariantList sttSegments = m_project.transcriptConfiguration.value(
+        QStringLiteral("sttSegments")).toList();
+    const QVariantList ocrSegments = m_project.transcriptConfiguration.value(
+        QStringLiteral("ocrSegments")).toList();
+    QString error;
+    if ((!sttSegments.isEmpty() && (!QDir().mkpath(sttDirectory)
+                                    || !writeDubbingSubtitles(sttSegments, sttPath, false, &error)))
+        || (!ocrSegments.isEmpty() && (!QDir().mkpath(ocrDirectory)
+                                       || !writeDubbingSubtitles(ocrSegments, ocrPath, false, &error)))
+        || (m_project.segments.isEmpty()
+            || !QDir().mkpath(canonicalDirectory)
+            || !writeDubbingSubtitles(m_project.segments, canonicalPath, false, &error))
+        || !QDir().mkpath(translationDirectory)) {
+        setError(error.isEmpty()
+            ? QStringLiteral("A transcript is required before preparing AI handoff files.")
+            : error);
+        return {};
+    }
+
+    clearError();
+    return {{QStringLiteral("projectRoot"), dubbingProjectArtifactRoot(m_project.projectPath)},
+            {QStringLiteral("sttInput"), QFileInfo(sttPath).isFile() ? sttPath : QString()},
+            {QStringLiteral("ocrInput"), QFileInfo(ocrPath).isFile() ? ocrPath : QString()},
+            {QStringLiteral("canonicalInput"), canonicalPath},
+            {QStringLiteral("translationOutput"), translatedPath}};
 }
 
 bool DubbingController::openCapCutDraft()

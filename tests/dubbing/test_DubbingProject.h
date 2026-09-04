@@ -9,13 +9,20 @@ class TestDubbingProject : public QObject
     Q_OBJECT
 private slots:
     void roundTripsVersionedJson();
+    void projectPathsRebaseAfterProjectDirectoryMove();
+    void fromJsonClearsFieldsWhenLoadingLegacySchema();
     void separationKeepsAnalysisAndVocalsArtifactsDistinct();
     void controllerSaveAsPersistsProjectForLaterResume();
+    void workflowResumeStateSurvivesProjectReopen();
+    void workflowResumeStateSurvivesControllerClose();
+    void workflowTranscriptArtifactsAreWrittenAndPersisted();
     void migratesLegacyProjectsToLlmRewritePipeline();
     void rejectsUnknownSchema();
     void mergesSegmentPatchesByStableId();
     void rejectsUnknownAndDuplicateSegmentPatches();
     void importingMediaDoesNotStartProcessing();
+    void autoProjectNamesAvoidOverwritingExistingProjects();
+    void unnamedProjectsAreCollisionSafe();
     void dubbingEntryGatePersistsChoiceWithoutMutatingProject();
     void automaticPreflightUsesPersistedLanguageSingleSourceOfTruth();
     void automaticPreflightBlocksKnownUnsupportedTtsLanguage();
@@ -56,7 +63,10 @@ private slots:
     void voiceTargetsAreSourceIndependentAndPersisted();
     void dubbingUsesReferenceCloneForLocalVieNeuAndOmniVoice();
     void audioMixRunsAsynchronously();
+    void workflowRequiresEveryNonSkippedCueForMix();
     void audioMixCreatesIndependentVocalStem();
+    void audioMixKeepsSourceDurationWhenSpeechEndsEarly();
+    void audioMixResamplesCommonTtsRatesWithoutDropouts();
     void audioMixAppliesSidechainDuckingToBackground();
     void audioMixHonorsOriginalAndDubbedLevels();
     void exportValidatesMuxedMediaBeforeCommit();
@@ -105,11 +115,15 @@ private slots:
     void incompleteSeparationStemsDoNotCompleteTheNode();
     void dubbingRejectsAConnectedColabWorkerForTheWrongModel();
     void currentSubtitleOcrNotebookRevisionVerifies();
+    void previousSubtitleOcrNotebookRevisionStillVerifies();
+    void unknownSubtitleOcrNotebookRevisionIsRejected();
     void remoteDubbingWorkflowIsReadyWithoutLocalModels();
     void dubbingColabModelsMapToExactNotebooks();
-    void dubbingManualArtifactSpecsExposeStrictColabContracts();
+    void dubbingManualArtifactSpecsExposeRoleBasedAudioContracts();
+    void manualSeparationUploadAcceptsRoleBasedAudioNames();
     void manualArtifactUploadAcceptsPresentationStagesWithoutColab();
     void manualArtifactUploadUiOffersPickerAndIndependentSkip();
+    void independentTranscriptSkipPolicyKeepsSiblingRouteAvailable();
     void dubbingUiUsesExactModelWorkers();
     void transcribeUiSeparatesSttAndOcrCards();
     void dubbingUiUsesSafePublicContractsAndArtifactGates();
@@ -119,7 +133,7 @@ private slots:
     void transcriptOcrRunControlRemainsAvailableAlongsideStt();
     void normalizesOcrOnlyTranscriptWithProvenance();
     void fusesMatchingAndShiftedTranscriptWithoutDuplicates();
-    void defaultsToSttWhenSttAndOcrDoNotMatch();
+    void defaultsToOcrWhenSttAndOcrDoNotMatch();
     void exposesConflictEvidenceWithoutSilentChoice();
     void preservesFusionAndTranscriptSettingsAcrossProjectReload();
     void ocrOnlyTranscriptUsesTheSharedSubtitleOcrController();

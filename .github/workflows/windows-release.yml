@@ -96,6 +96,10 @@ jobs:
           python scripts/generate_catalog.py
           git diff --exit-code -- data/catalog.json
 
+      - name: Verify notebook repository dependencies
+        shell: pwsh
+        run: python scripts/test_notebook_repository_dependencies.py
+
       - name: Verify runtime release checksums
         shell: pwsh
         run: python scripts/verify_catalog_checksums.py
@@ -109,6 +113,13 @@ jobs:
         run: |
           python scripts/test_colab_worker_pins.py
           python scripts/verify_colab_worker_pins.py
+
+      - name: Verify Unified Dubbing embedded worker bundle
+        shell: pwsh
+        run: |
+          python scripts/test_unified_dubbing_bundle.py
+          python scripts/verify_legacy_voice_clone_compat_notebook.py
+          python scripts/verify_unified_dubbing_colab_notebook.py
 
       - name: Verify translation catalogs are current
         shell: pwsh

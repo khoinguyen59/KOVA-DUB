@@ -23,6 +23,12 @@ Rectangle {
     property bool compact: false
     readonly property bool artifactUploadAvailable: root.dubbing
         && root.dubbing.workflowArtifactSpecsForStage(root.nodeId).length > 0
+    readonly property bool artifactUploadAllowedNow: {
+        var aggregateBusy = root.dubbing ? root.dubbing.processing : false
+        if (!root.dubbing) return false
+        return !aggregateBusy
+            || root.dubbing.canImportWorkflowArtifactNow(root.nodeId)
+    }
     // Audio STT and Subtitle OCR use distinct workers.  The generic Run task
     // button must remain usable for either one while the other is active, but
     // no other Dubbing stage gets that exception.
@@ -133,8 +139,7 @@ Rectangle {
             iconName: "folder"
             quiet: true
             Layout.preferredWidth: 126
-            enabled: !root.dubbing.processing
-                     || root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
+            enabled: root.artifactUploadAllowedNow
             toolTip: root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
                      ? qsTr("Use a verified local output and stop this task's automatic transfer")
                      : qsTr("Upload the exact output for this task; Colab is optional")
@@ -221,8 +226,7 @@ Rectangle {
                 iconName: "folder"
                 quiet: true
                 Layout.fillWidth: true
-                enabled: !root.dubbing.processing
-                         || root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
+                enabled: root.artifactUploadAllowedNow
                 toolTip: root.dubbing.canOverrideRunningWorkflowArtifact(root.nodeId)
                          ? qsTr("Use a verified local output and stop this task's automatic transfer")
                          : qsTr("Upload the declared output for this task; Colab is optional")

@@ -14,6 +14,7 @@ private slots:
     void roundTripsSharedAudioBuffer();
     void rejectsSharedAudioDescriptorLargerThanMapping();
     void startsAndPingsHostProcess();
+    void rapidlyRestartsHostWithoutLosingHandshake();
     void limitsGpuHostAdmission();
 };
 

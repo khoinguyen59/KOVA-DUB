@@ -74,12 +74,22 @@ void RuntimeHostServer::onNewConnection()
         m_clients.insert(socket, ClientState{});
         connect(socket, &QLocalSocket::readyRead, this, &RuntimeHostServer::onReadyRead);
         connect(socket, &QLocalSocket::disconnected, this, &RuntimeHostServer::onDisconnected);
+        // A client can authenticate immediately after the named pipe connects.
+        // If its Hello frame is already buffered before readyRead is connected,
+        // no later signal is guaranteed. Consume buffered input now; subsequent
+        // input is handled by the normal signal path.
+        if (socket->bytesAvailable() > 0) processSocketInput(socket);
     }
 }
 
 void RuntimeHostServer::onReadyRead()
 {
     auto *socket = qobject_cast<QLocalSocket *>(sender());
+    processSocketInput(socket);
+}
+
+void RuntimeHostServer::processSocketInput(QLocalSocket *socket)
+{
     if (!socket || !m_clients.contains(socket)) return;
 
     ClientState &state = m_clients[socket];

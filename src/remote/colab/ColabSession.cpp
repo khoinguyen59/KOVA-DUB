@@ -1,6 +1,7 @@
 #include "ColabSession.h"
 
 #include "ExecutionProvider.h"
+#include "Logger.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -8,6 +9,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QStringList>
 
 namespace LAStudio {
 
@@ -50,8 +52,30 @@ QString requiredWorkerRevision(const QString &capability)
         // Keep this in lockstep with the generated exact-model notebook.
         // The previous 2026-08-01 revision made a healthy current worker
         // report itself as outdated before its route could be used.
-        return QStringLiteral("subtitle-ocr-2026-08-23.17");
+        return QStringLiteral("subtitle-ocr-2026-08-23.18");
     return {};
+}
+
+QStringList supportedWorkerRevisions(const QString &capability)
+{
+    const QString canonicalRevision = requiredWorkerRevision(capability);
+    if (canonicalRevision.isEmpty()) return {};
+
+    // The currently running public Subtitle OCR Colab worker reports .17,
+    // while the regenerated notebook reports .18.  Both revisions expose the
+    // same CUDA model and response contract, so keep the handshake strict but
+    // explicitly support this compatible rolling update.  Do not generalize
+    // this to arbitrary revisions: an unknown worker must still be rejected.
+    if (capability == QStringLiteral("subtitle-ocr")) {
+        return {canonicalRevision, QStringLiteral("subtitle-ocr-2026-08-23.17")};
+    }
+    return {canonicalRevision};
+}
+
+bool isSupportedWorkerRevision(const QString &capability, const QString &reportedRevision)
+{
+    const QStringList supported = supportedWorkerRevisions(capability);
+    return !supported.isEmpty() && supported.contains(reportedRevision);
 }
 
 QString capabilityDisplayName(const QString &capability)
@@ -65,12 +89,16 @@ QString capabilityDisplayName(const QString &capability)
     return capability.isEmpty() ? QStringLiteral("selected") : capability;
 }
 
-QString outdatedNotebookMessage(const QString &capability)
+QString outdatedNotebookMessage(const QString &capability, const QString &reportedRevision)
 {
+    const QString reported = reportedRevision.isEmpty()
+        ? QStringLiteral("<missing>")
+        : reportedRevision;
+    const QString accepted = supportedWorkerRevisions(capability).join(QStringLiteral(", "));
     return QStringLiteral(
-        "The selected %1 notebook is outdated. Open the current exact-model notebook, "
-        "run all cells again, then use Check Colab.")
-        .arg(capabilityDisplayName(capability));
+        "The selected %1 notebook is outdated (reported revision '%2'; accepted revisions: %3). "
+        "Open the exact-model notebook, run all cells again, then use Check Colab.")
+        .arg(capabilityDisplayName(capability), reported, accepted);
 }
 
 } // namespace
@@ -419,8 +447,9 @@ void ColabSession::handleVerificationReply(QNetworkReply *reply,
         const QString expectedRevision = requiredWorkerRevision(m_expectedCapability);
         const QString reportedRevision = root.value(QStringLiteral("worker_revision"))
                                              .toString().trimmed();
-        if (!expectedRevision.isEmpty() && reportedRevision != expectedRevision) {
-            failVerification(outdatedNotebookMessage(m_expectedCapability), generation);
+        if (!expectedRevision.isEmpty()
+            && !isSupportedWorkerRevision(m_expectedCapability, reportedRevision)) {
+            failVerification(outdatedNotebookMessage(m_expectedCapability, reportedRevision), generation);
             return;
         }
         const QString reportedModel = root.value(QStringLiteral("model")).toString()
@@ -468,8 +497,9 @@ void ColabSession::handleVerificationReply(QNetworkReply *reply,
     const QString expectedRevision = requiredWorkerRevision(m_expectedCapability);
     const QString reportedRevision = root.value(QStringLiteral("worker_revision"))
                                          .toString().trimmed();
-    if (!expectedRevision.isEmpty() && reportedRevision != expectedRevision) {
-        failVerification(outdatedNotebookMessage(m_expectedCapability), generation);
+    if (!expectedRevision.isEmpty()
+        && !isSupportedWorkerRevision(m_expectedCapability, reportedRevision)) {
+        failVerification(outdatedNotebookMessage(m_expectedCapability, reportedRevision), generation);
         return;
     }
 
@@ -557,6 +587,14 @@ void ColabSession::handleVerificationReply(QNetworkReply *reply,
 void ColabSession::failVerification(const QString &message, quint64 generation)
 {
     if (generation != m_verificationGeneration) return;
+    Logger::error(
+        QStringLiteral("ColabSession"),
+        QStringLiteral("Direct worker verification failed capability='%1' model='%2' variant='%3' endpoint='%4': %5")
+            .arg(m_expectedCapability,
+                 m_expectedModel,
+                 m_expectedVariant,
+                 workerUrl(),
+                 message));
     cancelVerification();
     m_bearerToken.clear();
     m_checking = false;

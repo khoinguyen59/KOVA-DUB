@@ -17,6 +17,7 @@ from colab_worker_launch import build_worker_launch
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = ROOT / "notebooks"
+NOTEBOOK_SUBDIR = "subtitle_ocr"
 MODEL_ID = "pp-ocrv5-multilingual-3.1"
 NOTEBOOK = "LA_STUDIO_SUBTITLE_OCR_PP_OCRV5_GPU.ipynb"
 
@@ -45,7 +46,7 @@ MODEL_NAME = "PP-OCRv5 Multilingual 3.1"
 UPSTREAM_MODEL = "PaddlePaddle/PaddleOCR PP-OCRv5"
 UPSTREAM_VERSION = "PaddleOCR 3.1.1"
 LICENSE = "Apache-2.0"
-WORKER_REVISION = "subtitle-ocr-2026-08-23.17"
+WORKER_REVISION = "subtitle-ocr-2026-08-23.18"
 RESPONSE_CONTRACT = "subtitle-ocr-crops-v1"
 TOKEN = os.environ["LA_STUDIO_COLAB_SUBTITLE_OCR_TOKEN"]
 MAX_UPLOAD_BYTES = 16 * 1024 * 1024
@@ -313,7 +314,7 @@ def build_notebook() -> dict:
                 import sys
                 from pathlib import Path
 
-                BOOTSTRAP_REVISION = "subtitle-ocr-bootstrap-2026-08-23.17"
+                BOOTSTRAP_REVISION = "subtitle-ocr-bootstrap-2026-08-23.18"
                 print("LA Studio Subtitle OCR bootstrap:", BOOTSTRAP_REVISION)
                 print("This revision uses a dedicated package directory; it never creates a venv or calls ensurepip.")
 
@@ -389,7 +390,12 @@ def build_notebook() -> dict:
                 ocr_pip("--no-cache-dir", "--upgrade", "--force-reinstall",
                         "--only-binary=:all:",
                         "paddlex[ocr]==3.1.0", "PyYAML==6.0.2", "typing-extensions==4.15.0",
-                        "Pillow==12.0.0", "fastapi==0.115.12", "uvicorn==0.34.3",
+                        # Colab can publish a compatible Pillow patch release
+                        # (for example 12.3.0) before this notebook is rerun.
+                        # Require the supported major/minor family, not one
+                        # fragile patch version; the probe below still checks
+                        # the actual API and package isolation.
+                        "Pillow>=12.0.0,<13.0.0", "fastapi==0.115.12", "uvicorn==0.34.3",
                         "python-multipart==0.0.20")
                 # PaddleX 3.1 imports langchain.docstore while importing its
                 # pipeline registry, even for an image-only OCR worker. The
@@ -427,7 +433,9 @@ def build_notebook() -> dict:
                 assert version(\"paddlepaddle-gpu\") == \"3.1.0\", version(\"paddlepaddle-gpu\")
                 assert version(\"paddlex\") == \"3.1.0\", version(\"paddlex\")
                 assert version(\"paddleocr\") == \"3.1.1\", version(\"paddleocr\")
-                assert version(\"pillow\") == \"12.0.0\", version(\"pillow\")
+                pillow_version = version(\"pillow\")
+                pillow_major_minor = tuple(int(part) for part in pillow_version.split(\".\")[:2])
+                assert (12, 0) <= pillow_major_minor < (13, 0), pillow_version
                 dedicated_site = str(Path(os.environ[\"LA_STUDIO_OCR_SITE\"]).resolve())
                 for package in (PIL, paddle, paddleocr, paddlex, langchain):
                     assert str(Path(package.__file__).resolve()).startswith(dedicated_site), (package.__name__, package.__file__)
@@ -495,9 +503,21 @@ def build_notebook() -> dict:
 
 
 def main() -> None:
-    NOTEBOOKS.mkdir(parents=True, exist_ok=True)
-    target = NOTEBOOKS / NOTEBOOK
-    target.write_text(json.dumps(build_notebook(), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    target = NOTEBOOKS / NOTEBOOK_SUBDIR / NOTEBOOK
+    target.parent.mkdir(parents=True, exist_ok=True)
+    generated = build_notebook()
+    # Keep append-only helper cells that users may have added to the tracked
+    # notebook, while replacing every generated core cell from this source.
+    if target.is_file():
+        try:
+            existing = json.loads(target.read_text(encoding="utf-8"))
+            generated_cells = generated.get("cells", [])
+            existing_cells = existing.get("cells", [])
+            if len(existing_cells) > len(generated_cells):
+                generated["cells"].extend(existing_cells[len(generated_cells):])
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+    target.write_text(json.dumps(generated, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(target.relative_to(ROOT))
 
 

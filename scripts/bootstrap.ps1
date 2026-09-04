@@ -73,6 +73,13 @@ function Resolve-QtRoot {
             Sort-Object { [version]$_.Name } -Descending |
             ForEach-Object { $_.FullName }
     }
+    $managedQtRoot = Join-Path $RepoRoot ".tools\Qt"
+    if (Test-Path $managedQtRoot) {
+        $options += Get-ChildItem $managedQtRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { $_.FullName }
+    }
     $options += @("C:\Qt\6.9.3", "C:\Qt\6.9.1", "C:\Qt\6.8.3", "C:\Qt\6.8.2", "C:\Qt\6.8.1", "C:\Qt\6.8.0")
 
     foreach ($root in $options | Select-Object -Unique) {

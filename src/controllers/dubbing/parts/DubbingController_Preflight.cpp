@@ -497,14 +497,76 @@ void DubbingController::advanceManualStep(const QString &completedStepId)
     if (next.contains(completedStepId)) setCurrentStep(next.value(completedStepId));
 }
 
+bool DubbingController::canSkipWorkflowTask(const QString &nodeId) const
+{
+    if (!hasProject()) return false;
+
+    const QString requested = nodeId.trimmed().toLower();
+    if (requested == QStringLiteral("import")
+        || requested == QStringLiteral("media-input")) {
+        return false;
+    }
+
+    QString step = requested;
+    if (step == QStringLiteral("normalize")) step = QStringLiteral("ingest");
+    else if (step == QStringLiteral("isolator") || step == QStringLiteral("separate")
+             || step == QStringLiteral("source-separation")) {
+        step = QStringLiteral("source-separate");
+    } else if (step == QStringLiteral("stt") || step == QStringLiteral("transcribe-stt")
+               || step == QStringLiteral("ocr") || step == QStringLiteral("subtitle-ocr")
+               || step == QStringLiteral("review-transcript")) {
+        step = QStringLiteral("transcribe");
+    } else if (step == QStringLiteral("review-translation")) {
+        step = QStringLiteral("translate");
+    } else if (step == QStringLiteral("assign-voices") || step == QStringLiteral("tts")) {
+        step = QStringLiteral("synthesize");
+    } else if (step == QStringLiteral("alignment")
+               || step == QStringLiteral("alignment-subtitle")
+               || step == QStringLiteral("review-conflicts")) {
+        step = QStringLiteral("fit-timing");
+    } else if (step == QStringLiteral("export-output")) {
+        step = QStringLiteral("export");
+    }
+
+    static const QSet<QString> supported{
+        QStringLiteral("ingest"), QStringLiteral("source-separate"),
+        QStringLiteral("transcribe"), QStringLiteral("translate"),
+        QStringLiteral("synthesize"), QStringLiteral("fit-timing"),
+        QStringLiteral("mix"), QStringLiteral("export")};
+    if (!supported.contains(step)) return false;
+    if (!processing()) return true;
+
+    // STT and Subtitle OCR are the only two operations allowed to overlap.
+    // A skip request must target the idle sibling; it must never mark a task
+    // skipped while that task's own worker is still mutating its output.
+    if (m_automaticSetupActive || m_mediaQueueProcessing
+        || (m_translationFix && m_translationFix->busy())
+        || (m_workflowRunner && m_workflowRunner->running())) {
+        return false;
+    }
+    const bool sttBusy = isTranscriptionRunnerActive();
+    const bool ocrBusy = subtitleOcrProcessing();
+    if (m_runner && m_runner->processing() && !sttBusy) return false;
+
+    if (requested == QStringLiteral("stt")
+        || requested == QStringLiteral("transcribe-stt")) {
+        return !sttBusy && ocrBusy;
+    }
+    if (requested == QStringLiteral("ocr")
+        || requested == QStringLiteral("subtitle-ocr")) {
+        return sttBusy && !ocrBusy;
+    }
+
+    // The generic Transcribe presentation represents the combined/manual
+    // decision, so it cannot be skipped while either independent source is
+    // active. The user can skip the explicit STT or OCR card instead.
+    return false;
+}
+
 bool DubbingController::skipWorkflowTask(const QString &nodeId)
 {
     if (!hasProject()) {
         setError(QStringLiteral("Open or create a Dubbing project before skipping a task."));
-        return false;
-    }
-    if (processing()) {
-        setBusyError(QStringLiteral("Stop the active Dubbing operation before skipping a task."));
         return false;
     }
 
@@ -539,6 +601,10 @@ bool DubbingController::skipWorkflowTask(const QString &nodeId)
         QStringLiteral("mix"), QStringLiteral("export")};
     if (!supported.contains(step)) {
         setError(QStringLiteral("This Dubbing task cannot be skipped: %1.").arg(nodeId));
+        return false;
+    }
+    if (processing() && !canSkipWorkflowTask(requested)) {
+        setBusyError(QStringLiteral("Stop the active Dubbing operation before skipping a task. STT and OCR may be skipped independently only from the idle sibling route."));
         return false;
     }
 

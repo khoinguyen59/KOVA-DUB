@@ -22,6 +22,18 @@ Rectangle {
         && (!root.dubbing.processing || root.dubbing.sttCanRunAlongsideSubtitleOcr)
     readonly property bool ocrCanStart: !root.ocrBusy
         && (!root.dubbing.processing || root.dubbing.subtitleOcrCanRunAlongsideStt)
+    readonly property bool sttUploadAllowedNow: {
+        var aggregateBusy = root.dubbing ? root.dubbing.processing : false
+        if (!root.dubbing) return false
+        return !aggregateBusy
+            || root.dubbing.canImportWorkflowArtifactNow("stt")
+    }
+    readonly property bool ocrUploadAllowedNow: {
+        var aggregateBusy = root.dubbing ? root.dubbing.processing : false
+        if (!root.dubbing) return false
+        return !aggregateBusy
+            || root.dubbing.canImportWorkflowArtifactNow("subtitle-ocr")
+    }
     readonly property bool hasAnyTranscript: root.sttSegments.length > 0
         || root.ocrSegments.length > 0
         || ((root.dubbing.segments || []).length > 0)
@@ -158,7 +170,7 @@ Rectangle {
                         iconName: "folder"
                         quiet: true
                         Layout.fillWidth: true
-                        enabled: !root.dubbing.processing
+                        enabled: root.sttUploadAllowedNow
                         toolTip: qsTr("Upload a saved STT transcript")
                         onClicked: root.artifactUploadRequested("stt")
                     }
@@ -243,7 +255,7 @@ Rectangle {
                         iconName: "folder"
                         quiet: true
                         Layout.fillWidth: true
-                        enabled: !root.dubbing.processing
+                        enabled: root.ocrUploadAllowedNow
                         toolTip: qsTr("Upload a saved OCR transcript")
                         onClicked: root.artifactUploadRequested("subtitle-ocr")
                     }

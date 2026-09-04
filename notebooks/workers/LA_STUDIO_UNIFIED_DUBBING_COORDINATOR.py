@@ -109,9 +109,9 @@ def metadata_for_notebook(path: Path) -> tuple[str, str] | None:
 
 
 def discover_exact_notebook(source_root: Path, capability: str, model: str) -> Path:
-    # The repository stores exact workers under capability directories.  A
-    # flat glob silently makes every prewarmed model look missing after the
-    # coordinator clones the source checkout.
+    # The embedded source tree stores exact workers under capability
+    # directories. A flat glob silently makes every prewarmed model look
+    # missing when the coordinator is given its self-contained bundle.
     for notebook in sorted((source_root / "notebooks").rglob("*.ipynb")):
         metadata = metadata_for_notebook(notebook)
         if metadata == (capability, model):

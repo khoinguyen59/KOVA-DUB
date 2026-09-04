@@ -176,10 +176,16 @@ try {
         "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
         (Join-Path $PSScriptRoot "run_tests.ps1"),
         "-Preset", $Preset,
-        "-QtRoot", $QtRoot,
         "-MaxParallelJobs", $MaxParallelJobs,
         "-SkipAppBuildDependency"
     )
+    # Optional PowerShell parameters must not be emitted with a null value.
+    # Passing `-QtRoot $null` is parsed as a missing argument and prevents the
+    # gate from reaching the real C++/QML checks, even though run_tests.ps1
+    # already knows how to resolve Qt from LA_QT/C:\Qt.
+    if (-not [string]::IsNullOrWhiteSpace($QtRoot)) {
+        $testArguments += @("-QtRoot", $QtRoot)
+    }
     if (-not [string]::IsNullOrWhiteSpace($VcpkgRoot)) {
         $testArguments += @("-VcpkgRoot", $VcpkgRoot)
     }
@@ -189,7 +195,15 @@ try {
     }
 
     Invoke-GateStep -Name "QML lint" -Action {
-        & $gatePowerShell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "lint_qml.ps1") -Preset $Preset -QtRoot $QtRoot
+        $lintArguments = @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+            (Join-Path $PSScriptRoot "lint_qml.ps1"),
+            "-Preset", $Preset
+        )
+        if (-not [string]::IsNullOrWhiteSpace($QtRoot)) {
+            $lintArguments += @("-QtRoot", $QtRoot)
+        }
+        & $gatePowerShell @lintArguments
         if ($LASTEXITCODE -ne 0) { throw "QML lint failed." }
     }
 
@@ -201,6 +215,8 @@ try {
     Invoke-GateStep -Name "Generated Colab notebook integrity" -Action {
         & $python.command @($python.arguments) (Join-Path $PSScriptRoot "verify_generated_colab_notebooks.py")
         if ($LASTEXITCODE -ne 0) { throw "Generated Colab notebook contract failed." }
+        & $python.command @($python.arguments) (Join-Path $PSScriptRoot "test_notebook_repository_dependencies.py")
+        if ($LASTEXITCODE -ne 0) { throw "Notebook repository dependency scan failed." }
     }
 
     Invoke-GateStep -Name "Embedded Colab worker payload integrity" -Action {
@@ -211,6 +227,10 @@ try {
     }
 
     Invoke-GateStep -Name "Unified Dubbing Colab contract" -Action {
+        & $python.command @($python.arguments) (Join-Path $PSScriptRoot "test_unified_dubbing_bundle.py")
+        if ($LASTEXITCODE -ne 0) { throw "Unified Dubbing embedded bundle tests failed." }
+        & $python.command @($python.arguments) (Join-Path $PSScriptRoot "verify_legacy_voice_clone_compat_notebook.py")
+        if ($LASTEXITCODE -ne 0) { throw "Legacy Voice Clone compatibility notebook failed." }
         & $python.command @($python.arguments) (Join-Path $PSScriptRoot "verify_unified_dubbing_colab_notebook.py")
         if ($LASTEXITCODE -ne 0) { throw "Unified Dubbing Colab contract failed." }
     }

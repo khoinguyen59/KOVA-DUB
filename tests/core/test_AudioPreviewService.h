@@ -11,6 +11,7 @@ private slots:
     void initTestCase();
     void cleanupTestCase();
     void testAudioPreviewService();
+    void decodesFlacWaveformOffUiThread();
 
 private:
     QTemporaryDir m_tempDir;

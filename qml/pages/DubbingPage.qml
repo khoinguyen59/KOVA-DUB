@@ -16,8 +16,13 @@ Item {
     anchors.fill: parent
 
     Component.onCompleted: {
-        dubbing.beginDubbingEntry()
-        dubbingEntryGate.openGate()
+        if (dubbing.dubbingEntryGateActive || (!dubbing.hasProject && (!dubbing.sourceMediaPath || dubbing.sourceMediaPath.length === 0))) {
+            dubbing.beginDubbingEntry()
+            dubbingEntryGate.openGate()
+        }
+        if (dubbing.currentStepId && dubbing.currentStepId !== "") {
+            root.reviewStepId = root.actionNodeForStage(dubbing.currentStepId)
+        }
     }
 
     property var dubbing: AppController.dubbing
@@ -144,6 +149,9 @@ Item {
         if (!sourceMediaPanel.qmlSmokeWorkspaceContractCheck
                 || !sourceMediaPanel.qmlSmokeWorkspaceContractCheck())
             return fail("media workspace")
+        if (!sourceMediaPanel.qmlSmokeMediaControlsCheck
+                || !sourceMediaPanel.qmlSmokeMediaControlsCheck())
+            return fail("media controls")
         if (dubbingStepReviewPanel.objectName !== "dubbingStepReviewPanel"
                 || dubbingStepReviewPanel.width <= 0
                 || dubbingStepReviewPanel.width > Math.max(320, Math.min(560, root.width * 0.46 + 1)))

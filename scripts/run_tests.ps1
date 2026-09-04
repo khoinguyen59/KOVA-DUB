@@ -61,6 +61,25 @@ function Ensure-Command {
     throw "$Name is required but was not found in PATH."
 }
 
+function Resolve-ToolPath {
+    param(
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string[]] $FallbackPaths
+    )
+
+    foreach ($candidate in $FallbackPaths) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and
+            (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+    $command = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+    throw "$Name is required but was not found."
+}
+
 function Resolve-QtRoot {
     param([string] $Candidate, [string] $BuildPreset)
 
@@ -70,6 +89,13 @@ function Resolve-QtRoot {
     if (-not [string]::IsNullOrWhiteSpace($env:LA_QT)) { $options += $env:LA_QT }
     if (Test-Path "C:\Qt") {
         $options += Get-ChildItem "C:\Qt" -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { $_.FullName }
+    }
+    $managedQtRoot = Join-Path $RepoRoot ".tools\Qt"
+    if (Test-Path $managedQtRoot) {
+        $options += Get-ChildItem $managedQtRoot -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
             Sort-Object { [version]$_.Name } -Descending |
             ForEach-Object { $_.FullName }
@@ -111,11 +137,51 @@ function Resolve-VcpkgRoot {
     return $null
 }
 
-function Test-UnitTestsConfigured {
+function Test-MsvcCMakeToolchain {
     param([Parameter(Mandatory)][string] $BuildDirectory)
 
     $cachePath = Join-Path $BuildDirectory "CMakeCache.txt"
+    if (-not (Test-Path -LiteralPath $cachePath)) { return $false }
+
+    # A previous Kova/MinGW configure can leave GNU ar/ranlib in an otherwise
+    # valid MSVC cache. CMake accepts that cache, then Ninja fails later with
+    # "ar.exe: invalid option -- /". Reject the cache before any compilation.
+    $cacheArchiver = Select-String -LiteralPath $cachePath -Pattern '^CMAKE_AR:.*=(.*)$' |
+        Select-Object -First 1
+    if ($null -ne $cacheArchiver -and
+        $cacheArchiver.Matches[0].Groups[1].Value -match '(?i)([\\/]ar\.exe|[\\/]ranlib\.exe)') {
+        return $false
+    }
+
+    $compilerInfo = Get-ChildItem -LiteralPath (Join-Path $BuildDirectory "CMakeFiles") `
+        -Recurse -Filter "CMakeCXXCompiler.cmake" -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($null -ne $compilerInfo) {
+        $compilerText = Get-Content -Raw -LiteralPath $compilerInfo.FullName
+        $configuredArchiver = [regex]::Match($compilerText, 'set\(CMAKE_AR "([^"]+)"\)')
+        if ($configuredArchiver.Success -and
+            $configuredArchiver.Groups[1].Value -match '(?i)([\\/]ar\.exe|[\\/]ranlib\.exe|mingw|winlibs)') {
+            return $false
+        }
+        $configuredRanlib = [regex]::Match($compilerText, 'set\(CMAKE_RANLIB "([^"]*)"\)')
+        if ($configuredRanlib.Success -and
+            -not [string]::IsNullOrWhiteSpace($configuredRanlib.Groups[1].Value) -and
+            $configuredRanlib.Groups[1].Value -match '(?i)([\\/]ranlib\.exe|mingw|winlibs)') {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Test-UnitTestsConfigured {
+    param(
+        [Parameter(Mandatory)][string] $BuildDirectory,
+        [Parameter(Mandatory)][string] $BuildPreset
+    )
+
+    $cachePath = Join-Path $BuildDirectory "CMakeCache.txt"
     if (-not (Test-Path -LiteralPath (Join-Path $BuildDirectory "build.ninja")) -or
+        -not (Test-Path -LiteralPath (Join-Path $BuildDirectory "CMakeFiles\rules.ninja")) -or
         -not (Test-Path -LiteralPath $cachePath)) {
         return $false
     }
@@ -123,7 +189,11 @@ function Test-UnitTestsConfigured {
         return $false
     }
     if ($SkipAppBuildDependency -and
-        -not (Select-String -LiteralPath $cachePath -Pattern '^LASTUDIO_SKIP_TEST_APP_DEPENDENCY:BOOL=ON$' -Quiet)) {
+        -not (Select-String -LiteralPath $cachePath `
+            -Pattern '^LASTUDIO_SKIP_TEST_APP_DEPENDENCY:(BOOL|UNINITIALIZED)=ON$' -Quiet)) {
+        return $false
+    }
+    if ($BuildPreset -notlike "*mingw*" -and -not (Test-MsvcCMakeToolchain -BuildDirectory $BuildDirectory)) {
         return $false
     }
     return $true
@@ -133,7 +203,8 @@ function Configure-UnitTests {
     param(
         [Parameter(Mandatory)][string] $BuildPreset,
         [Parameter(Mandatory)][string] $ResolvedQtRoot,
-        [Parameter(Mandatory)][string] $ResolvedVcpkgRoot
+        [Parameter(Mandatory)][string] $ResolvedVcpkgRoot,
+        [switch] $Fresh
     )
 
     $qtKit = if ($BuildPreset -like "*mingw*") { "mingw_64" } else { "msvc2022_64" }
@@ -153,7 +224,7 @@ function Configure-UnitTests {
     # A portable/package configure intentionally turns BUILD_TESTING off.
     # Reconfigure only the test target with the same pinned dependencies,
     # rather than invoking the application-packaging build as a side effect.
-    $ninjaPath = (Get-Command "ninja" -ErrorAction Stop).Source.Replace('\', '/')
+    $ninjaPath = $script:NinjaExecutable.Replace('\', '/')
     $cmakeArgs = @(
         "-DBUILD_TESTING=ON",
         "-DCMAKE_MAKE_PROGRAM=$ninjaPath",
@@ -172,6 +243,7 @@ function Configure-UnitTests {
         $archiverPath = (Get-Command "lib.exe" -ErrorAction Stop).Source.Replace('\', '/')
         $cmakeArgs += "-DCMAKE_LINKER=$linkerPath"
         $cmakeArgs += "-DCMAKE_AR=$archiverPath"
+        $cmakeArgs += "-DCMAKE_RANLIB="
     }
     if ($SkipAppBuildDependency) {
         $cmakeArgs += "-DLASTUDIO_SKIP_TEST_APP_DEPENDENCY=ON"
@@ -181,7 +253,11 @@ function Configure-UnitTests {
     $env:VCPKG_OVERLAY_TRIPLETS = ""
     $env:VCPKG_DEFAULT_TRIPLET = ""
     Write-Host ">> Configuring unit test target..." -ForegroundColor Cyan
-    cmake --preset $BuildPreset @cmakeArgs
+    if ($Fresh) {
+        & $script:CMakeExecutable --fresh --preset $BuildPreset @cmakeArgs
+    } else {
+        & $script:CMakeExecutable --preset $BuildPreset @cmakeArgs
+    }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -227,15 +303,37 @@ function Ensure-MsvcEnvironment {
     }
 }
 
-# Resolve and ensure commands
-Ensure-Command -Name "cmake" -FallbackPaths @(
-    "C:\Qt\Tools\CMake_64\bin",
-    "C:\Program Files\CMake\bin"
+# Resolve and ensure commands. Prefer the CMake bundled with this repository's
+# vcpkg bootstrap over an unrelated CMake earlier on PATH. Qt's QML resource
+# generation is sensitive to the CMake/Qt tool pairing; using a foreign CMake
+# can leave generated qrc sources missing from the Ninja graph. Keep absolute
+# executable paths as well: Windows PowerShell can retain an already resolved
+# native command after PATH is prepended, which previously left CMAKE_COMMAND
+# and build.ninja pointing at another checkout.
+$bundledCmake = Get-ChildItem -LiteralPath (Join-Path $RepoRoot ".deps\vcpkg\downloads\tools") `
+    -Filter "cmake.exe" -File -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if ($bundledCmake) {
+    Add-PathIfExists -PathEntry $bundledCmake.DirectoryName
+}
+$script:CMakeExecutable = Resolve-ToolPath -Name "cmake.exe" -FallbackPaths @(
+    $(if ($bundledCmake) { $bundledCmake.FullName }),
+    "C:\Qt\Tools\CMake_64\bin\cmake.exe",
+    "C:\Program Files\CMake\bin\cmake.exe"
 )
-Ensure-Command -Name "ninja" -FallbackPaths @(
-    "C:\Qt\Tools\Ninja",
-    "C:\Program Files\Ninja"
+$script:CMakeBinDirectory = Split-Path -Parent $script:CMakeExecutable
+$script:NinjaExecutable = Resolve-ToolPath -Name "ninja.exe" -FallbackPaths @(
+    (Join-Path $script:CMakeBinDirectory "ninja.exe"),
+    "C:\Qt\Tools\Ninja\ninja.exe",
+    "C:\Program Files\Ninja\ninja.exe"
 )
+$script:CTestExecutable = Resolve-ToolPath -Name "ctest.exe" -FallbackPaths @(
+    (Join-Path $script:CMakeBinDirectory "ctest.exe"),
+    "C:\Qt\Tools\CMake_64\bin\ctest.exe",
+    "C:\Program Files\CMake\bin\ctest.exe"
+)
+Add-PathIfExists -PathEntry $script:CMakeBinDirectory
+Add-PathIfExists -PathEntry (Split-Path -Parent $script:NinjaExecutable)
 if ($Preset -like "*mingw*") {
     Add-PathIfExists -PathEntry "C:\Qt\Tools\mingw1310_64\bin"
 } else {
@@ -252,7 +350,15 @@ $qtBin = Join-Path $resolvedQtRoot "$kit\bin"
 Add-PathIfExists -PathEntry $qtBin
 
 $buildDir = Join-Path $RepoRoot "out\build\$Preset"
-Remove-StaleCMakeBuildDirectory -BuildDirectory $buildDir -ExpectedSourceDirectory $RepoRoot
+$cachedSourceDirectory = Get-CMakeCacheSourceDir -BuildDirectory $buildDir
+$sourceDirectoryMismatch = -not [string]::IsNullOrWhiteSpace($cachedSourceDirectory) -and
+    (Normalize-CMakePath $cachedSourceDirectory) -ne (Normalize-CMakePath $RepoRoot)
+if ($sourceDirectoryMismatch) {
+    # CMake --fresh clears only its own cache/generator metadata. This is safer
+    # than recursively deleting a build tree that may contain a DLL held by
+    # Windows, and it also preserves unrelated generated runtime payloads.
+    Write-Host ">> Detected stale CMake cache from '$cachedSourceDirectory'; reconfiguring with --fresh." -ForegroundColor Yellow
+}
 
 # 1. Build unit tests if requested
 if (-not $NoBuild) {
@@ -260,11 +366,17 @@ if (-not $NoBuild) {
     if ([string]::IsNullOrWhiteSpace($resolvedVcpkgRoot)) {
         throw "vcpkg root was not detected. Pass -VcpkgRoot <path-to-vcpkg>."
     }
-    if (-not (Test-UnitTestsConfigured -BuildDirectory $buildDir)) {
-        Configure-UnitTests -BuildPreset $Preset -ResolvedQtRoot $resolvedQtRoot -ResolvedVcpkgRoot $resolvedVcpkgRoot
+    $freshConfigure = $sourceDirectoryMismatch
+    if ($freshConfigure -or -not (Test-UnitTestsConfigured -BuildDirectory $buildDir -BuildPreset $Preset)) {
+        Configure-UnitTests -BuildPreset $Preset -ResolvedQtRoot $resolvedQtRoot `
+            -ResolvedVcpkgRoot $resolvedVcpkgRoot -Fresh:$freshConfigure
     }
-    Write-Host ">> Building unit tests target..." -ForegroundColor Cyan
-    cmake --build $buildDir --target LAStudioUnitTests --parallel $MaxParallelJobs
+    Write-Host ">> Building all CTest executables..." -ForegroundColor Cyan
+    # CTest also has fixture tests that launch the runtime host and production
+    # QML smoke tests that launch the app. Build all three runtime targets in
+    # addition to the two test executables; otherwise a clean cache can report
+    # false failures simply because the fixture binary was never produced.
+    & $script:CMakeExecutable --build $buildDir --target LAStudioUnitTests VietNormUnitTests LAStudioRuntimeHost LAStudio --parallel $MaxParallelJobs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -281,5 +393,5 @@ if ($args) {
     $ctestArgs += $args
 }
 
-& ctest @ctestArgs
+& $script:CTestExecutable @ctestArgs
 exit $LASTEXITCODE

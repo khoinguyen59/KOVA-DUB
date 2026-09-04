@@ -5,3 +5,5 @@ repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
 python scripts/test_colab_worker_pins.py
+python scripts/test_unified_dubbing_bundle.py
+python scripts/test_notebook_repository_dependencies.py

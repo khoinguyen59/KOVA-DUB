@@ -941,6 +941,22 @@ void TestMediaIngestService::singleImportedMediaBecomesTheActiveProject()
     QVERIFY(QFileInfo(projectPath).isFile());
 }
 
+void TestMediaIngestService::ingestUsesFlacCacheAndKeepsLegacyWavCompatibility()
+{
+    const QDir sourceRoot(QStringLiteral(LASTUDIO_SOURCE_DIR));
+    QFile serviceFile(sourceRoot.filePath(QStringLiteral("src/dubbing/media/MediaIngestService.cpp")));
+    QVERIFY(serviceFile.open(QIODevice::ReadOnly));
+    const QString source = QString::fromUtf8(serviceFile.readAll());
+
+    QVERIFY(source.contains(QStringLiteral("/master.flac")));
+    QVERIFY(source.contains(QStringLiteral("/analysis.flac")));
+    QVERIFY(source.contains(QStringLiteral("AudioFileDecoder::decode")));
+    QVERIFY(source.contains(QStringLiteral("-c:a")));
+    QVERIFY(source.contains(QStringLiteral("flac")));
+    QVERIFY(source.contains(QStringLiteral("legacyWavSibling")));
+    QVERIFY(source.contains(QStringLiteral("QStringLiteral(\".wav\")")));
+}
+
 void TestMediaIngestService::mediaBatchContinuesAfterARealWorkerFailure()
 {
     QTemporaryDir dir;

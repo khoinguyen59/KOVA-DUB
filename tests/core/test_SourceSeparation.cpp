@@ -4,10 +4,12 @@
 #include "separation/io/SeparationAudioIO.h"
 #include "audio/io/AudioFileDecoder.h"
 #include "audio/io/WavIO.h"
+#include "core/hardware/InferenceThreadPolicy.h"
 
 #include <QtTest/QtTest>
 #include <QSignalSpy>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QProcess>
 #include <QStandardPaths>
@@ -18,8 +20,17 @@ namespace LAStudio {
 
 class FakeTestBackend : public SeparationBackend {
 public:
-    FakeTestBackend(const QString &id, std::shared_ptr<std::atomic<int>> callCounter)
-        : m_id(id), m_callCounter(callCounter) {}
+    FakeTestBackend(const QString &id,
+                    std::shared_ptr<std::atomic<int>> callCounter,
+                    int delayMs = 100,
+                    std::shared_ptr<std::atomic_bool> entered = nullptr,
+                    std::shared_ptr<std::atomic_bool> release = nullptr,
+                    std::shared_ptr<std::atomic_bool> completed = nullptr,
+                    std::shared_ptr<std::atomic_bool> observedCancellation = nullptr)
+        : m_id(id), m_callCounter(callCounter), m_delayMs(delayMs),
+          m_entered(std::move(entered)), m_release(std::move(release)),
+          m_completed(std::move(completed)),
+          m_observedCancellation(std::move(observedCancellation)) {}
 
     QString id() const override { return m_id; }
 
@@ -36,6 +47,9 @@ public:
         if (m_callCounter) {
             (*m_callCounter)++;
         }
+        if (m_entered) {
+            m_entered->store(true, std::memory_order_release);
+        }
 
         BackendResult res;
         res.success = false;
@@ -47,18 +61,36 @@ public:
 
         if (progress) progress(50, QStringLiteral("Fake separating"));
 
-        // Simulate some minor work/delay
-        for (int i = 0; i < 50; ++i) {
+        if (m_release) {
+            // Simulate a native inference call that does not observe the
+            // cancellation flag until it returns. The service destructor must
+            // not wait forever for this path.
+            while (!m_release->load(std::memory_order_acquire)) {
+                QThread::msleep(5);
+            }
+            if (cancellation.isCancelled()) {
+                if (m_observedCancellation) {
+                    m_observedCancellation->store(true, std::memory_order_release);
+                }
+                if (m_completed) {
+                    m_completed->store(true, std::memory_order_release);
+                }
+                res.error = QStringLiteral("Cancelled");
+                return res;
+            }
+        } else {
+            for (int elapsed = 0; elapsed < m_delayMs; elapsed += 2) {
+                if (cancellation.isCancelled()) {
+                    res.error = QStringLiteral("Cancelled");
+                    return res;
+                }
+                QThread::msleep(2);
+            }
+
             if (cancellation.isCancelled()) {
                 res.error = QStringLiteral("Cancelled");
                 return res;
             }
-            QThread::msleep(2);
-        }
-
-        if (cancellation.isCancelled()) {
-            res.error = QStringLiteral("Cancelled");
-            return res;
         }
 
         res.success = true;
@@ -74,12 +106,21 @@ public:
         bg.channels = audio.channels;
         res.stems.append(bg);
 
+        if (m_completed) {
+            m_completed->store(true, std::memory_order_release);
+        }
+
         return res;
     }
 
 private:
     QString m_id;
     std::shared_ptr<std::atomic<int>> m_callCounter;
+    int m_delayMs = 100;
+    std::shared_ptr<std::atomic_bool> m_entered;
+    std::shared_ptr<std::atomic_bool> m_release;
+    std::shared_ptr<std::atomic_bool> m_completed;
+    std::shared_ptr<std::atomic_bool> m_observedCancellation;
 };
 
 void TestSourceSeparation::initTestCase()
@@ -233,6 +274,42 @@ void TestSourceSeparation::testServiceReentryBusy()
     QCOMPARE(callCounter->load(), 1);
 }
 
+void TestSourceSeparation::testServiceStartReturnsBeforeInferenceCompletes()
+{
+    auto factory = std::make_shared<SeparationBackendFactory>();
+    auto entered = std::make_shared<std::atomic_bool>(false);
+    factory->registerBackend(QStringLiteral("fake-slow-start"), [entered]() {
+        return std::make_unique<FakeTestBackend>(QStringLiteral("fake-slow-start"),
+                                                  nullptr, 600, entered);
+    });
+
+    SourceSeparationService service(factory);
+    SeparationConfiguration config;
+    config.backendId = QStringLiteral("fake-slow-start");
+    config.pipelineProfile = QStringLiteral("uvr-2stems");
+    config.runtimeId = QStringLiteral("fake-runtime");
+    config.runtimePath = QStringLiteral("dummy_path");
+
+    SeparationRequest request;
+    request.sourcePath = m_testWavPath;
+    request.outputRoot = m_tempDir.path();
+    request.configuration = config;
+
+    QSignalSpy finishedSpy(&service, &SourceSeparationService::finished);
+    QElapsedTimer timer;
+    timer.start();
+    QVERIFY(service.isolate(request));
+    QVERIFY2(timer.elapsed() < 150,
+             "Starting source separation waited for native inference on the caller thread");
+    QTRY_VERIFY_WITH_TIMEOUT(entered->load(std::memory_order_acquire), 2000);
+    // The fake backend may finish while QTRY_VERIFY is pumping the event loop.
+    // Do not call wait() after the signal has already been delivered: QtTest's
+    // wait() only observes a signal emitted after it starts waiting. The
+    // completion bound includes decoder setup and atomic stem writes, so it is
+    // intentionally separate from the <150 ms caller-thread assertion above.
+    QTRY_VERIFY_WITH_TIMEOUT(finishedSpy.count() > 0, 8000);
+}
+
 void TestSourceSeparation::testCancellation()
 {
     auto factory = std::make_shared<SeparationBackendFactory>();
@@ -297,6 +374,60 @@ void TestSourceSeparation::testDestroyServiceRunning()
         QVERIFY(service.processing());
         // Destructor should safely stop the worker thread and clean up without crash
     }
+}
+
+void TestSourceSeparation::testDestroyServiceDoesNotBlockOnUninterruptibleWorker()
+{
+    auto factory = std::make_shared<SeparationBackendFactory>();
+    auto entered = std::make_shared<std::atomic_bool>(false);
+    auto release = std::make_shared<std::atomic_bool>(false);
+    auto completed = std::make_shared<std::atomic_bool>(false);
+    auto observedCancellation = std::make_shared<std::atomic_bool>(false);
+
+    factory->registerBackend(QStringLiteral("fake-uninterruptible"),
+                             [entered, release, completed, observedCancellation]() {
+        return std::make_unique<FakeTestBackend>(QStringLiteral("fake-uninterruptible"),
+                                                  nullptr, 0, entered, release, completed,
+                                                  observedCancellation);
+    });
+
+    SeparationConfiguration config;
+    config.backendId = QStringLiteral("fake-uninterruptible");
+    config.pipelineProfile = QStringLiteral("uvr-2stems");
+    config.runtimeId = QStringLiteral("fake-runtime");
+    config.runtimePath = QStringLiteral("dummy_path");
+
+    SeparationRequest req;
+    req.sourcePath = m_testWavPath;
+    req.outputRoot = m_tempDir.path();
+    req.configuration = config;
+
+    auto *service = new SourceSeparationService(factory);
+    QVERIFY(service->isolate(req));
+    QTRY_VERIFY_WITH_TIMEOUT(entered->load(std::memory_order_acquire), 1000);
+
+    QElapsedTimer destructionTimer;
+    destructionTimer.start();
+    delete service;
+    QVERIFY2(destructionTimer.elapsed() < 1500,
+             qPrintable(QStringLiteral("service destruction took %1 ms")
+                            .arg(destructionTimer.elapsed())));
+
+    release->store(true, std::memory_order_release);
+    QTRY_VERIFY_WITH_TIMEOUT(observedCancellation->load(std::memory_order_acquire), 3000);
+    QTRY_VERIFY_WITH_TIMEOUT(completed->load(std::memory_order_acquire), 3000);
+}
+
+void TestSourceSeparation::testSourceSeparationThreadPolicyProtectsUiCapacity()
+{
+    const int automatic = InferenceThreadPolicy::recommendedThreadCount(
+        InferenceBackendProfile::SourceSeparationCpu);
+    const int explicitMaximum = InferenceThreadPolicy::recommendedThreadCount(
+        InferenceBackendProfile::SourceSeparationCpu, 64);
+
+    QVERIFY(automatic >= 1);
+    QVERIFY(automatic <= 3);
+    QCOMPARE(explicitMaximum, 3);
 }
 
 } // namespace LAStudio

@@ -1,4 +1,135 @@
-# AI agent response — offline Dubbing artifact upload
+# AI agent response — final reliability and delivery recheck
+
+## 2026-09-05 — 0.0.9.1 audit remediation and portable package
+
+### Implemented
+
+- Runtime Host no longer relies on a single `readyRead` edge for its first
+  named-pipe frame. The server consumes already-buffered input and the client
+  retries the idempotent Hello frame within a five-second handshake deadline;
+  inference keeps its separate 60-second inactivity deadline.
+- The Dubbing mixer/workflow regressions cover required cue coverage,
+  source-duration preservation, common TTS sample rates and correct
+  sidechain branching. Project paths, workflow output persistence and smoke
+  data isolation remain in the release path.
+- The release script rejects a requested version that differs from
+  `CMakeLists.txt` and will stage `release-source-manifest.json` with the base
+  revision, dirty-source hashes and executable hash. This makes a dirty local
+  candidate traceable without putting source contents or credentials into the
+  package.
+
+### Fresh evidence
+
+- Runtime Host stress: **100 consecutive restart/auth handshakes PASS**.
+- Full MSVC CTest: **41/41 PASS**.
+- QML lint and `git diff --check`: **PASS**.
+- `graphify update .`: **PASS** (with Graphify's existing parser warnings for
+  some generated/unsupported source formats).
+- `out/prebuild-gate/latest.json`: **10/10 PASS**.
+- `scripts/package.ps1` staged the internal portable candidate at
+  `out/LA-Studio-0.0.9.1/`; its packaged QML smoke recorded **19** interaction
+  events and the release source manifest records the staged executable hash.
+
+### Honest boundary
+
+The automated result proves the local/controller/contract routes. A fresh
+credentialed Colab GPU run, a real CapCut open/import and a prolonged
+interactive playback/ROI-drag run remain operator acceptance tasks and are
+not represented as automatic PASS results.
+
+## 2026-09-03 — canonical guide, project isolation and release gate
+
+### Fixed
+
+- Rewrote the only guide,
+  `docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md`, as a direct task
+  contract for an external AI IDE: use the exact app-supplied STT/OCR and
+  translation paths, reconcile both scripts when present, then translate.
+- The guide now gives OCR priority, STT reference/fallback behavior, immutable
+  cue/timeline rules, Chinese → Vietnamese translation, speaker hierarchy,
+  Pinyin-to-Hán-Việt names (`Wang` → `Vương`), meaningful cue density and
+  final timestamp/cue validation. It contains no architecture, auth/cache,
+  repository URL, fixed basename or disk-search requirement.
+- Removed the obsolete second guide `docs/AI_AGENT_TRANSLATION_PROMPT.md` and
+  updated the C++ contract test/checklist so the old translation-only contract
+  cannot silently return.
+- Made automatic project creation collision-safe: a repeated custom name now
+  gets `__2`, `__3`, ... instead of overwriting the earlier project.
+- Corrected the MSVC build-cache detector. It now checks actual `CMAKE_AR` and
+  `CMAKE_RANLIB` values instead of treating the bundled CMake executable path
+  containing `mingw` as a stale MinGW toolchain.
+- Kept the already implemented workflow safeguards: independent STT/OCR,
+  local upload without Colab, optional task skip, artifact persistence,
+  thumbnail/player/ROI safety, FLAC/WAV compatibility, non-blocking
+  separation, and cross-task regression requirements.
+
+### Short chat prompt
+
+Use this prompt after LA Studio has supplied the exact paths:
+
+> Đọc `C:\Users\Nguyen Trong Khoi\Downloads\TTS\LA-Studio\docs\AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md` và làm ngay theo file. Chỉ dùng đúng các đường dẫn STT/OCR/input/output do LA Studio cung cấp; nếu có cả STT và OCR thì khớp thành bản chuẩn rồi dịch Trung → Việt, giữ nguyên timeline.
+
+### Verification
+
+- Full MSVC CTest: **41/41 PASS** after source, test and guide changes.
+- The clean incremental rebuild compiled both `LA-Studio` and
+  `LAStudioUnitTests` successfully; the previous direct-shell failure was only
+  the expected missing MSVC environment, and the project test script initializes
+  that environment correctly.
+- QML lint, prebuild gate and Graphify refresh are complete. Portable
+  packaging and Git push are performed only after this report is updated with
+  their actual evidence. Live Colab and long-running GUI acceptance cannot be
+  claimed from the static/unit-test gate alone.
+
+## 2026-08-29 — previous latest outcome
+
+## 2026-08-29 — Subtitle OCR Colab Pillow compatibility
+
+- Đã sửa lỗi notebook OCR dừng trước khi mở worker vì probe kiểm tra cứng
+  `Pillow==12.0.0` nhưng môi trường Colab đang có `12.3.0`. Dependency nay
+  dùng `Pillow>=12.0.0,<13.0.0`; probe vẫn kiểm tra API `ImageText`/`_Ink`,
+  package isolation và một lần inference CUDA thật.
+- `No ccache found` được phân loại đúng là warning không gây dừng worker.
+  Revision handshake giữa desktop và notebook đã đổi đồng bộ sang
+  `subtitle-ocr-2026-08-23.18`; Unified notebook cũng đã được regenerate.
+- Đã xác minh generated notebooks **32/32**, Unified notebook contract **PASS**
+  và focused Dubbing tests cho artifact/upload, STT/OCR độc lập đều **PASS**.
+  Colab notebook đang mở từ trước phải đóng/mở lại bản mới trên runtime mới.
+
+## 2026-08-29 — cross-notebook audit for application-repository dependencies
+
+- The same failure mode was checked across the complete notebook tree, not only
+  the Spleeter notebook. The audit found two application-owned runtime fetches:
+  the Unified Dubbing notebook fetched the LA Studio worker/coordinator bundle,
+  and the legacy `LA_STUDIO_VOICE_CLONE_GPU.ipynb` fetched the old
+  `kova-voice-studio` application repository.
+- Unified Dubbing is now self-contained: the generated notebook embeds **34
+  exact local files** (32 exact-model notebooks plus the coordinator and the
+  Spleeter worker), verifies normalized SHA-256 values, materializes them under
+  `/content/la-studio-unified-source`, and starts the coordinator from that
+  local source tree. It no longer clones or downloads LA Studio application
+  code from GitHub at runtime.
+- The legacy Voice Clone notebook is now a compatibility alias of the exact
+  OmniVoice notebook. It contains no application-repository URL, clone step,
+  `REPO_URL`, or `REPO_REF`. This prevents an old notebook entry from
+  reintroducing the same failure.
+- All other direct exact-model notebooks were checked. Their remaining
+  `git clone`/download statements point to official upstream model/runtime
+  repositories and are intentionally retained because those repositories are
+  model dependencies, not LA Studio application-worker dependencies.
+- Added repository-wide dependency scanning and regression gates:
+  `test_notebook_repository_dependencies.py`,
+  `test_unified_dubbing_bundle.py`,
+  `verify_legacy_voice_clone_compat_notebook.py`, and the strengthened
+  `verify_unified_dubbing_colab_notebook.py`. They run in hooks, CI, Windows
+  release, and the pre-build gate.
+
+Verification for this cross-notebook fix: repository dependency scan **1/1
+PASS**, Unified bundle tests **5/5 PASS**, legacy alias verification **PASS**,
+Unified notebook contract **PASS**, generated exact-model notebooks **32/32
+PASS**, exact bindings **31/31 PASS**, remote feature surface **8/8 PASS**,
+QML lint **PASS**, CTest **41/41 PASS**, and the full pre-build release gate
+**PASS**. No EXE was rebuilt in this source-only notebook correction.
 
 ## 2026-08-29 — Spleeter Colab made self-contained
 
@@ -129,10 +260,9 @@ Verification after the fix: focused `TestDubbingProject` **1/1 PASS**; full CTes
 - Align đã lưu mức `originalGainPercent` và `dubbedGainPercent`, mặc định
   `0/100`, và truyền mức tiếng gốc xuyên suốt sidechain release để không làm
   tiếng gốc quay lại sau khi ducking.
-- Project mới và project migrate thiếu giá trị dùng mặc định `zh → vi`; các
-  guide `AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md` và
-  `AI_AGENT_TRANSLATION_PROMPT.md` là hợp đồng IDE-agnostic cho agent xử lý
-  script/fusion/translation.
+- Project mới và project migrate thiếu giá trị dùng mặc định `zh → vi`; file
+  `AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md` là hợp đồng IDE-agnostic duy
+  nhất cho agent xử lý script/fusion/translation.
 
 ### Verification boundary
 
@@ -199,7 +329,7 @@ Verification after the fix: focused `TestDubbingProject` **1/1 PASS**; full CTes
 
 - Fixed the false **outdated Subtitle OCR notebook** warning by synchronizing
   the desktop-required worker revision with the current generated exact OCR
-  notebook: `subtitle-ocr-2026-08-23.17`.
+  notebook: `subtitle-ocr-2026-08-23.18`.
 - Fixed Dubbing's completed-artifact pickers, including **Reviewed STT + OCR
   transcript**: clicking **Choose output** now creates and opens a real picker;
   accepting a file retains the selection so **Use uploaded output and
@@ -726,3 +856,48 @@ open the expected native Windows file chooser rather than the dark Qt dialog.
 No visible owner GUI, browser, or live Colab worker was controlled. Therefore
 the suite validates application/controller/loopback worker contracts, not a
 new live-Colab acceptance claim. No EXE was packaged in this recheck batch.
+
+## Update — 2026-08-29: STT/OCR local upload independence recheck
+
+### Issue corrected
+
+The previous report focused on the Subtitle OCR notebook failure and did not
+record the separate desktop regression: the STT/OCR Upload actions could be
+disabled by the aggregate Dubbing `processing` flag before any Colab connection
+existed. In another path, the UI policy allowed the sibling upload while the
+other independent transcript worker was running, but the backend import gate
+still rejected it.
+
+### Code correction
+
+- Added `DubbingController::canImportWorkflowArtifactNow()` as the single
+  route-scoped policy for manual local artifact handoff. STT and OCR upload do
+  not require a model, worker URL, bearer token, or Colab session.
+- Updated the production STT/OCR cards, task settings panel, and artifact
+  upload panel to use that policy instead of the aggregate busy gate.
+- Normalized `ocr` and `subtitle-ocr` artifact aliases and added a defensive
+  direct contract lookup/refresh so the dialog cannot show only a summary while
+  hiding its `FileDialog`.
+- Kept cancellation scoped: accepting a matching active worker output may
+  cancel that worker; uploading the independent sibling output never cancels
+  the worker still running.
+
+### Verification
+
+- Real local import regression with no Colab configuration: STT accepts
+  `transcript.srt`; OCR accepts `ocr.srt`.
+- Downstream handoff is now verified rather than inferred: each imported file
+  becomes canonical `m_project.segments`, is recorded in the route-specific
+  `sttSegments`/`ocrSegments` provenance list, produces a cached artifact path
+  and `stepOutput`, and changes the Translate node to `ready`. A combined STT +
+  OCR import is reconciled locally before Translate, and the canonical cue data
+  remains available after `saveProject()` followed by `openProject()`.
+- Focused `TestDubbingProject`: **5/5 passed**.
+- Full CTest: **41/41 passed**; QML lint gate: **PASS**.
+- Product EXE was intentionally **not** built in this source-fix turn, so no
+  new live GUI screenshot or packaged-binary claim is made here.
+
+The required follow-up is to run the visual upload-picker smoke after the next
+production build: open both STT and OCR Upload before Colab setup, verify the
+native file picker shows the declared subtitle formats, import one file per
+route, and repeat while the sibling transcript worker is active.

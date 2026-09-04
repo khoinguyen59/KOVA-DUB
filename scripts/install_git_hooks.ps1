@@ -28,4 +28,4 @@ if (-not (Test-Path -LiteralPath (Join-Path $hooksDirectory "pre-push"))) {
 if ($LASTEXITCODE -ne 0) {
     throw "Could not configure core.hooksPath for $repoRoot"
 }
-Write-Host "LA Studio Git hooks installed: pre-commit local pin check, pre-push remote pin check."
+Write-Host "LA Studio Git hooks installed: notebook dependency and embedded-worker checks run before commit/push."

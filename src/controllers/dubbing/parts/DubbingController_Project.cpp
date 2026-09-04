@@ -81,7 +81,7 @@ bool DubbingController::newProject(const QString &path)
     m_project.timingConfiguration = {{QStringLiteral("mode"), QStringLiteral("keep")},
                                      {QStringLiteral("minimumGapMs"), 80}};
     m_project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
-                                         {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+                                         {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")}};
     m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
                                        {QStringLiteral("dubbedGainPercent"), 100}};
     m_timingResolutionPreview.clear();
@@ -100,7 +100,18 @@ bool DubbingController::newProject(const QString &path)
     if (!path.isEmpty()) {
         if (!ensureProject(path)) return false;
     } else {
-        m_project.projectPath = PathUtils::dataDir() + QStringLiteral("/dubbing/untitled.ladub.json");
+        // The app owns project identity. Never reuse one fixed path for an
+        // unnamed project: a second project must not overwrite the first one.
+        const QString dir = defaultProjectsDirectory();
+        const QString baseName = QStringLiteral("Project_%1").arg(
+            QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_hhmmss_zzz")));
+        QString targetPath = QDir(dir).filePath(baseName + QStringLiteral(".ladub.json"));
+        int suffix = 2;
+        while (QFileInfo::exists(targetPath)) {
+            targetPath = QDir(dir).filePath(
+                QStringLiteral("%1__%2.ladub.json").arg(baseName).arg(suffix++));
+        }
+        m_project.projectPath = targetPath;
     }
     m_project.speakers.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("speaker-1")},
                                           {QStringLiteral("name"), QStringLiteral("Speaker 1")},
@@ -136,9 +147,9 @@ bool DubbingController::openProject(const QString &path)
     }
     if (m_project.transcriptConfiguration.isEmpty()) {
         m_project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
-                                             {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt")}};
+                                             {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")}};
     } else if (!m_project.transcriptConfiguration.contains(QStringLiteral("fusionPolicy"))) {
-        m_project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"));
+        m_project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr"));
     }
     if (m_project.audioMixConfiguration.isEmpty()) {
         m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
@@ -179,10 +190,24 @@ bool DubbingController::openProject(const QString &path)
             m_project.cloneVoicePresetId = m_project.ttsVoiceId;
         }
     }
-    m_stepOutputs.clear();
-    m_lastCompletedStepId.clear();
+    m_stepOutputs = m_project.workflowStepOutputs;
+    m_lastCompletedStepId = m_project.workflowLastCompletedStepId;
     setWorkflowMode(QStringLiteral("idle"));
-    setCurrentStep(m_project.sourceMediaPath.isEmpty() ? QStringLiteral("import") : QStringLiteral("ingest"));
+    static const QSet<QString> persistedSteps{
+        QStringLiteral("import"), QStringLiteral("media-input"),
+        QStringLiteral("ingest"), QStringLiteral("source-separate"),
+        QStringLiteral("transcribe"), QStringLiteral("translate"),
+        QStringLiteral("synthesize"), QStringLiteral("fit-timing"),
+        QStringLiteral("mix"), QStringLiteral("export"),
+        QStringLiteral("completed")};
+    const QString savedStep = m_project.workflowCurrentStepId.trimmed().toLower();
+    const QString resumeStep = persistedSteps.contains(savedStep)
+        ? savedStep
+        : (m_project.sourceMediaPath.isEmpty() ? QStringLiteral("import") : QStringLiteral("ingest"));
+    setCurrentStep(resumeStep);
+    m_pendingExportPath.clear();
+    m_capCutDraftPath = m_project.capCutDraftPath;
+    m_capCutDraftWarning.clear();
     if (m_workflowRunner) m_workflowRunner->setJournal(nullptr);
     m_workflowJournal.reset();
     m_workflowReviewStore.reset();
@@ -193,9 +218,43 @@ bool DubbingController::openProject(const QString &path)
     m_workflowRunner->setJournal(m_workflowJournal.get());
     discoverInterruptedWorkflow();
     
-    // Sync paths to runner
-    m_runner->setPreviewPath(QFileInfo(m_project.projectPath).absolutePath() + QStringLiteral("/preview.wav"));
-    m_runner->setExportPath(QString());
+    // Restore durable output paths instead of replacing them with a guessed
+    // preview path or clearing the export path. For schema <= 15, recover the
+    // old conventional preview file only when it actually exists; never show
+    // a fabricated path as a completed artifact.
+    auto outputPath = [this](const QString &stepId,
+                             const QStringList &keys) -> QString {
+        const QVariantMap output = m_stepOutputs.value(stepId).toMap();
+        for (const QString &key : keys) {
+            const QString path = output.value(key).toString().trimmed();
+            if (!path.isEmpty()) return path;
+        }
+        return {};
+    };
+    QString previewPath = m_project.previewAudioPath.trimmed();
+    if (previewPath.isEmpty())
+        previewPath = outputPath(QStringLiteral("mix"),
+                                 {QStringLiteral("audio"), QStringLiteral("path")});
+    if (previewPath.isEmpty()) {
+        const QString legacyPreview = QDir(QFileInfo(m_project.projectPath).absolutePath())
+            .filePath(QStringLiteral("preview.wav"));
+        if (QFileInfo(legacyPreview).isFile()) previewPath = legacyPreview;
+    }
+    QString dubbedVocalPath = m_project.dubbedVocalAudioPath.trimmed();
+    if (dubbedVocalPath.isEmpty())
+        dubbedVocalPath = outputPath(QStringLiteral("fit-timing"),
+                                     {QStringLiteral("audio"), QStringLiteral("path")});
+    if (dubbedVocalPath.isEmpty())
+        dubbedVocalPath = outputPath(QStringLiteral("synthesize"),
+                                     {QStringLiteral("audio"), QStringLiteral("path")});
+    QString exportPath = m_project.exportMediaPath.trimmed();
+    if (exportPath.isEmpty())
+        exportPath = outputPath(QStringLiteral("export"),
+                                {QStringLiteral("media"), QStringLiteral("path")});
+    m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+    m_runner->setPreviewPath(previewPath);
+    m_runner->setDubbedVocalPath(dubbedVocalPath);
+    m_runner->setExportPath(exportPath);
     requestSourceThumbnail();
     
     emit projectChanged();
@@ -227,13 +286,73 @@ void DubbingController::discoverInterruptedWorkflow()
                           {QStringLiteral("lastUpdated"), run.lastUpdated}};
 }
 
+void DubbingController::syncProjectStateForPersistence()
+{
+    m_project.workflowNodeConfigurations = m_workflowNodeConfigurations;
+    m_project.workflowCurrentStepId = m_currentStepId;
+    m_project.workflowLastCompletedStepId = m_lastCompletedStepId;
+    m_project.workflowStepOutputs = m_stepOutputs;
+    m_project.capCutDraftPath = m_capCutDraftPath;
+    if (m_runner) {
+        m_project.previewAudioPath = m_runner->previewPath();
+        m_project.dubbedVocalAudioPath = m_runner->dubbedVocalPath();
+        m_project.exportMediaPath = m_runner->exportPath();
+    }
+}
+
+bool DubbingController::persistWorkflowTranscriptArtifact(const QString &nodeId,
+                                                          const QVariantList &segments,
+                                                          bool useTargetText,
+                                                          QString *path)
+{
+    if (segments.isEmpty() || m_project.projectPath.trimmed().isEmpty()) return false;
+
+    QString artifactId = nodeId.trimmed().toLower();
+    QString fileName;
+    if (artifactId == QStringLiteral("stt") || artifactId == QStringLiteral("transcribe")) {
+        artifactId = QStringLiteral("transcribe");
+        fileName = QStringLiteral("transcript.srt");
+    } else if (artifactId == QStringLiteral("ocr")
+               || artifactId == QStringLiteral("subtitle-ocr")) {
+        artifactId = QStringLiteral("subtitle-ocr");
+        fileName = QStringLiteral("ocr.srt");
+    } else if (artifactId == QStringLiteral("review")
+               || artifactId == QStringLiteral("review-transcript")) {
+        artifactId = QStringLiteral("review-transcript");
+        fileName = QStringLiteral("reviewed-transcript.srt");
+    } else if (artifactId == QStringLiteral("translate")) {
+        fileName = QStringLiteral("translated.srt");
+    } else {
+        return false;
+    }
+
+    const QString artifactDirectory = dubbingArtifactStageDirectory(m_project.projectPath, artifactId);
+    if (!QDir().mkpath(artifactDirectory)) {
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Cannot create project transcript artifact directory: %1")
+                            .arg(artifactDirectory));
+        return false;
+    }
+
+    const QString artifactPath = QDir(artifactDirectory).filePath(fileName);
+    QString error;
+    if (!writeDubbingSubtitles(segments, artifactPath, useTargetText, &error)) {
+        Logger::warning(QStringLiteral("DubbingController"),
+                        QStringLiteral("Cannot persist %1 transcript artifact: %2")
+                            .arg(artifactId, error));
+        return false;
+    }
+    if (path) *path = artifactPath;
+    return true;
+}
+
 bool DubbingController::saveProject()
 {
     if (!ensureProject(QString())) return false;
     // Route/model choices are a project contract for every Dubbing quality.
     // Clearing standard-mode selections here was the reason a reopened project
     // could revive an old Local setup instead of the confirmed Colab route.
-    m_project.workflowNodeConfigurations = m_workflowNodeConfigurations;
+    syncProjectStateForPersistence();
     QVariantMap persistedRewrite = translationFixConfiguration();
     // API credentials belong only to the secure settings store. Direct Colab
     // URL/token never enter this map in the first place.
@@ -272,17 +391,34 @@ bool DubbingController::saveProjectAs(const QString &path)
 
 QString DubbingController::historyPath() const
 {
-    const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                         + QStringLiteral("/history");
+    // Project history is user data. Keep it under the same overridable data
+    // root as projects so smoke/acceptance profiles cannot pollute a real
+    // user's recent-project list.
+    const QString base = QDir(PathUtils::dataDir()).filePath(QStringLiteral("history"));
     QDir().mkpath(base);
     return base + QStringLiteral("/dubbing_history.json");
 }
 
 QString DubbingController::defaultProjectsDirectory() const
 {
+    if (!qEnvironmentVariable("LASTUDIO_DATA_DIR").trimmed().isEmpty()) {
+        const QString isolated = QDir(PathUtils::dataDir()).filePath(QStringLiteral("projects"));
+        if (QDir().mkpath(isolated)) return isolated;
+    }
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString candidate = QDir(appDir).filePath(QStringLiteral("projects"));
-    QDir().mkpath(candidate);
+    // Portable installs may be read-only (for example under Program Files).
+    // Keep the convenient beside-executable location when it is writable, but
+    // never silently lose an auto-created project because that directory could
+    // not be written.
+    if (QDir().mkpath(candidate) && QFileInfo(candidate).isWritable())
+        return candidate;
+
+    const QString fallback = QDir(
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))
+        .filePath(QStringLiteral("projects"));
+    if (QDir().mkpath(fallback))
+        return fallback;
     return candidate;
 }
 
@@ -291,9 +427,30 @@ bool DubbingController::createAutoProject(const QString &customName)
     const QString dir = defaultProjectsDirectory();
     QString baseName = customName.trimmed();
     if (baseName.isEmpty()) {
-        baseName = QStringLiteral("Project_%1").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_hhmmss")));
+        baseName = QStringLiteral("Project_%1").arg(
+            QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_hhmmss_zzz")));
+    } else {
+        // The app owns project identity. Normalize user input to one safe file
+        // stem, then allocate a collision-free path instead of overwriting a
+        // previous project that happened to use the same display name.
+        if (baseName.endsWith(QStringLiteral(".ladub.json"), Qt::CaseInsensitive)) {
+            baseName.chop(QStringLiteral(".ladub.json").size());
+        } else if (baseName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            baseName.chop(QStringLiteral(".json").size());
+        }
+        baseName.replace(QRegularExpression(QStringLiteral("[<>:\"/\\\\|?*]")),
+                         QStringLiteral("_"));
+        baseName = baseName.trimmed();
+        if (baseName.isEmpty())
+            baseName = QStringLiteral("Project");
     }
-    const QString targetPath = QDir(dir).filePath(baseName + QStringLiteral(".ladub.json"));
+
+    QString targetPath = QDir(dir).filePath(baseName + QStringLiteral(".ladub.json"));
+    int suffix = 2;
+    while (QFileInfo::exists(targetPath)) {
+        targetPath = QDir(dir).filePath(
+            QStringLiteral("%1__%2.ladub.json").arg(baseName).arg(suffix++));
+    }
     return newProject(targetPath);
 }
 

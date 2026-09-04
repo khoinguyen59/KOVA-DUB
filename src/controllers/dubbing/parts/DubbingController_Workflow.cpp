@@ -8,6 +8,17 @@ bool readableDubbingArtifact(const QString &path)
     return info.isFile() && info.size() > 0;
 }
 
+bool cueRequiresGeneratedAudio(const QVariantMap &segment)
+{
+    // A cue can only be excluded by an explicit, durable operator decision.
+    // Empty text, a missing clip, or a partial worker result must never be
+    // silently reclassified as "not required" and exported as silence.
+    return !segment.value(QStringLiteral("skipped")).toBool()
+        && !segment.value(QStringLiteral("skip")).toBool()
+        && segment.value(QStringLiteral("state")).toString().trimmed().toLower()
+               != QStringLiteral("skipped");
+}
+
 } // namespace
 
 QVariantList DubbingController::workflowNodes() const
@@ -15,15 +26,26 @@ QVariantList DubbingController::workflowNodes() const
     const bool hasMedia = readableDubbingArtifact(m_project.sourceMediaPath);
     const bool hasSegments = !m_project.segments.isEmpty();
     bool hasTargets = false;
-    bool allTargets = hasSegments;
     bool hasClips = false;
+    bool allTargets = hasSegments;
+    bool allClips = hasSegments;
+    int requiredCueCount = 0;
+    int translatedCueCount = 0;
+    int generatedCueCount = 0;
     bool hasConflict = false;
     for (const QVariant &entry : m_project.segments) {
         const QVariantMap segment = entry.toMap();
-        hasTargets = hasTargets || !segment.value(QStringLiteral("targetText")).toString().trimmed().isEmpty();
-        allTargets = allTargets && !segment.value(QStringLiteral("targetText")).toString().trimmed().isEmpty();
-        hasClips = hasClips || readableDubbingArtifact(
-            segment.value(QStringLiteral("clipPath")).toString());
+        const bool hasTarget = !segment.value(QStringLiteral("targetText")).toString().trimmed().isEmpty();
+        const bool hasClip = readableDubbingArtifact(segment.value(QStringLiteral("clipPath")).toString());
+        hasTargets = hasTargets || hasTarget;
+        if (cueRequiresGeneratedAudio(segment)) {
+            ++requiredCueCount;
+            translatedCueCount += hasTarget ? 1 : 0;
+            generatedCueCount += hasClip ? 1 : 0;
+            allTargets = allTargets && hasTarget;
+            allClips = allClips && hasClip;
+        }
+        hasClips = hasClips || hasClip;
         hasConflict = hasConflict || segment.value(QStringLiteral("timingConflict")).toBool();
     }
     const QVariantMap synthesisSelection = m_workflowNodeConfigurations
@@ -132,26 +154,27 @@ QVariantList DubbingController::workflowNodes() const
             const int unresolved = unresolvedTranscriptConflictCount();
             state = unresolved > 0 ? QStringLiteral("blocked")
                 : (!translationReady ? QStringLiteral("blocked")
-                    : (hasTargets ? QStringLiteral("completed")
+                    : (allTargets ? QStringLiteral("completed")
                        : (hasSegments ? QStringLiteral("ready") : QStringLiteral("missing"))));
             detail = unresolved > 0
                 ? QStringLiteral("Resolve %1 STT/OCR conflict(s) before Translate.").arg(unresolved)
                 : (!translationReady ? QStringLiteral("Choose a target language")
-                   : (hasTargets ? QStringLiteral("Target text available")
+                   : (allTargets ? QStringLiteral("Target text available")
                                  : QStringLiteral("Translate with CrispASR")));
             provider = QStringLiteral("Local translation runtime");
         } else if (definition.id == QStringLiteral("review-translation")) {
-            state = hasTargets ? QStringLiteral("completed") : QStringLiteral("blocked");
-            detail = hasTargets ? QStringLiteral("Translated transcript available for review") : QStringLiteral("Translate the transcript first");
+            state = allTargets ? QStringLiteral("completed") : QStringLiteral("blocked");
+            detail = allTargets ? QStringLiteral("Translated transcript available for review")
+                                : QStringLiteral("Translated %1/%2 required cues").arg(translatedCueCount).arg(requiredCueCount);
         } else if (definition.id == QStringLiteral("assign-voices")) {
-            const bool voicesReady = hasTargets && !m_project.speakers.isEmpty();
+            const bool voicesReady = allTargets && !m_project.speakers.isEmpty();
             state = voicesReady ? QStringLiteral("ready") : QStringLiteral("blocked");
             detail = voicesReady ? QStringLiteral("Speaker assignments are ready") : QStringLiteral("Translated transcript and a speaker are required");
         } else if (definition.id == QStringLiteral("synthesize")) {
             const bool cloneVoiceReady = cloneVoiceSelectionValid();
             state = !cloneVoiceReady ? QStringLiteral("blocked")
                 : (!ttsReady ? QStringLiteral("missing")
-                   : (hasClips ? QStringLiteral("completed")
+                   : (allClips ? QStringLiteral("completed")
                       : (allTargets ? QStringLiteral("ready") : QStringLiteral("blocked"))));
             const QString defaultVoice = automaticDefaultFamilyId(
                 QStringLiteral("tts"), m_project.dubbingQuality);
@@ -166,17 +189,24 @@ QVariantList DubbingController::workflowNodes() const
                        ? QStringLiteral("VieNeu-TTS v2 Turbo (default)")
                        : QStringLiteral("OmniVoice (default)"));
         } else if (definition.id == QStringLiteral("fit-timing")) {
-            state = !hasClips ? QStringLiteral("blocked") : (hasConflict ? QStringLiteral("blocked") : QStringLiteral("completed"));
+            state = !allClips ? QStringLiteral("blocked") : (hasConflict ? QStringLiteral("blocked") : QStringLiteral("completed"));
             detail = hasConflict ? QStringLiteral("One or more clips exceed the fit tolerance") : QStringLiteral("Fit generated clips to segment timing");
         } else if (definition.id == QStringLiteral("review-conflicts")) {
-            state = hasConflict ? QStringLiteral("blocked") : (hasClips ? QStringLiteral("completed") : QStringLiteral("blocked"));
+            state = hasConflict ? QStringLiteral("blocked") : (allClips ? QStringLiteral("completed") : QStringLiteral("blocked"));
             detail = hasConflict ? QStringLiteral("Review timing conflicts") : QStringLiteral("No timing conflicts pending");
         } else if (definition.id == QStringLiteral("mix")) {
-            state = hasClips && !hasConflict ? QStringLiteral("ready") : QStringLiteral("blocked");
-            detail = hasClips ? QStringLiteral("Mix generated clips with background audio") : QStringLiteral("Generate segment audio first");
+            state = allClips && !hasConflict ? QStringLiteral("ready") : QStringLiteral("blocked");
+            detail = allClips ? QStringLiteral("Mix generated clips with background audio")
+                              : QStringLiteral("Generated %1/%2 required clips").arg(generatedCueCount).arg(requiredCueCount);
         } else if (definition.id == QStringLiteral("export")) {
-            state = !hasClips ? QStringLiteral("missing") : (!previewPath().isEmpty() ? QStringLiteral("completed") : QStringLiteral("ready"));
-            detail = !hasClips ? QStringLiteral("Generate translated audio first") : (!previewPath().isEmpty() ? QStringLiteral("Preview rendered") : QStringLiteral("Render the mixed audio"));
+            const bool exportReady = readableDubbingArtifact(exportPath());
+            state = !allClips ? QStringLiteral("missing")
+                : (exportReady ? QStringLiteral("completed")
+                               : (!previewPath().isEmpty() ? QStringLiteral("ready") : QStringLiteral("blocked")));
+            detail = !allClips ? QStringLiteral("Generate translated audio first")
+                : (exportReady ? QStringLiteral("Final video exported")
+                               : (!previewPath().isEmpty() ? QStringLiteral("Preview rendered; export final video")
+                                                           : QStringLiteral("Render the mixed audio")));
         }
         const bool userSkipped = m_stepOutputs.value(definition.id).toMap()
             .value(QStringLiteral("skipped")).toBool();
@@ -891,7 +921,7 @@ bool DubbingController::setWorkflowNodeParameters(const QString &nodeId, const Q
         const QString fusionPolicy = DubbingTranscriptFusionService::normalizePolicy(
             current.value(QStringLiteral("fusionPolicy"),
                           m_project.transcriptConfiguration.value(
-                              QStringLiteral("fusionPolicy"), QStringLiteral("prefer-stt"))).toString());
+                              QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr"))).toString());
         current.insert(QStringLiteral("fusionPolicy"), fusionPolicy);
         m_project.transcriptConfiguration.insert(QStringLiteral("fusionPolicy"), fusionPolicy);
         for (const QString &key : {QStringLiteral("ocrLanguage"), QStringLiteral("ocrExecutionRoute"),
@@ -1297,6 +1327,7 @@ void DubbingController::startStepByStep()
         // graph or run a stage before the operator supplies media.
         setCurrentStep(QStringLiteral("media-input"));
         clearError();
+        persistAfterEdit();
         return;
     }
     const bool hasAnyTranscript = !m_project.segments.isEmpty()
@@ -1324,6 +1355,7 @@ void DubbingController::startStepByStep()
     }
     Logger::info(QStringLiteral("DubbingController"),
                  QStringLiteral("Step-by-step resolved next step=%1").arg(m_currentStepId));
+    persistAfterEdit();
 }
 
 bool DubbingController::runCurrentStep(const QString &outputPath)

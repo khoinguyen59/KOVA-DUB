@@ -18,6 +18,9 @@ Rectangle {
     readonly property bool hasDubbedPreview: root.dubbing.dubbedVocalPath.length > 0
     property string previewMode: "source"
     readonly property bool showingDubbedMedia: root.previewMode === "dubbed" && root.hasDubbedPreview
+    readonly property int playbackPosition: mediaPlayer.position
+    readonly property int playbackDuration: mediaPlayer.duration
+    readonly property bool isPlaying: mediaPlayer.playbackState === MediaPlayer.PlayingState
     property bool previewMuted: false
     property real vocalLevel: 1.0
     property real backgroundLevel: 1.0
@@ -46,9 +49,11 @@ Rectangle {
     // VideoOutput continues to preserve the source pixels inside the frame.
     readonly property string previewFrameMode: "16:9"
     readonly property real previewFrameAspectRatio: 16 / 9
-    readonly property bool thumbnailReady: root.hasLoadedSource
-                                           && (mediaPlayer.mediaStatus === MediaPlayer.LoadedMedia
-                                               || mediaPlayer.mediaStatus === MediaPlayer.BufferedMedia)
+    // Some Windows multimedia backends briefly switch back to Loading while
+    // paused or seeking. Once a frame was available, the poster must never
+    // cover the paused frame again.
+    property bool mediaFrameWasAvailable: false
+    readonly property bool thumbnailReady: root.hasLoadedSource && root.mediaFrameWasAvailable
     readonly property bool sourceThumbnailAvailable: root.dubbing.sourceThumbnailUrl
                                                       && root.dubbing.sourceThumbnailUrl.toString().length > 0
     readonly property var subtitleConfiguration: root.dubbing.subtitleConfiguration || ({})
@@ -58,14 +63,7 @@ Rectangle {
     // This deliberately mirrors the explicit text-source choice in the
     // advanced subtitle panel instead of making the preview silently diverge.
     readonly property string subtitleTextSource: root.subtitleConfiguration.textSource || "target"
-    readonly property int activeSubtitleIndex: {
-        for (var i = 0; i < root.dubbing.segments.length; ++i) {
-            var segment = root.dubbing.segments[i]
-            if (mediaPlayer.position >= segment.startMs && mediaPlayer.position <= segment.endMs)
-                return i
-        }
-        return -1
-    }
+    readonly property int activeSubtitleIndex: root.selectedSegment
     readonly property string activeSubtitleText: {
         if (root.activeSubtitleIndex < 0) return ""
         var segment = root.dubbing.segments[root.activeSubtitleIndex]
@@ -127,9 +125,14 @@ Rectangle {
         mediaPlayer.pause()
         vocalPlayer.pause()
         backgroundPlayer.pause()
+        // A temporary drift correction must never leak into the next play
+        // session or make a paused preview resume at an altered speed.
+        vocalPlayer.playbackRate = 1.0
+        backgroundPlayer.playbackRate = 1.0
     }
     function seekAll(position) {
         mediaPlayer.position = position
+        root.updateActiveSubtitle(position)
         if (root.showingDubbedMedia) {
             if (vocalPlayer.seekable) vocalPlayer.position = position
             if (backgroundPlayer.seekable) backgroundPlayer.position = position
@@ -139,10 +142,12 @@ Rectangle {
         if (root.showingDubbedMedia) {
             if (root.dubbing.dubbedVocalPath.length > 0) {
                 vocalPlayer.position = mediaPlayer.position
+                vocalPlayer.playbackRate = 1.0
                 vocalPlayer.play()
             }
             if (root.dubbing.backgroundPath.length > 0) {
                 backgroundPlayer.position = mediaPlayer.position
+                backgroundPlayer.playbackRate = 1.0
                 backgroundPlayer.play()
             }
         }
@@ -205,6 +210,36 @@ Rectangle {
                         width: draftOcrRoi.width, height: draftOcrRoi.height }
     }
 
+    function updateActiveSubtitle(position) {
+        var cues = root.dubbing.segments || []
+        if (root.selectedSegment >= 0 && root.selectedSegment < cues.length) {
+            var current = cues[root.selectedSegment]
+            if (position >= current.startMs && position <= current.endMs)
+                return
+        }
+        // Cues are sorted by time. This keeps frame-position work O(log n)
+        // rather than walking every subtitle cue on every multimedia update.
+        var left = 0
+        var right = cues.length - 1
+        var match = -1
+        while (left <= right) {
+            var middle = Math.floor((left + right) / 2)
+            var cue = cues[middle]
+            if (position < cue.startMs)
+                right = middle - 1
+            else if (position > cue.endMs)
+                left = middle + 1
+            else {
+                match = middle
+                break
+            }
+        }
+        if (match >= 0 && root.selectedSegment !== match) {
+            root.selectedSegment = match
+            root.segmentSelected(match)
+        }
+    }
+
     function qmlSmokeMediaControlsCheck() {
         return controlsAutoHide.qmlSmokeStateCheck()
                 && controlsAutoHide.delayMs === 2000
@@ -213,6 +248,7 @@ Rectangle {
                 && previewModeSelector.y >= -1
                 && previewModeSelector.y + previewModeSelector.height
                    <= previewToolbar.height + 1
+                && previewControls.z > dubbingOcrRoiOverlay.z
                 && subtitlePreviewOverlay.width > 0
                 && previewFrame.width > 0
                 && previewFrame.height > 0
@@ -220,9 +256,6 @@ Rectangle {
                     || subtitlePreviewOverlay.y + subtitlePreviewOverlay.height
                        <= previewFrame.y + previewFrame.height
                           - subtitlePreviewOverlay.lowerControlsClearance + 1)
-                && (!dubbingOcrRoiOverlay.visible
-                    || dubbingOcrRoiOverlay.y + dubbingOcrRoiOverlay.height
-                       <= previewControls.y - Theme.paddingSmall + 1)
                 && (!root.hasLoadedSource || !sourceSetupPanel.visible)
     }
 
@@ -276,6 +309,7 @@ Rectangle {
         // A newly selected/downloaded source should immediately receive the
         // canvas. Re-opening source setup remains an explicit user action.
         root.sourceSetupExpanded = !root.hasLoadedSource
+        root.mediaFrameWasAvailable = false
         if (root.dubbing.requestSourceThumbnail)
             root.dubbing.requestSourceThumbnail()
     }
@@ -294,20 +328,24 @@ Rectangle {
         }
         videoOutput: videoOutput
         onMediaStatusChanged: {
-            if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+            if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
+                root.mediaFrameWasAvailable = true
                 root.restoreAfterSourceSwitch()
+            }
         }
     }
     MediaPlayer {
         id: vocalPlayer
-        source: root.localMediaUrl(root.dubbing.dubbedVocalPath)
+        source: root.showingDubbedMedia
+                ? root.localMediaUrl(root.dubbing.dubbedVocalPath) : ""
         audioOutput: AudioOutput {
             volume: root.showingDubbedMedia && !root.previewMuted ? root.vocalLevel : 0
         }
     }
     MediaPlayer {
         id: backgroundPlayer
-        source: root.localMediaUrl(root.dubbing.backgroundPath)
+        source: root.showingDubbedMedia
+                ? root.localMediaUrl(root.dubbing.backgroundPath) : ""
         audioOutput: AudioOutput {
             // The rendered mix uses 35% background gain. A 100% slider value
             // therefore reproduces the rendered/exported balance.
@@ -324,16 +362,7 @@ Rectangle {
         }
         function onPositionChanged() {
             if (mediaPlayer.playbackState !== MediaPlayer.PlayingState) return
-            for (var i = 0; i < root.dubbing.segments.length; ++i) {
-                var segment = root.dubbing.segments[i]
-                if (mediaPlayer.position >= segment.startMs && mediaPlayer.position <= segment.endMs) {
-                    if (root.selectedSegment !== i) {
-                        root.selectedSegment = i
-                        root.segmentSelected(i)
-                    }
-                    break
-                }
-            }
+            root.updateActiveSubtitle(mediaPlayer.position)
         }
     }
     onHasDubbedPreviewChanged: {
@@ -364,15 +393,35 @@ Rectangle {
         }
     }
     Timer {
-        interval: 500
+        // A 1-second low-frequency correction avoids repeated hard seeks
+        // while the video and local stem decoders settle independently.
+        interval: 1000
         repeat: true
         running: root.showingDubbedMedia
                  && mediaPlayer.playbackState === MediaPlayer.PlayingState
         onTriggered: {
-            if (vocalPlayer.seekable && Math.abs(vocalPlayer.position - mediaPlayer.position) > 180)
-                vocalPlayer.position = mediaPlayer.position
-            if (backgroundPlayer.seekable && Math.abs(backgroundPlayer.position - mediaPlayer.position) > 180)
-                backgroundPlayer.position = mediaPlayer.position
+            if (vocalPlayer.seekable) {
+                var vocalDrift = vocalPlayer.position - mediaPlayer.position
+                if (Math.abs(vocalPlayer.position - mediaPlayer.position) > 1500) {
+                    vocalPlayer.position = mediaPlayer.position
+                    vocalPlayer.playbackRate = 1.0
+                } else if (Math.abs(vocalPlayer.position - mediaPlayer.position) > 500) {
+                    vocalPlayer.playbackRate = vocalDrift < 0 ? 1.02 : 0.98
+                } else {
+                    vocalPlayer.playbackRate = 1.0
+                }
+            }
+            if (backgroundPlayer.seekable) {
+                var backgroundDrift = backgroundPlayer.position - mediaPlayer.position
+                if (Math.abs(backgroundPlayer.position - mediaPlayer.position) > 1500) {
+                    backgroundPlayer.position = mediaPlayer.position
+                    backgroundPlayer.playbackRate = 1.0
+                } else if (Math.abs(backgroundPlayer.position - mediaPlayer.position) > 500) {
+                    backgroundPlayer.playbackRate = backgroundDrift < 0 ? 1.02 : 0.98
+                } else {
+                    backgroundPlayer.playbackRate = 1.0
+                }
+            }
         }
     }
 
@@ -582,12 +631,12 @@ Rectangle {
                     id: thumbnailPoster
                     objectName: "dubbingVideoThumbnail"
                     anchors.fill: parent
-                    // Keep the extracted first frame visible until playback
-                    // actually starts. MediaPlayer can report LoadedMedia
-                    // before VideoOutput has painted its first frame, which
-                    // otherwise leaves a black canvas in the editor.
-                    visible: root.isVideoSource && (!root.thumbnailReady
-                                                     || mediaPlayer.playbackState !== MediaPlayer.PlayingState)
+                    // The thumbnail is only the loading fallback. Once the
+                    // media is loaded, VideoOutput owns the canvas so pause
+                    // (and a user stop implemented as pause) keeps the exact
+                    // frame where the operator stopped instead of reverting
+                    // to the first-frame poster.
+                    visible: root.isVideoSource && !root.thumbnailReady
                     z: 6
                     color: "#11121a"
                     Image {
@@ -597,7 +646,7 @@ Rectangle {
                         source: root.dubbing.sourceThumbnailUrl
                         visible: root.sourceThumbnailAvailable && status === Image.Ready
                         asynchronous: true
-                        cache: false
+                        cache: true
                         fillMode: Image.PreserveAspectFit
                     }
                     Column {
@@ -618,20 +667,15 @@ Rectangle {
                 id: dubbingOcrRoiOverlay
                 objectName: "dubbingSubtitleOcrRoiOverlay"
                 // The source content rect is the coordinate space used by
-                // OCR metadata. The displayed editor rect reserves the
-                // playback controls so the ROI border, label and resize
-                // handles cannot be painted over the seek bar.
+                // OCR metadata. Keep the complete source frame here: when
+                // editing, the ROI must be draggable across the playback
+                // controls instead of being artificially capped above them.
                 readonly property rect sourceContent: Qt.rect(
                     previewFrame.x + videoOutput.contentRect.x,
                     previewFrame.y + videoOutput.contentRect.y,
                     videoOutput.contentRect.width,
                     videoOutput.contentRect.height)
-                readonly property rect content: {
-                    var source = sourceContent
-                    var controlsTop = previewControls.y - Theme.paddingSmall
-                    var safeHeight = Math.max(0, Math.min(source.height, controlsTop - source.y))
-                    return Qt.rect(source.x, source.y, source.width, safeHeight)
-                }
+                readonly property rect content: sourceContent
                 visible: root.showOcrTools && root.isVideoSource && root.dubbing.dubbingOcrRoiVisible
                          && content.width > 0 && content.height > 0
                 x: content.x + root.draftOcrRoi.x * content.width
@@ -643,6 +687,9 @@ Rectangle {
                        : Qt.rgba(0.45, 0.20, 1.0, 0.11)
                 border.color: root.ocrRoiEditMode ? Theme.accentLight : Theme.primary
                 border.width: root.ocrRoiEditMode ? 3 : 2
+                // Keep timeline input above ROI editing in every mode. A
+                // drag that starts on the ROI retains its grab while crossing
+                // the controls, but a drag begun on the seek strip scrubs.
                 z: 8
                 MouseArea {
                     anchors.fill: parent
@@ -828,6 +875,10 @@ Rectangle {
                 objectName: "dubbingSharedMediaControls"
                 anchors.left: previewFrame.left; anchors.right: previewFrame.right; anchors.bottom: previewFrame.bottom
                 height: 44
+                // OCR ROI editing is intentionally above the video but never
+                // above the player controls. Without an explicit z-order, a
+                // lower ROI can steal the seek drag from seekArea.
+                z: 20
                 visible: root.dubbing.sourceMediaPath.length > 0 && (opacity > 0 || controlsAutoHide.controlsVisible)
                 opacity: controlsAutoHide.controlsVisible ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 250 } }
@@ -853,6 +904,7 @@ Rectangle {
                     MouseArea {
                         id: seekArea
                         anchors.fill: parent
+                        enabled: mediaPlayer.duration > 0
                         hoverEnabled: true
                         property bool wasPlaying: false
                         function updatePosition(x) { if (mediaPlayer.duration > 0) root.seekAll(Math.max(0, Math.min(1, x / width)) * mediaPlayer.duration) }
@@ -860,7 +912,7 @@ Rectangle {
                             controlsAutoHide.interactionActive = true
                             controlsAutoHide.noteInteraction()
                             wasPlaying = mediaPlayer.playbackState === MediaPlayer.PlayingState
-                            if (wasPlaying) mediaPlayer.pause()
+                            if (wasPlaying) root.pauseAll()
                             updatePosition(mouseX)
                         }
                         onPositionChanged: if (pressed) {

@@ -7,6 +7,14 @@
 #include <QThread>
 
 namespace LAStudio {
+namespace {
+
+constexpr int kHostStartupTimeoutMs = 5000;
+constexpr int kHostHandshakeTimeoutMs = 5000;
+constexpr int kHostHandshakeAttemptTimeoutMs = 1000;
+constexpr int kRequestInactivityTimeoutMs = 60000;
+
+}
 
 RuntimeHostClient::RuntimeHostClient(QObject *parent)
     : QObject(parent)
@@ -74,7 +82,7 @@ bool RuntimeHostClient::start(const QString &hostExecutable, QString *error)
     m_process.setProcessEnvironment(environment);
     m_process.setProcessChannelMode(QProcess::SeparateChannels);
     m_process.start();
-    if (!m_process.waitForStarted(10000)) {
+    if (!m_process.waitForStarted(kHostStartupTimeoutMs)) {
         if (error) *error = QStringLiteral("Could not start RuntimeHost: %1").arg(m_process.errorString());
         return false;
     }
@@ -221,7 +229,8 @@ bool RuntimeHostClient::request(RuntimeHostMessage message,
         m_currentRequestId.store(0, std::memory_order_release);
         return false;
     }
-    const bool received = readResponse(&m_socket, requestId, response, error);
+    const bool received = readResponse(&m_socket, requestId, response,
+                                       kRequestInactivityTimeoutMs, error);
     m_currentRequestId.store(0, std::memory_order_release);
     return received;
 }
@@ -263,19 +272,35 @@ bool RuntimeHostClient::connectSocket(QLocalSocket *socket, QString *error)
 bool RuntimeHostClient::authenticate(QLocalSocket *socket, QString *error)
 {
     const quint64 requestId = m_nextRequestId.fetch_add(1, std::memory_order_relaxed);
-    if (!sendFrame(socket, RuntimeHostMessage::Hello, requestId,
-                   QCborMap{{QStringLiteral("token"), m_token},
-                            {QStringLiteral("protocolMajor"), kRuntimeHostProtocolMajor}},
-                   error)) {
-        return false;
+    const QCborMap hello{{QStringLiteral("token"), m_token},
+                         {QStringLiteral("protocolMajor"), kRuntimeHostProtocolMajor}};
+    QElapsedTimer totalTimeout;
+    totalTimeout.start();
+    QString lastError;
+    while (totalTimeout.elapsed() < kHostHandshakeTimeoutMs) {
+        // Hello is idempotent on the host. Retrying it handles the Windows
+        // named-pipe race where the first frame is buffered before the server
+        // has subscribed to readyRead on its newly accepted socket.
+        if (!sendFrame(socket, RuntimeHostMessage::Hello, requestId, hello, &lastError)) {
+            if (error) *error = lastError;
+            return false;
+        }
+        RuntimeHostFrame response;
+        const int remaining = kHostHandshakeTimeoutMs - static_cast<int>(totalTimeout.elapsed());
+        if (readResponse(socket, requestId, &response,
+                         qMax(1, qMin(kHostHandshakeAttemptTimeoutMs, remaining)), &lastError)) {
+            if (response.message == RuntimeHostMessage::HelloAck) return true;
+            if (error) *error = protocolError(response);
+            return false;
+        }
+        if (!socket || socket->state() != QLocalSocket::ConnectedState) break;
     }
-    RuntimeHostFrame response;
-    if (!readResponse(socket, requestId, &response, error)) return false;
-    if (response.message != RuntimeHostMessage::HelloAck) {
-        if (error) *error = protocolError(response);
-        return false;
+    if (error) {
+        *error = lastError.isEmpty()
+            ? QStringLiteral("RuntimeHost did not acknowledge its startup handshake.")
+            : lastError;
     }
-    return true;
+    return false;
 }
 
 bool RuntimeHostClient::sendFrame(QLocalSocket *socket,
@@ -299,9 +324,10 @@ bool RuntimeHostClient::sendFrame(QLocalSocket *socket,
 bool RuntimeHostClient::readResponse(QLocalSocket *socket,
                                      quint64 requestId,
                                      RuntimeHostFrame *response,
+                                     int inactivityTimeoutMs,
                                      QString *error)
 {
-    constexpr int kInactivityTimeoutMs = 60000;
+    if (inactivityTimeoutMs <= 0) inactivityTimeoutMs = kRequestInactivityTimeoutMs;
     RuntimeHostFrameParser parser;
     QElapsedTimer inactivity;
     inactivity.start();
@@ -333,7 +359,7 @@ bool RuntimeHostClient::readResponse(QLocalSocket *socket,
             if (error) *error = parseError;
             return false;
         }
-        const int remaining = kInactivityTimeoutMs - static_cast<int>(inactivity.elapsed());
+        const int remaining = inactivityTimeoutMs - static_cast<int>(inactivity.elapsed());
         if (remaining <= 0) {
             if (error) {
                 if (m_process.state() == QProcess::NotRunning) {
@@ -343,7 +369,7 @@ bool RuntimeHostClient::readResponse(QLocalSocket *socket,
                 } else {
                     *error = QStringLiteral("RuntimeHost made no progress or response for %1 seconds. "
                                             "Cancel or reload the model and retry.")
-                                 .arg(kInactivityTimeoutMs / 1000);
+                                 .arg(inactivityTimeoutMs / 1000);
                 }
             }
             return false;

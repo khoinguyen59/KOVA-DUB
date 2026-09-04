@@ -170,7 +170,10 @@ WavIO::WavData decodeWithFfmpeg(const QString &path, QString *error)
         const bool failedToStart = process.error() == QProcess::FailedToStart;
         if (process.state() != QProcess::NotRunning) {
             process.kill();
-            process.waitForFinished();
+            // Do not turn the timeout recovery path into a second unbounded
+            // wait. A stuck FFmpeg child must not keep the separation worker
+            // (and consequently application shutdown) alive forever.
+            process.waitForFinished(1000);
         }
         setError(error, failedToStart
                             ? QStringLiteral("Could not start FFmpeg.")

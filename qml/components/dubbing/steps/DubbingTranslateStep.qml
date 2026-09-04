@@ -132,15 +132,63 @@ Rectangle {
             Layout.fillWidth: true
             spacing: Theme.paddingSmall
 
+            // Inline guidance for unresolved STT/OCR conflicts (Actionable Guidance, zero red noise)
+            Rectangle {
+                id: conflictResolutionBox
+                visible: root.dubbing && root.dubbing.unresolvedTranscriptConflictCount > 0
+                Layout.fillWidth: true
+                Layout.preferredHeight: 38
+                radius: Theme.radiusSmall
+                color: Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.12)
+                border.color: Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.35)
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.paddingSmall
+                    anchors.rightMargin: Theme.paddingSmall
+                    spacing: Theme.paddingSmall
+
+                    LineIcon {
+                        name: "alert"
+                        color: Theme.warning
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Có %1 câu STT/OCR chưa khớp").arg(root.dubbing ? root.dubbing.unresolvedTranscriptConflictCount : 0)
+                        color: Theme.warning
+                        font.pixelSize: Theme.fontSmall
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+
+                    PrimaryButton {
+                        text: qsTr("⚡ Duyệt nhanh theo STT")
+                        quiet: true
+                        Layout.preferredHeight: 28
+                        onClicked: {
+                            if (root.dubbing && root.dubbing.resolveAllTranscriptConflicts) {
+                                root.dubbing.resolveAllTranscriptConflicts("stt")
+                            }
+                        }
+                    }
+                }
+            }
+
             // Row 1: Primary Action Button (Full width)
             PrimaryButton {
                 id: runTranslateBtn
+                readonly property bool hasConflicts: root.dubbing && root.dubbing.unresolvedTranscriptConflictCount > 0
                 text: (root.dubbing.segments || []).length > 0 && root.dubbing.segments[0] && root.dubbing.segments[0].targetText
                       ? qsTr("⚡ Dịch Lại Toàn Bộ Lời Thoại (%1 phân đoạn)").arg(root.dubbing.segments.length)
                       : qsTr("⚡ Chạy Dịch Thuật AI (Translate)")
                 iconName: root.dubbing.processing ? "activity" : "globe"
                 loading: root.dubbing.processing
-                enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0
+                enabled: !root.dubbing.processing && (root.dubbing.segments || []).length > 0 && !hasConflicts
+                toolTip: hasConflicts ? qsTr("Cần duyệt %1 câu xung đột STT/OCR trước khi dịch").arg(root.dubbing.unresolvedTranscriptConflictCount) : ""
                 Layout.preferredHeight: 40
                 Layout.fillWidth: true
                 buttonColor: Theme.accent

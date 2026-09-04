@@ -24,8 +24,9 @@ class ColabWorkerClient final
 {
 public:
     using UploadProgressCallback = std::function<void(qint64 sent, qint64 total)>;
-    // A remote job becoming ready only means the WAV artifacts are available
-    // on Colab.  Keep the return transfer independently observable.
+    // A remote job becoming ready only means the requested lossless audio
+    // artifacts are available on Colab. Keep the return transfer independently
+    // observable; separation defaults to FLAC while legacy WAV remains valid.
     using DownloadProgressCallback = std::function<void(qint64 received, qint64 total)>;
 
     bool configure(const QUrl &workerUrl, const QString &bearerToken,
@@ -61,12 +62,16 @@ public:
     bool createSeparationJob(const QString &audioPath, const QString &model,
                              const QString &artifactFormat,
                              QJsonObject *job, QString *errorMessage);
-    bool separationJobStatus(const QString &jobId, QJsonObject *job, QString *errorMessage);
+    bool separationJobStatus(const QString &jobId, QJsonObject *job, QString *errorMessage,
+                             int timeoutMs = 30 * 1000,
+                             const std::shared_ptr<std::atomic_bool> &cancelToken = {});
     bool downloadSeparationArtifact(const QString &jobId, const QString &stem,
                                     const QString &artifactFormat,
                                     const std::shared_ptr<std::atomic_bool> &cancelToken,
                                     QByteArray *artifactData, QString *errorMessage,
-                                    const DownloadProgressCallback &downloadProgress = {});
+                                    const DownloadProgressCallback &downloadProgress = {},
+                                    int transferTimeoutMs = 15 * 60 * 1000,
+                                    int idleTimeoutMs = 45 * 1000);
     bool cancelSeparationJob(const QString &jobId, QString *errorMessage = nullptr);
     bool translateSegments(const QVariantList &segments, const QString &sourceLanguage,
                            const QString &targetLanguage, const QString &model,

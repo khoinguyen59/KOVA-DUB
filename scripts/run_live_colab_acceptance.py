@@ -552,20 +552,39 @@ def run_separation(client: WorkerClient) -> Check:
     started = time.monotonic()
     try:
         audio = require_audio_config(client)
-        body, content_type = encode_multipart({"model": client.model, "stems": "vocals,background"}, "file", audio)
+        artifact_format = str(client.config.get("artifact_format", "flac")).strip().lower()
+        if artifact_format not in {"flac", "wav"}:
+            raise AcceptanceError("voice-isolation artifact_format must be 'flac' or 'wav'")
+        body, content_type = encode_multipart({
+            "model": client.model,
+            "stems": "vocals,background",
+            "output_format": artifact_format,
+        }, "file", audio)
         status, raw, _ = client.request("POST", "/v1/audio/separations", body, content_type, "application/json")
         response = json.loads(raw.decode("utf-8")) if raw else {}
         if not 200 <= status < 300:
             raise AcceptanceError(f"separation failed with HTTP {status}: {redact_detail(response.get('detail', response))}")
+        if str(response.get("artifact_format", "")).strip().lower() != artifact_format:
+            raise AcceptanceError("separation worker returned an unexpected artifact format")
         job_id = require_string(response, "job_id", "separation job response")
         complete, progress = poll_job(client, "/v1/audio/separations/{job_id}", job_id, {"ready"})
         if not progress or progress[-1] != 100:
             raise AcceptanceError("separation did not report completion progress of 100")
         for stem in ("vocals", "background"):
-            status, wav, _ = client.request("GET", f"/v1/audio/separations/{job_id}/artifacts/{stem}", None, None, "audio/wav")
-            if not 200 <= status < 300 or len(wav) < 44 or wav[:4] != b"RIFF" or wav[8:12] != b"WAVE":
-                raise AcceptanceError(f"separation {stem} artifact is not valid WAV audio")
-        return Check("real voice-isolation inference", True, f"two WAV stems with monotonic progress ({len(progress)} samples)", time.monotonic() - started)
+            expected_mime = "audio/flac" if artifact_format == "flac" else "audio/wav"
+            status, artifact, headers = client.request(
+                "GET", f"/v1/audio/separations/{job_id}/artifacts/{stem}",
+                None, None, expected_mime)
+            valid = artifact.startswith(b"fLaC") if artifact_format == "flac" else (
+                len(artifact) >= 44 and artifact[:4] == b"RIFF" and artifact[8:12] == b"WAVE")
+            content_type_header = next(
+                (value for key, value in headers.items() if key.lower() == "content-type"), ""
+            ).split(";", 1)[0].strip().lower()
+            if not 200 <= status < 300 or not valid or content_type_header != expected_mime:
+                raise AcceptanceError(f"separation {stem} artifact is not valid {artifact_format.upper()} audio")
+        return Check("real voice-isolation inference", True,
+                     f"two {artifact_format.upper()} stems with monotonic progress ({len(progress)} samples)",
+                     time.monotonic() - started)
     except (AcceptanceError, json.JSONDecodeError) as error:
         return Check("real voice-isolation inference", False, redact_detail(error), time.monotonic() - started)
 

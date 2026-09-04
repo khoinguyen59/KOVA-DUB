@@ -26,6 +26,13 @@ struct ColabSeparationRequest {
     // desktop waiting indefinitely if it never transitions to ready.
     int finalizeTimeoutMs = 5 * 60 * 1000;
     int statusPollIntervalMs = 350;
+    // Status is control-plane traffic and must fail quickly when a temporary
+    // tunnel disappears. Artifact transfer has a larger hard limit because a
+    // valid FLAC stem can take several minutes on a slow Colab connection,
+    // while the idle guard prevents an open socket from hanging forever.
+    int statusRequestTimeoutMs = 30 * 1000;
+    int artifactTransferTimeoutMs = 15 * 60 * 1000;
+    int artifactIdleTimeoutMs = 45 * 1000;
 };
 
 struct ColabSeparationResult {

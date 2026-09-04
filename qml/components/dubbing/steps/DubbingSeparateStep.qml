@@ -97,12 +97,22 @@ Rectangle {
                 }
 
                 PrimaryButton {
+                    visible: !((root.dubbing.vocalsPath || "").length > 0 && (root.dubbing.backgroundPath || "").length > 0)
+                    text: qsTr("Bỏ qua bước này ➔")
+                    iconName: "chevron-right"
+                    quiet: true
+                    enabled: !root.dubbing.processing
+                    Layout.preferredHeight: 38
+                    Layout.fillWidth: true
+                    onClicked: root.nextStepRequested()
+                }
+
+                PrimaryButton {
+                    visible: (root.dubbing.vocalsPath || "").length > 0 && (root.dubbing.backgroundPath || "").length > 0
                     text: qsTr("Tiếp tục: Nhận Dạng ➔")
                     iconName: "chevron-right"
                     buttonColor: Theme.accent
                     enabled: !root.dubbing.processing
-                             && (root.dubbing.vocalsPath || "").length > 0
-                             && (root.dubbing.backgroundPath || "").length > 0
                     Layout.preferredHeight: 38
                     Layout.fillWidth: true
                     onClicked: root.nextStepRequested()

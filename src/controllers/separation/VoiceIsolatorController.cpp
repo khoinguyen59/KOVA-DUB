@@ -4,6 +4,7 @@
 #include "controllers/app/AppController.h"
 #include "core/models/ModelManager.h"
 #include "core/models/RuntimeManager.h"
+#include "core/hardware/InferenceThreadPolicy.h"
 #include "audio/io/WavIO.h"
 
 #include <QDir>
@@ -224,7 +225,14 @@ QVariantMap VoiceIsolatorController::configurationInfo() const
 void VoiceIsolatorController::setSourcePath(const QString &path) { if (m_sourcePath == path) return; m_sourcePath = path; emit stateChanged(); }
 void VoiceIsolatorController::setRuntimePath(const QString &path) { if (m_runtimePath == path && m_configurationOverrideActive) return; m_configurationOverrideActive = true; m_runtimePath = path; emit stateChanged(); }
 void VoiceIsolatorController::setModelPath(const QString &path) { if (m_modelPath == path && m_configurationOverrideActive) return; m_configurationOverrideActive = true; m_modelPath = path; emit stateChanged(); }
-void VoiceIsolatorController::setThreadCount(int value) { value = qBound(1, value, 64); if (m_threadCount == value) return; m_threadCount = value; emit stateChanged(); }
+void VoiceIsolatorController::setThreadCount(int value)
+{
+    value = InferenceThreadPolicy::recommendedThreadCount(
+        InferenceBackendProfile::SourceSeparationCpu, value);
+    if (m_threadCount == value) return;
+    m_threadCount = value;
+    emit stateChanged();
+}
 
 void VoiceIsolatorController::applyModelConfiguration(const QString &runtimePath, const QVariantMap &resolvedPaths)
 {
@@ -315,7 +323,8 @@ void VoiceIsolatorController::isolate(bool fast)
     req.sourcePath = m_sourcePath;
     req.outputRoot = m_tempDir->path();
     req.configuration = config;
-    req.numThreads = m_threadCount;
+    req.numThreads = InferenceThreadPolicy::recommendedThreadCount(
+        InferenceBackendProfile::SourceSeparationCpu, m_threadCount);
 
     QString err;
     if (!m_service->isolate(req, &err)) {

@@ -44,6 +44,20 @@ if (-not $qmllint) {
 }
 
 if (-not $qmllint) {
+    $managedQtRoot = Join-Path $RepoRoot ".tools\Qt"
+    if (Test-Path $managedQtRoot) {
+        $kit = if ($Preset -like "*mingw*") { "mingw_64" } else { "msvc2022_64" }
+        $managedQt = Get-ChildItem $managedQtRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { Join-Path $_.FullName "$kit\bin\qmllint.exe" } |
+            Where-Object { Test-Path -LiteralPath $_ } |
+            Select-Object -First 1
+        if ($managedQt) { $qmllint = $managedQt }
+    }
+}
+
+if (-not $qmllint) {
     throw "qmllint.exe was not found. Pass -QtRoot or add the Qt bin directory to PATH."
 }
 

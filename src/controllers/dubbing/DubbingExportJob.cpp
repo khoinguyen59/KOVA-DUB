@@ -6,7 +6,9 @@
 #include "dubbing/media/MediaToolService.h"
 #include "dubbing/media/MediaProcessTimeout.h"
 #include "core/services/MediaRuntimeLocator.h"
+#include "audio/io/AudioFileDecoder.h"
 #include "audio/io/WavIO.h"
+#include "core/utils/Logger.h"
 
 #include <QDir>
 #include <QFile>
@@ -83,7 +85,12 @@ DubbingExportJob::~DubbingExportJob()
     cancel();
     if (m_renderWatcher) {
         m_renderWatcher->cancel();
-        m_renderWatcher->waitForFinished();
+        // The render lambda owns its inputs and observes the shared
+        // cancellation flag. Never hold application shutdown indefinitely
+        // for a codec or process that ignores cancellation.
+        if (m_renderWatcher->isRunning())
+            Logger::warning(QStringLiteral("DubbingExportJob"),
+                            QStringLiteral("Detached cancelled audio render during shutdown."));
     }
 }
 
@@ -182,11 +189,14 @@ bool DubbingExportJob::startExport(const QString &sourceMediaPath, const QString
             fail(QStringLiteral("Failed to stage rendered WAV for export: %1").arg(m_exportStagingPath));
             return false;
         }
-        const WavIO::WavData stagedAudio = WavIO::loadAsFloat(m_exportStagingPath);
+        QString audioError;
+        const WavIO::WavData stagedAudio = AudioFileDecoder::decode(m_exportStagingPath, &audioError);
         if (stagedAudio.samples.isEmpty() || stagedAudio.sampleRate <= 0 || stagedAudio.channels <= 0) {
             QFile::remove(m_exportStagingPath);
             clearExportPaths();
-            fail(QStringLiteral("Rendered audio failed validation before export."));
+            fail(audioError.isEmpty()
+                ? QStringLiteral("Rendered audio failed validation before export.")
+                : QStringLiteral("Rendered audio failed validation before export: %1").arg(audioError));
             return false;
         }
         QString error;

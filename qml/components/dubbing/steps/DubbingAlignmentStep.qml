@@ -19,7 +19,8 @@ Rectangle {
     readonly property bool canRun: !root.dubbing.processing
                                      && root.hasTranscript
                                      && (root.dubbing.normalizedAudioPath || "").length > 0
-    readonly property bool hasConflicts: root.dubbing.unresolvedTranscriptConflictCount > 0
+    readonly property int timingConflictCount: (root.dubbing && root.dubbing.timingConflicts) ? root.dubbing.timingConflicts.length : 0
+    readonly property bool hasConflicts: timingConflictCount > 0
 
     Layout.fillWidth: true
     implicitHeight: layout.implicitHeight + Theme.paddingMedium * 2
@@ -85,7 +86,7 @@ Rectangle {
                     anchors.centerIn: parent
                     spacing: 2
                     Text { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("CONFLICTS"); color: Theme.textSecondary; font.pixelSize: 9; font.bold: true }
-                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: String(root.dubbing.unresolvedTranscriptConflictCount); color: root.hasConflicts ? Theme.warning : Theme.success; font.pixelSize: Theme.fontSmall; font.bold: true }
+                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: String(root.timingConflictCount); color: root.hasConflicts ? Theme.warning : Theme.success; font.pixelSize: Theme.fontSmall; font.bold: true }
                 }
             }
         }
