@@ -11,6 +11,7 @@
 #include "core/utils/Logger.h"
 
 #include <QDir>
+#include <QCryptographicHash>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -33,6 +34,18 @@ QString srtTime(qint64 value)
     return QStringLiteral("%1:%2:%3,%4")
         .arg(hours, 2, 10, QLatin1Char('0')).arg(minutes, 2, 10, QLatin1Char('0'))
         .arg(seconds, 2, 10, QLatin1Char('0')).arg(millis, 3, 10, QLatin1Char('0'));
+}
+
+QString scopedPreviewPath(const QString &projectPath)
+{
+    const QFileInfo projectInfo(projectPath);
+    const QString absoluteProjectPath = projectInfo.absoluteFilePath();
+    const QString projectKey = QString::fromLatin1(
+        QCryptographicHash::hash(absoluteProjectPath.toUtf8(), QCryptographicHash::Sha256)
+            .toHex().left(20));
+    const QDir projectDirectory = projectInfo.absoluteDir();
+    return projectDirectory.filePath(QStringLiteral(".workflow-artifacts/mix-%1/preview.wav")
+                                         .arg(projectKey));
 }
 
 bool writeTargetSubtitles(const QVariantList &segments, const QString &path)
@@ -102,7 +115,11 @@ bool DubbingExportJob::renderPreview(const QVariantList &segments, const QString
     QString outputPath = path;
     if (outputPath.isEmpty()) {
         if (projectPath.isEmpty()) { fail(QStringLiteral("Save the project before rendering a preview.")); return false; }
-        outputPath = QFileInfo(projectPath).absolutePath() + QStringLiteral("/preview.wav");
+        outputPath = scopedPreviewPath(projectPath);
+        if (!QDir().mkpath(QFileInfo(outputPath).absolutePath())) {
+            fail(QStringLiteral("Could not create the project-scoped preview folder."));
+            return false;
+        }
     }
     if (!m_renderWatcher || m_renderWatcher->isRunning()) { fail(QStringLiteral("An audio mix is already running.")); return false; }
     m_running = true;

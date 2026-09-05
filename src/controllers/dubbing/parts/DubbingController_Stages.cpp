@@ -43,6 +43,8 @@ QVariantMap DubbingController::audioMixConfiguration() const
                          qBound(0, configuration.value(QStringLiteral("originalGainPercent"), 0).toInt(), 100));
     configuration.insert(QStringLiteral("dubbedGainPercent"),
                          qBound(0, configuration.value(QStringLiteral("dubbedGainPercent"), 100).toInt(), 100));
+    configuration.insert(QStringLiteral("backgroundGainPercent"),
+                         qBound(0, configuration.value(QStringLiteral("backgroundGainPercent"), 100).toInt(), 100));
     // Keep the complete source/BGM duration even when the last synthesized
     // cue finishes early. This value is intentionally a render snapshot, not
     // user-editable project configuration.
@@ -63,7 +65,29 @@ bool DubbingController::setAudioMixLevels(int originalPercent, int dubbedPercent
     }
     m_project.audioMixConfiguration = {
         {QStringLiteral("originalGainPercent"), qBound(0, originalPercent, 100)},
-        {QStringLiteral("dubbedGainPercent"), qBound(0, dubbedPercent, 100)}};
+        {QStringLiteral("dubbedGainPercent"), qBound(0, dubbedPercent, 100)},
+        {QStringLiteral("backgroundGainPercent"), qBound(
+            0, m_project.audioMixConfiguration.value(QStringLiteral("backgroundGainPercent"), 100).toInt(), 100)}};
+    invalidateTimingOutputs();
+    clearError();
+    emit projectChanged();
+    emit workflowChanged();
+    persistAfterEdit();
+    return true;
+}
+
+bool DubbingController::setBackgroundAudioLevel(int backgroundPercent)
+{
+    if (processing()) {
+        setBusyError(QStringLiteral("Wait for the current Dubbing operation before changing audio levels."));
+        return false;
+    }
+    if (!hasProject()) {
+        setError(QStringLiteral("Open a Dubbing project before changing audio levels."));
+        return false;
+    }
+    m_project.audioMixConfiguration.insert(
+        QStringLiteral("backgroundGainPercent"), qBound(0, backgroundPercent, 100));
     invalidateTimingOutputs();
     clearError();
     emit projectChanged();
@@ -101,7 +125,7 @@ QVariantMap DubbingController::previewTimingResolution(const QString &mode, int 
     QVariantMap report;
     if (normalizedMode == QStringLiteral("ripple")) {
         QString error;
-        const QVariantList revised = DubbingTimingService::rippleForward(
+        QVariantList revised = DubbingTimingService::rippleForward(
             m_project.segments, gapMs, &report, &error);
         if (revised.isEmpty() && !m_project.segments.isEmpty()) {
             setError(error);
@@ -140,7 +164,7 @@ bool DubbingController::applyTimingResolution(const QString &mode, int minimumGa
     if (normalizedMode == QStringLiteral("ripple")) {
         QString error;
         QVariantMap report;
-        const QVariantList revised = DubbingTimingService::rippleForward(
+        QVariantList revised = DubbingTimingService::rippleForward(
             m_project.segments, configuration.value(QStringLiteral("minimumGapMs")).toLongLong(),
             &report, &error);
         if (revised.isEmpty() && !m_project.segments.isEmpty()) {
@@ -152,6 +176,7 @@ bool DubbingController::applyTimingResolution(const QString &mode, int minimumGa
             return false;
         }
         m_timingUndoSegments = m_project.segments;
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &revised);
         m_project.segments = revised;
         m_timingResolutionPreview = report;
         invalidateTimingOutputs();
@@ -227,6 +252,7 @@ void DubbingController::onIngestFinished(bool success, const QVariantMap &manife
     m_project.vocalsAudioPath = manifest.value(QStringLiteral("vocalsAudioPath")).toString();
     m_project.backgroundAudioPath = manifest.value(QStringLiteral("backgroundAudioPath")).toString();
     m_runner->setBackgroundAudioPath(manifest.value(QStringLiteral("backgroundAudioPath")).toString());
+    m_runner->setSourceVocalsAudioPath(manifest.value(QStringLiteral("vocalsAudioPath")).toString());
     m_project.sourceDurationMs = manifest.value(QStringLiteral("sourceDurationMs")).toLongLong();
     m_project.sourceSampleRate = manifest.value(QStringLiteral("sourceSampleRate")).toInt();
     m_project.sourceChannels = manifest.value(QStringLiteral("sourceChannels")).toInt();
@@ -447,11 +473,12 @@ bool DubbingController::reconcileTranscriptSources()
 
     const QString policy = m_project.transcriptConfiguration
                                .value(QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")).toString();
-    const QVariantList reconciled = DubbingTranscriptFusionService::fuse(sttSegments, ocrSegments, policy);
+    QVariantList reconciled = DubbingTranscriptFusionService::fuse(sttSegments, ocrSegments, policy);
     if (reconciled.isEmpty()) {
         setError(QStringLiteral("Reconcile produced no usable transcript segments. Keep the STT/OCR results and review their source timing."));
         return false;
     }
+    invalidateDerivedAudioForChangedSegments(m_project.segments, &reconciled);
     m_project.segments = reconciled;
     m_project.transcriptConfiguration.insert(QStringLiteral("reconciledSegments"), reconciled);
     m_project.transcriptConfiguration.insert(QStringLiteral("lastReconciledPolicy"),

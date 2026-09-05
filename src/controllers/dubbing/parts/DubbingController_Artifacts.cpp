@@ -1,3 +1,194 @@
+namespace {
+
+bool validateWorkflowArtifactMedia(const QString &path, const QString &streamSelector,
+                                   QString *error)
+{
+    const MediaRuntimePaths runtime = MediaRuntimeLocator::resolve();
+    if (!runtime.hasFfprobe()) {
+        if (error) {
+            *error = QStringLiteral("Cannot validate '%1' because FFprobe is unavailable. "
+                                    "Install the bundled media tools and try again.")
+                         .arg(QFileInfo(path).fileName());
+        }
+        return false;
+    }
+
+    QProcess process;
+    process.setProcessChannelMode(QProcess::SeparateChannels);
+    process.start(runtime.ffprobe,
+                  {QStringLiteral("-v"), QStringLiteral("error"),
+                   QStringLiteral("-select_streams"), streamSelector,
+                   QStringLiteral("-show_entries"), QStringLiteral("stream=codec_type"),
+                   QStringLiteral("-of"), QStringLiteral("default=noprint_wrappers=1:nokey=1"),
+                   path});
+    if (!process.waitForStarted(5000)) {
+        if (error) {
+            *error = QStringLiteral("Could not start FFprobe to validate '%1': %2")
+                         .arg(QFileInfo(path).fileName(), process.errorString());
+        }
+        return false;
+    }
+
+    QElapsedTimer timeout;
+    timeout.start();
+    while (!process.waitForFinished(100)) {
+        if (timeout.elapsed() > 30000) {
+            process.kill();
+            process.waitForFinished(1000);
+            if (error) {
+                *error = QStringLiteral("Timed out while validating '%1'.")
+                             .arg(QFileInfo(path).fileName());
+            }
+            return false;
+        }
+    }
+
+    const QString expectedType = streamSelector.startsWith(QLatin1Char('a'))
+        ? QStringLiteral("audio") : QStringLiteral("video");
+    const QString actualType = QString::fromUtf8(process.readAllStandardOutput()).trimmed();
+    if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0
+        && actualType == expectedType) {
+        return true;
+    }
+
+    QString detail = QString::fromUtf8(process.readAllStandardError()).trimmed();
+    if (detail.size() > 600) detail = detail.right(600);
+    if (error) {
+        *error = QStringLiteral("'%1' is not a readable %2 file%3")
+                     .arg(QFileInfo(path).fileName(), expectedType,
+                          detail.isEmpty() ? QStringLiteral(".")
+                                           : QStringLiteral(": %1").arg(detail));
+    }
+    return false;
+}
+
+bool isAudioArtifactNode(const QString &id)
+{
+    return id == QStringLiteral("ingest") || id == QStringLiteral("source-separate")
+        || id == QStringLiteral("synthesize") || id == QStringLiteral("fit-timing")
+        || id == QStringLiteral("mix");
+}
+
+bool validateWorkflowArtifactContent(const QVariantMap &request, QVariantMap *prepared,
+                                     QString *error)
+{
+    const QString id = request.value(QStringLiteral("id")).toString();
+    const QStringList paths = request.value(QStringLiteral("paths")).toStringList();
+    if (isAudioArtifactNode(id)) {
+        for (const QString &path : paths) {
+            if (!validateWorkflowArtifactMedia(path, QStringLiteral("a:0"), error))
+                return false;
+        }
+        return true;
+    }
+    if (id == QStringLiteral("export"))
+        return validateWorkflowArtifactMedia(paths.constFirst(), QStringLiteral("v:0"), error);
+
+    if (id != QStringLiteral("transcribe") && id != QStringLiteral("subtitle-ocr")
+        && id != QStringLiteral("review-transcript") && id != QStringLiteral("translate")) {
+        return true;
+    }
+
+    QVariantList imported;
+    bool hasTiming = false;
+    QString format;
+    if (!DubbingSubtitleService::importFile(paths.constFirst(), imported, hasTiming, format, error))
+        return false;
+    QVariantList replacement = imported;
+    const QVariantList segmentSnapshot = request.value(QStringLiteral("segments")).toList();
+    if (!hasTiming
+        && !DubbingSubtitleService::mapUntimedLines(imported, segmentSnapshot, replacement, error)) {
+        return false;
+    }
+    if (id != QStringLiteral("translate")) {
+        if (prepared) {
+            prepared->insert(QStringLiteral("subtitleSegments"), replacement);
+            prepared->insert(QStringLiteral("subtitleFormat"), format);
+            prepared->insert(QStringLiteral("subtitleHasTiming"), hasTiming);
+            // Untimed text is mapped against this exact transcript snapshot.
+            // If the project changes before commit, reject it rather than
+            // applying to different dialogue after a worker is cancelled.
+            prepared->insert(QStringLiteral("segmentSnapshot"), segmentSnapshot);
+            prepared->insert(QStringLiteral("requiresSegmentSnapshot"), !hasTiming);
+        }
+        return true;
+    }
+
+    if (replacement.size() != segmentSnapshot.size()) {
+        if (error) {
+            *error = QStringLiteral("The translated workflow output has %1 cues, but this transcript has %2. No rows were changed.")
+                         .arg(replacement.size()).arg(segmentSnapshot.size());
+        }
+        return false;
+    }
+    for (int index = 0; index < replacement.size(); ++index) {
+        if (replacement.at(index).toMap().value(QStringLiteral("sourceText")).toString().trimmed().isEmpty()) {
+            if (error) {
+                *error = QStringLiteral("The translated workflow output contains an empty cue at row %1.")
+                             .arg(index + 1);
+            }
+            return false;
+        }
+    }
+    if (prepared) {
+        prepared->insert(QStringLiteral("translationLines"), replacement);
+        prepared->insert(QStringLiteral("segmentSnapshot"), segmentSnapshot);
+        // Translation must target exactly the rows seen by the AI/worker.
+        prepared->insert(QStringLiteral("requiresSegmentSnapshot"), true);
+    }
+    return true;
+}
+
+QVariantMap stageWorkflowArtifactImport(const QVariantMap &request)
+{
+    QVariantMap result{{QStringLiteral("requestedId"), request.value(QStringLiteral("requestedId"))},
+                       {QStringLiteral("id"), request.value(QStringLiteral("id"))},
+                       {QStringLiteral("projectPath"), request.value(QStringLiteral("projectPath"))}};
+    QString error;
+    QVariantMap prepared;
+    if (!validateWorkflowArtifactContent(request, &prepared, &error)) {
+        result.insert(QStringLiteral("error"), error);
+        return result;
+    }
+
+    const QString id = request.value(QStringLiteral("id")).toString();
+    const QStringList sourcePaths = request.value(QStringLiteral("paths")).toStringList();
+    const QString destinationRoot = request.value(QStringLiteral("destinationRoot")).toString();
+    const QString stagingDirectory = QDir(destinationRoot).filePath(
+        QStringLiteral(".manual-imports/%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+    if (!QDir().mkpath(stagingDirectory)) {
+        result.insert(QStringLiteral("error"),
+                      QStringLiteral("Cannot create a staging folder for the selected workflow output."));
+        return result;
+    }
+
+    QStringList stagedPaths;
+    for (int index = 0; index < sourcePaths.size(); ++index) {
+        const QFileInfo sourceInfo(sourcePaths.at(index));
+        QString fileName = sourceInfo.fileName();
+        if (stagedPaths.contains(QDir(stagingDirectory).filePath(fileName), Qt::CaseInsensitive)) {
+            const QString role = id == QStringLiteral("source-separate") && index == 0
+                ? QStringLiteral("vocals-") : QStringLiteral("background-");
+            fileName = role + fileName;
+        }
+        const QString destination = QDir(stagingDirectory).filePath(fileName);
+        if (!QFile::copy(sourceInfo.absoluteFilePath(), destination)) {
+            QDir(stagingDirectory).removeRecursively();
+            result.insert(QStringLiteral("error"),
+                          QStringLiteral("Cannot stage '%1' for this project.").arg(sourceInfo.fileName()));
+            return result;
+        }
+        stagedPaths.append(destination);
+    }
+    result.insert(QStringLiteral("paths"), stagedPaths);
+    result.insert(QStringLiteral("stagingDirectory"), stagingDirectory);
+    result.insert(QStringLiteral("prepared"), prepared);
+    result.insert(QStringLiteral("success"), true);
+    return result;
+}
+
+} // namespace
+
 bool DubbingController::exportPackage(const QString &directoryPath)
 {
     const QString outputDirectory = QFileInfo(PathUtils::urlToLocalPath(directoryPath)).absoluteFilePath();
@@ -127,6 +318,7 @@ bool DubbingController::importSubtitlesInternal(const QString &path,
             return false;
         }
     }
+    invalidateDerivedAudioForChangedSegments(m_project.segments, &replacement);
     m_project.segments = replacement;
     QVariantMap configuration = this->subtitleConfiguration();
     configuration.insert(QStringLiteral("source"), QStringLiteral("imported-") + format);
@@ -329,11 +521,13 @@ QVariantMap DubbingController::workflowArtifactHandoffStatus(const QString &node
     return result;
 }
 
-bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
-                                                     const QVariantList &paths)
+bool DubbingController::validateWorkflowArtifactRequest(const QString &nodeId,
+                                                        const QVariantList &paths,
+                                                        QVariantMap *request,
+                                                        QString *error) const
 {
     if (!hasProject()) {
-        setError(QStringLiteral("Open or create a Dubbing project before importing a workflow output."));
+        if (error) *error = QStringLiteral("Open or create a Dubbing project before importing a workflow output.");
         return false;
     }
 
@@ -359,16 +553,15 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     // later reconciliation artifact.
     const QVariantMap spec = workflowArtifactSpec(requestedId);
     if (spec.isEmpty()) {
-        setError(QStringLiteral("This Dubbing task does not accept a manual workflow output."));
+        if (error) *error = QStringLiteral("This Dubbing task does not accept a manual workflow output.");
         return false;
     }
-    const bool overrideRunningWorker = canOverrideRunningWorkflowArtifact(id);
     // Use the same route-scoped policy as the Upload button.  In particular,
     // an offline STT handoff must remain importable while the independent OCR
     // worker is active, and vice versa; only the matching active worker may
     // be cancelled below.
     if (processing() && !canImportWorkflowArtifactNow(requestedId)) {
-        setBusyError(QStringLiteral("A different Dubbing task is active. Upload may replace only the output of the currently-running task."));
+        if (error) *error = QStringLiteral("A different Dubbing task is active. Upload may replace only the output of the currently-running task.");
         return false;
     }
 
@@ -376,7 +569,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     for (const QVariant &value : paths) {
         const QString candidate = QFileInfo(PathUtils::urlToLocalPath(value.toString())).absoluteFilePath();
         if (candidate.isEmpty() || !QFileInfo(candidate).isFile()) {
-            setError(QStringLiteral("Every selected workflow output must be an existing local file."));
+            if (error) *error = QStringLiteral("Every selected workflow output must be an existing local file.");
             return false;
         }
         if (!sourcePaths.contains(candidate, Qt::CaseInsensitive)) sourcePaths.append(candidate);
@@ -385,9 +578,11 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     const bool multiple = spec.value(QStringLiteral("multiple")).toBool();
     const int expectedCount = multiple ? 2 : 1;
     if (sourcePaths.size() != expectedCount) {
-        setError(multiple
-                     ? QStringLiteral("Voice isolation requires exactly two audio files: Vocals first and Background second.")
-                     : QStringLiteral("This task requires exactly one output file; select only the declared workflow artifact."));
+        if (error) {
+            *error = multiple
+                ? QStringLiteral("Voice isolation requires exactly two audio files: Vocals first and Background second.")
+                : QStringLiteral("This task requires exactly one output file; select only the declared workflow artifact.");
+        }
         return false;
     }
 
@@ -395,8 +590,10 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     for (const QString &sourcePath : sourcePaths) {
         const QString extension = QStringLiteral(".") + QFileInfo(sourcePath).suffix().toLower();
         if (!allowedExtensions.contains(extension)) {
-            setError(QStringLiteral("Unsupported workflow output format '%1'. Allowed formats: %2.")
-                         .arg(extension, allowedExtensions.join(QStringLiteral(", "))));
+            if (error) {
+                *error = QStringLiteral("Unsupported workflow output format '%1'. Allowed formats: %2.")
+                             .arg(extension, allowedExtensions.join(QStringLiteral(", ")));
+            }
             return false;
         }
     }
@@ -418,11 +615,79 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         const QString expectedBase = QFileInfo(expected).completeBaseName().toLower();
         const QString actualBase = QFileInfo(actual).completeBaseName().toLower();
         if (!expectedBase.isEmpty() && actualBase != expectedBase) {
-            setError(QStringLiteral("This task accepts only '%1' (with one of the declared extensions), not '%2'.")
-                         .arg(expected, QFileInfo(sourcePaths.constFirst()).fileName()));
+            if (error) {
+                *error = QStringLiteral("This task accepts only '%1' (with one of the declared extensions), not '%2'.")
+                             .arg(expected, QFileInfo(sourcePaths.constFirst()).fileName());
+            }
             return false;
         }
     }
+
+    if (request) {
+        request->insert(QStringLiteral("requestedId"), requestedId);
+        request->insert(QStringLiteral("id"), id);
+        request->insert(QStringLiteral("spec"), spec);
+        request->insert(QStringLiteral("paths"), sourcePaths);
+        request->insert(QStringLiteral("projectPath"), m_project.projectPath);
+        request->insert(QStringLiteral("destinationRoot"),
+                        dubbingArtifactStageDirectory(m_project.projectPath, id));
+        request->insert(QStringLiteral("segments"), m_project.segments);
+        request->insert(QStringLiteral("overrideRunningWorker"),
+                        canOverrideRunningWorkflowArtifact(id));
+    }
+    return true;
+}
+
+bool DubbingController::startWorkflowArtifactImport(const QString &nodeId,
+                                                     const QVariantList &paths)
+{
+    if (m_workflowArtifactImportWatcher.isRunning()) {
+        setBusyError(QStringLiteral("Finish validating the current workflow output before choosing another one."));
+        return false;
+    }
+
+    QVariantMap request;
+    QString error;
+    if (!validateWorkflowArtifactRequest(nodeId, paths, &request, &error)) {
+        setError(error);
+        return false;
+    }
+
+    m_workflowArtifactImportNodeId = request.value(QStringLiteral("requestedId")).toString();
+    emit workflowArtifactImportChanged();
+    m_workflowArtifactImportWatcher.setFuture(QtConcurrent::run(
+        [request]() { return stageWorkflowArtifactImport(request); }));
+    return true;
+}
+
+bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
+                                                     const QVariantList &paths)
+{
+    QVariantMap request;
+    QString requestError;
+    if (!validateWorkflowArtifactRequest(nodeId, paths, &request, &requestError)) {
+        setError(requestError);
+        return false;
+    }
+
+    QString contentError;
+    QVariantMap prepared;
+    if (!validateWorkflowArtifactContent(request, &prepared, &contentError)) {
+        setError(contentError);
+        return false;
+    }
+
+    return applyWorkflowArtifactFiles(request, prepared);
+}
+
+bool DubbingController::applyWorkflowArtifactFiles(const QVariantMap &request,
+                                                    const QVariantMap &prepared)
+{
+    const QString requestedId = request.value(QStringLiteral("requestedId")).toString();
+    const QString id = request.value(QStringLiteral("id")).toString();
+    const QVariantMap spec = request.value(QStringLiteral("spec")).toMap();
+    const QStringList sourcePaths = request.value(QStringLiteral("paths")).toStringList();
+    const bool overrideRunningWorker = request.value(QStringLiteral("overrideRunningWorker")).toBool();
 
     const QString destinationRoot = dubbingArtifactStageDirectory(m_project.projectPath, id);
     if (!QDir().mkpath(destinationRoot)) {
@@ -434,6 +699,22 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
     QString copyError;
     for (int index = 0; index < sourcePaths.size(); ++index) {
         const QString &sourcePath = sourcePaths.at(index);
+        const QString absoluteSource = QFileInfo(sourcePath).absoluteFilePath();
+        const QString normalizedDestinationRoot = QDir(destinationRoot).absolutePath();
+        const QString relativeToDestinationRoot = QDir(normalizedDestinationRoot)
+            .relativeFilePath(absoluteSource);
+        const bool alreadyStagedForProject = !relativeToDestinationRoot.isEmpty()
+            && relativeToDestinationRoot != QStringLiteral(".")
+            && !relativeToDestinationRoot.startsWith(QStringLiteral("../"))
+            && !relativeToDestinationRoot.startsWith(QStringLiteral("..\\"));
+        if (alreadyStagedForProject) {
+            // startWorkflowArtifactImport copied this file off the GUI thread
+            // into a project-owned immutable handoff folder. Re-copying it on
+            // the controller thread would reintroduce freezes for large FLAC
+            // stems and makes a completed staging operation non-transactional.
+            copiedPaths.append(absoluteSource);
+            continue;
+        }
         const QString fileName = QFileInfo(sourcePath).fileName();
         QString destination = QDir(destinationRoot).filePath(fileName);
         if (id == QStringLiteral("source-separate")
@@ -448,7 +729,6 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         // Preserve every manual handoff. A repeated run or two AI IDE runs
         // may legitimately use the same basename; never replace an existing
         // project artifact just because the picker supplied that name again.
-        const QString absoluteSource = QFileInfo(sourcePath).absoluteFilePath();
         if (QFileInfo::exists(destination)
             && QFileInfo(destination).absoluteFilePath().compare(
                    absoluteSource, Qt::CaseInsensitive) != 0) {
@@ -526,6 +806,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         m_project.vocalsAudioPath.clear();
         m_project.backgroundAudioPath.clear();
         m_runner->setBackgroundAudioPath(QString());
+        m_runner->setSourceVocalsAudioPath(QString());
         m_stepOutputs.insert(id, QVariantMap{{QStringLiteral("manualUpload"), true},
                                              {QStringLiteral("audio"), copiedPaths.constFirst()},
                                              {QStringLiteral("path"), copiedPaths.constFirst()},
@@ -544,6 +825,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
         m_project.vocalsAudioPath = vocalsPath;
         m_project.backgroundAudioPath = backgroundPath;
         m_runner->setBackgroundAudioPath(backgroundPath);
+        m_runner->setSourceVocalsAudioPath(vocalsPath);
         m_stepOutputs.insert(id, QVariantMap{{QStringLiteral("manualUpload"), true},
                                              {QStringLiteral("vocals"), vocalsPath},
                                              {QStringLiteral("background"), backgroundPath},
@@ -552,8 +834,35 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
                                              {QStringLiteral("workerPath"), spec.value(QStringLiteral("workerPath"))}});
     } else if (id == QStringLiteral("transcribe") || id == QStringLiteral("subtitle-ocr")
                || id == QStringLiteral("review-transcript")) {
+        QVariantList replacement = prepared.value(QStringLiteral("subtitleSegments")).toList();
+        if (replacement.isEmpty()) {
+            setError(QStringLiteral("The selected transcript output contains no usable subtitle cues."));
+            return false;
+        }
+        if (prepared.value(QStringLiteral("requiresSegmentSnapshot")).toBool()
+            && prepared.value(QStringLiteral("segmentSnapshot")).toList() != m_project.segments) {
+            setError(QStringLiteral("The transcript changed while this untimed output was being validated. Select the file again so its lines can be matched safely."));
+            return false;
+        }
+        // All parse and untimed-mapping work completed before this point.  Do
+        // not call importSubtitlesInternal here: it would introduce another
+        // failure path after the matching STT/OCR worker is cancelled.
         cancelMatchingWorker();
-        if (!importSubtitlesInternal(copiedPaths.constFirst(), QStringLiteral("existing-segment"), true)) return false;
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &replacement);
+        m_project.segments = replacement;
+        QVariantMap configuration = subtitleConfiguration();
+        configuration.insert(QStringLiteral("source"),
+                             QStringLiteral("imported-")
+                                 + prepared.value(QStringLiteral("subtitleFormat")).toString());
+        configuration.insert(QStringLiteral("hasOriginalTiming"),
+                             prepared.value(QStringLiteral("subtitleHasTiming")).toBool());
+        configuration.insert(QStringLiteral("untimedMapping"),
+                             prepared.value(QStringLiteral("subtitleHasTiming")).toBool()
+                                 ? QString()
+                                 : QStringLiteral("existing-segment"));
+        configuration.insert(QStringLiteral("importedFileName"),
+                             QFileInfo(copiedPaths.constFirst()).fileName());
+        m_project.subtitleConfiguration = configuration;
         if (id == QStringLiteral("transcribe")) {
             m_project.transcriptConfiguration.insert(QStringLiteral("sttSegments"), m_project.segments);
         } else if (id == QStringLiteral("subtitle-ocr")) {
@@ -568,22 +877,14 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
                                              {QStringLiteral("path"), copiedPaths.constFirst()},
                                              {QStringLiteral("colabFolder"), spec.value(QStringLiteral("colabFolder"))},
                                              {QStringLiteral("workerPath"), spec.value(QStringLiteral("workerPath"))}});
+        emit segmentsChanged();
     } else if (id == QStringLiteral("translate")) {
-        QVariantList imported;
-        bool hasTiming = false;
-        QString format;
-        QString importError;
-        if (!DubbingSubtitleService::importFile(copiedPaths.constFirst(), imported, hasTiming, format, &importError)) {
-            setError(importError);
+        if (prepared.value(QStringLiteral("requiresSegmentSnapshot")).toBool()
+            && prepared.value(QStringLiteral("segmentSnapshot")).toList() != m_project.segments) {
+            setError(QStringLiteral("The transcript changed while this translation output was being validated. Select the file again for the current script."));
             return false;
         }
-        QVariantList targetLines = imported;
-        if (!hasTiming) {
-            if (!DubbingSubtitleService::mapUntimedLines(imported, m_project.segments, targetLines, &importError)) {
-                setError(importError);
-                return false;
-            }
-        }
+        const QVariantList targetLines = prepared.value(QStringLiteral("translationLines")).toList();
         if (targetLines.size() != m_project.segments.size()) {
             setError(QStringLiteral("The translated workflow output has %1 cues, but this transcript has %2. No rows were changed.")
                          .arg(targetLines.size()).arg(m_project.segments.size()));
@@ -603,6 +904,7 @@ bool DubbingController::importWorkflowArtifactFiles(const QString &nodeId,
             updated[index] = segment;
         }
         cancelMatchingWorker();
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &updated);
         m_project.segments = updated;
         m_project.subtitleConfiguration.insert(QStringLiteral("translationSource"), QStringLiteral("manual-colab-upload"));
         m_project.subtitleConfiguration.insert(QStringLiteral("translatedFileName"), QFileInfo(copiedPaths.constFirst()).fileName());
@@ -747,45 +1049,56 @@ QVariantMap DubbingController::prepareTranscriptAiHandoff()
         setError(QStringLiteral("Save the project before preparing transcript handoff files."));
         return {};
     }
-    const QString sttDirectory = dubbingArtifactStageDirectory(
-        m_project.projectPath, QStringLiteral("transcribe"));
-    const QString ocrDirectory = dubbingArtifactStageDirectory(
-        m_project.projectPath, QStringLiteral("subtitle-ocr"));
-    const QString canonicalDirectory = dubbingArtifactStageDirectory(
-        m_project.projectPath, QStringLiteral("review-transcript"));
-    const QString translationDirectory = dubbingArtifactStageDirectory(
-        m_project.projectPath, QStringLiteral("translate"));
-    const QString sttPath = QDir(sttDirectory).filePath(QStringLiteral("transcript.srt"));
-    const QString ocrPath = QDir(ocrDirectory).filePath(QStringLiteral("ocr.srt"));
-    const QString canonicalPath = QDir(canonicalDirectory).filePath(
-        QStringLiteral("canonical-transcript.srt"));
-    const QString translatedPath = QDir(translationDirectory).filePath(
-        QStringLiteral("translated.srt"));
+    const QString handoffId = QDateTime::currentDateTimeUtc().toString(
+        QStringLiteral("yyyyMMddTHHmmsszzzZ")) + QLatin1Char('-')
+        + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const QString handoffDirectory = QDir(dubbingProjectArtifactRoot(m_project.projectPath)).filePath(
+        QStringLiteral("ai-handoff/%1").arg(handoffId));
+    const QString sttPath = QDir(handoffDirectory).filePath(QStringLiteral("01-stt-input.srt"));
+    const QString ocrPath = QDir(handoffDirectory).filePath(QStringLiteral("02-ocr-input.srt"));
+    const QString canonicalPath = QDir(handoffDirectory).filePath(
+        QStringLiteral("03-canonical-timeline.srt"));
+    const QString mergedPath = QDir(handoffDirectory).filePath(
+        QStringLiteral("04-merged-transcript.srt"));
+    const QString translatedPath = QDir(handoffDirectory).filePath(
+        QStringLiteral("05-translation-vi.srt"));
 
     const QVariantList sttSegments = m_project.transcriptConfiguration.value(
         QStringLiteral("sttSegments")).toList();
     const QVariantList ocrSegments = m_project.transcriptConfiguration.value(
         QStringLiteral("ocrSegments")).toList();
     QString error;
-    if ((!sttSegments.isEmpty() && (!QDir().mkpath(sttDirectory)
-                                    || !writeDubbingSubtitles(sttSegments, sttPath, false, &error)))
-        || (!ocrSegments.isEmpty() && (!QDir().mkpath(ocrDirectory)
-                                       || !writeDubbingSubtitles(ocrSegments, ocrPath, false, &error)))
+    if (!QDir().mkpath(handoffDirectory)
+        || (!sttSegments.isEmpty()
+            && !writeDubbingSubtitlesAtomically(sttSegments, sttPath, false, &error))
+        || (!ocrSegments.isEmpty()
+            && !writeDubbingSubtitlesAtomically(ocrSegments, ocrPath, false, &error))
         || (m_project.segments.isEmpty()
-            || !QDir().mkpath(canonicalDirectory)
-            || !writeDubbingSubtitles(m_project.segments, canonicalPath, false, &error))
-        || !QDir().mkpath(translationDirectory)) {
+            || !writeDubbingSubtitlesAtomically(m_project.segments, canonicalPath, false, &error))) {
         setError(error.isEmpty()
             ? QStringLiteral("A transcript is required before preparing AI handoff files.")
             : error);
         return {};
     }
 
+    const auto suppliedPath = [](const QString &path) {
+        return path.isEmpty() ? QStringLiteral("(not supplied)") : path;
+    };
+    const QString prompt = QStringLiteral(
+        "Read the supplied transcript merge and translation guide, then execute it.\n"
+        "STT input: %1\nOCR input: %2\nCanonical input: %3\n"
+        "Merged output: %4\nTranslation output: %5")
+        .arg(suppliedPath(QFileInfo(sttPath).isFile() ? sttPath : QString()),
+             suppliedPath(QFileInfo(ocrPath).isFile() ? ocrPath : QString()),
+             canonicalPath, mergedPath, translatedPath);
     clearError();
     return {{QStringLiteral("projectRoot"), dubbingProjectArtifactRoot(m_project.projectPath)},
+            {QStringLiteral("handoffDirectory"), handoffDirectory},
+            {QStringLiteral("prompt"), prompt},
             {QStringLiteral("sttInput"), QFileInfo(sttPath).isFile() ? sttPath : QString()},
             {QStringLiteral("ocrInput"), QFileInfo(ocrPath).isFile() ? ocrPath : QString()},
             {QStringLiteral("canonicalInput"), canonicalPath},
+            {QStringLiteral("mergedOutput"), mergedPath},
             {QStringLiteral("translationOutput"), translatedPath}};
 }
 
@@ -854,6 +1167,7 @@ bool DubbingController::renderPreview(const QString &path)
         return false;
     }
     m_runner->setBackgroundAudioPath(backgroundPath);
+    m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
     return m_runner->renderPreview(m_project.segments, m_project.projectPath, path,
                                    audioMixConfiguration());
 }

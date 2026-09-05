@@ -19,6 +19,7 @@
 #include "dubbing/workflow/DubbingWorkflowNodes.h"
 #include "workflows/graph/WorkflowGraphRunner.h"
 #include "core/storage/PathUtils.h"
+#include "core/services/MediaRuntimeLocator.h"
 #include "core/utils/Logger.h"
 #include "controllers/app/AppController.h"
 #include "controllers/models/ModelSessionRegistry.h"
@@ -49,9 +50,11 @@
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QProcess>
+#include <QElapsedTimer>
 #include <QStringList>
 #include <QTimer>
 #include <QRegularExpression>
+#include <QtConcurrent>
 
 namespace LAStudio {
 
@@ -231,6 +234,41 @@ bool writeDubbingSubtitles(const QVariantList &segments, const QString &path,
                            bool useTargetText, QString *error)
 {
     return DubbingSubtitleService::writeSidecar(segments, path, useTargetText, error);
+}
+
+bool writeDubbingSubtitlesAtomically(const QVariantList &segments, const QString &path,
+                                     bool useTargetText, QString *error)
+{
+    const QFileInfo destination(path);
+    if (!QDir().mkpath(destination.absolutePath())) {
+        if (error) *error = QStringLiteral("Cannot create transcript handoff folder: %1")
+                               .arg(destination.absolutePath());
+        return false;
+    }
+    // The snapshot directory is unique per handoff. Write in that directory
+    // first, then rename on the same volume so an external IDE never sees a
+    // partially-written SRT at the advertised input path.
+    const QString temporaryPath = path + QStringLiteral(".writing-")
+        + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString writeError;
+    if (!writeDubbingSubtitles(segments, temporaryPath, useTargetText, &writeError)) {
+        QFile::remove(temporaryPath);
+        if (error) *error = writeError;
+        return false;
+    }
+    if (QFileInfo::exists(path) && !QFile::remove(path)) {
+        QFile::remove(temporaryPath);
+        if (error) *error = QStringLiteral("Cannot replace transcript handoff file: %1")
+                               .arg(path);
+        return false;
+    }
+    if (!QFile::rename(temporaryPath, path)) {
+        QFile::remove(temporaryPath);
+        if (error) *error = QStringLiteral("Cannot finalize transcript handoff file: %1")
+                               .arg(path);
+        return false;
+    }
+    return true;
 }
 
 bool replaceCopy(const QString &source, const QString &destination, QString *error)
@@ -512,6 +550,47 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
 {
     m_translation = translation;
     m_runner = new DubbingJobRunner(sttSession, tts, translation, models, runtimes, this);
+    connect(&m_workflowArtifactImportWatcher, &QFutureWatcher<QVariantMap>::finished,
+            this, [this]() {
+        const QVariantMap result = m_workflowArtifactImportWatcher.result();
+        const QString requestedId = result.value(QStringLiteral("requestedId"),
+                                                  m_workflowArtifactImportNodeId).toString();
+        const QString stagedDirectory = result.value(QStringLiteral("stagingDirectory")).toString();
+        m_workflowArtifactImportNodeId.clear();
+        emit workflowArtifactImportChanged();
+
+        bool success = result.value(QStringLiteral("success")).toBool();
+        QString error = result.value(QStringLiteral("error")).toString();
+        if (success && (!hasProject()
+                        || QFileInfo(projectPath()).absoluteFilePath().compare(
+                               QFileInfo(result.value(QStringLiteral("projectPath")).toString()).absoluteFilePath(),
+                               Qt::CaseInsensitive) != 0)) {
+            success = false;
+            error = QStringLiteral("The project changed while the workflow output was being validated. Select the file again for the current project.");
+        }
+        if (success) {
+            QVariantList stagedPaths;
+            const QStringList paths = result.value(QStringLiteral("paths")).toStringList();
+            for (const QString &path : paths) stagedPaths.append(path);
+            QVariantMap applyRequest;
+            if (!validateWorkflowArtifactRequest(requestedId, stagedPaths, &applyRequest, &error)) {
+                success = false;
+            } else if (applyRequest.value(QStringLiteral("id")).toString()
+                       != result.value(QStringLiteral("id")).toString()) {
+                success = false;
+                error = QStringLiteral("The selected workflow route changed while the output was being validated. Select the file again for the current route.");
+            } else {
+                success = applyWorkflowArtifactFiles(
+                    applyRequest, result.value(QStringLiteral("prepared")).toMap());
+                if (!success) error = lastError();
+            }
+        }
+        if (!success) {
+            if (!stagedDirectory.isEmpty()) QDir(stagedDirectory).removeRecursively();
+            if (!error.isEmpty()) setError(error);
+        }
+        emit workflowArtifactImportFinished(requestedId, success);
+    });
     // Public-media download is a CPU-only, app-owned operation. It is not an
     // AI route and must never require, create, or reuse a Colab credential.
     m_remoteMediaImport = new RemoteMediaImportService({}, this);
@@ -560,7 +639,9 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
     });
     connect(m_translationFix, &DubbingTranslationFixService::completed,
             this, [this](const QVariantList &segments, int, int) {
-        m_project.segments = segments;
+        QVariantList updated = segments;
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &updated);
+        m_project.segments = updated;
         emit segmentsChanged();
         emit translationFixChanged();
         emit workflowChanged();
@@ -570,7 +651,9 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
             this, [this](const QVariantList &segments, int, int) {
         // Suggestions preserve each segment's conflict evidence and remain
         // pending until an explicit accept/reject/manual review action.
-        m_project.segments = segments;
+        QVariantList updated = segments;
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &updated);
+        m_project.segments = updated;
         emit segmentsChanged();
         emit translationFixChanged();
         emit workflowChanged();
@@ -765,7 +848,9 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
     });
 
     connect(m_runner, &DubbingJobRunner::segmentsUpdated, this, [this](const QVariantList &segments) {
-        m_project.segments = segments;
+        QVariantList updated = segments;
+        invalidateDerivedAudioForChangedSegments(m_project.segments, &updated);
+        m_project.segments = updated;
         emit segmentsChanged();
         emit workflowChanged();
         persistAfterEdit();
@@ -795,6 +880,7 @@ DubbingController::DubbingController(SttSessionController *sttSession, TtsEngine
         m_project.vocalsAudioPath = vocalsPath;
         m_project.backgroundAudioPath = backgroundPath;
         m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+        m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
         emit projectChanged();
         emit workflowChanged();
         persistAfterEdit();
@@ -1455,7 +1541,9 @@ void DubbingController::setSubtitleOcrController(SubtitleOcrController *controll
             // editable segment list only when STT has not already produced the
             // primary transcript; a later OCR pass remains non-destructive.
             if (sttSegments.isEmpty()) {
-                m_project.segments = segments;
+                QVariantList updated = segments;
+                invalidateDerivedAudioForChangedSegments(m_project.segments, &updated);
+                m_project.segments = updated;
                 emit segmentsChanged();
             }
             QVariantMap ocrOutput;

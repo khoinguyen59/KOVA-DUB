@@ -22,7 +22,10 @@ Rectangle {
     required property var sourceMediaPanel
     property int selectedSegment: -1
     property int activeTab: 0
-    onDisplayedStepIdChanged: activeTab = 0
+    onDisplayedStepIdChanged: {
+        activeTab = 0
+        transcriptAiHandoff = ({})
+    }
     property bool ocrSetupEditable: true
     property string playingSeparationStem: ""
     property string playingVoiceClipPath: ""
@@ -32,6 +35,9 @@ Rectangle {
                                   ? root.dubbing.workflowArtifactSpecsForStage(root.actionNodeId)
                                   : []
     property var acceptedArtifactNodeIds: []
+    property var transcriptAiHandoff: ({})
+    readonly property bool supportsTranscriptAiHandoff:
+        ["transcribe", "review-transcript", "translate", "review-translation"].indexOf(root.displayedStepId) >= 0
     // Keep bindings around the C++ invokable live while independent STT/OCR
     // workers change aggregate processing state.
     property int skipPolicyRevision: 0
@@ -99,6 +105,18 @@ Rectangle {
     function skipArtifactTask() {
         if (root.dubbing && root.dubbing.skipWorkflowTask(root.actionNodeId))
             root.artifactSkipRequested(root.actionNodeId)
+    }
+
+    function prepareTranscriptAiHandoff() {
+        if (!root.dubbing || !root.supportsTranscriptAiHandoff)
+            return
+        root.transcriptAiHandoff = root.dubbing.prepareTranscriptAiHandoff()
+    }
+
+    function openTranscriptAiHandoffFolder() {
+        var path = String(root.transcriptAiHandoff.handoffDirectory || "")
+        if (path !== "")
+            Qt.openUrlExternally("file:///" + path.replace(/\\/g, "/"))
     }
 
     component SegmentTextArea: AppTextArea {
@@ -298,6 +316,65 @@ Rectangle {
                             contractSpec: modelData
                             Layout.fillWidth: true
                             onArtifactAccepted: root.handleArtifactAccepted(nodeId)
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "dubbingTranscriptAiHandoff"
+                        visible: root.supportsTranscriptAiHandoff
+                        Layout.fillWidth: true
+                        implicitHeight: transcriptHandoffActions.implicitHeight + Theme.paddingSmall * 2
+                        radius: Theme.radiusSmall
+                        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
+                        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.30)
+                        border.width: 1
+
+                        ColumnLayout {
+                            id: transcriptHandoffActions
+                            anchors.fill: parent
+                            anchors.margins: Theme.paddingSmall
+                            spacing: Theme.paddingSmall
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.paddingSmall
+
+                                PrimaryButton {
+                                    objectName: "dubbingPrepareTranscriptAiHandoff"
+                                    text: qsTr("Chuẩn bị AI handoff")
+                                    iconName: "share"
+                                    quiet: true
+                                    Layout.fillWidth: true
+                                    enabled: root.dubbing && (root.dubbing.segments || []).length > 0
+                                    onClicked: root.prepareTranscriptAiHandoff()
+                                }
+                                PrimaryButton {
+                                    objectName: "dubbingCopyTranscriptAiPrompt"
+                                    text: qsTr("Sao chép prompt")
+                                    iconName: "copy"
+                                    quiet: true
+                                    enabled: String(root.transcriptAiHandoff.prompt || "") !== ""
+                                    onClicked: AppController.copyToClipboard(root.transcriptAiHandoff.prompt)
+                                }
+                                PrimaryButton {
+                                    objectName: "dubbingOpenTranscriptAiHandoffFolder"
+                                    text: qsTr("Mở thư mục")
+                                    iconName: "folder"
+                                    quiet: true
+                                    enabled: String(root.transcriptAiHandoff.handoffDirectory || "") !== ""
+                                    onClicked: root.openTranscriptAiHandoffFolder()
+                                }
+                            }
+
+                            Text {
+                                visible: String(root.transcriptAiHandoff.handoffDirectory || "") !== ""
+                                Layout.fillWidth: true
+                                text: root.transcriptAiHandoff.handoffDirectory || ""
+                                color: Theme.textSecondary
+                                font.pixelSize: Theme.fontSmall
+                                elide: Text.ElideMiddle
+                                maximumLineCount: 1
+                            }
                         }
                     }
 

@@ -1,5 +1,14 @@
 # Tri nho du an LA Studio
 
+## 2026-09-05 — Recheck Dubbing: báo cáo từng batch, không nghiệm thu từ CTest đơn thuần
+
+- Yêu cầu mới: sau mỗi nhóm test nhỏ phải ghi kết quả/lỗi ngay vào `docs/AI_AGENT_RESPONSE_REPORT.md`, không chờ toàn bộ audit xong.
+- Recheck trên `7489f1a`: CTest 41/41, QML lint/smoke và notebook contracts qua, nhưng vẫn tìm được RC-01…RC-12. Xem phần mới nhất báo cáo/checklist trước khi tiếp tục fix/build.
+- Rủi ro cần ưu tiên: default `preview.wav` chung folder dự án; clip TTS cũ thắng manual voice upload hoặc bản dịch mới; upload invalid làm hủy worker; copy lớn blocking và FFmpeg argv hàng trăm cue quá dài.
+- 2026-09-05 G14–G18: artifact staging phải parse/map trước khi hủy worker; test re-entrant TXT upload đã khóa điều này. Upload enqueue được giữ dưới 150 ms với probe cố ý chậm; mixer batch 24 input đã render 1.000 cue/path dài; full Windows CTest 41/41 và QML lint/route smoke đều xanh. Live desktop/Colab/slow-disk acceptance vẫn không được suy diễn từ fixture.
+- Test STT/OCR concurrent hiện có tên “combined” nhưng chủ yếu kiểm source hoặc nhánh từ chối reconcile cũ; chưa có bằng chứng chạy hai worker đồng thời đủ mọi thứ tự/cancel. Không gọi đó là live acceptance.
+- Audit không đổi product code/EXE; chỉ docs, log và staging eSpeak trong build runtime để chạy năm test bị skip. Native desktop/Colab GPU/CapCut vẫn cần nghiệm thu riêng.
+
 ## 2026-09-05 - Runtime Host handshake race gate
 
 - Race đã tái hiện: client có thể gửi `Hello` vào named pipe trước khi server
@@ -59,6 +68,30 @@
 - Verification after this change: full MSVC CTest **41/41 PASS**. The build
   scripts now inspect only real archive-tool entries, not harmless `mingw` text
   in a bundled CMake path.
+
+## 2026-09-05 - Unique project/run AI handoff snapshots
+
+- `DubbingController::prepareTranscriptAiHandoff()` creates a unique folder
+  below the current project's `.workflow-artifacts/<project>/ai-handoff/`.
+  It atomically snapshots STT, OCR and canonical SRT inputs and reserves
+  project/run-specific merge and Vietnamese translation outputs.
+- The returned short prompt is the sole place that lists the exact absolute
+  paths. The guide remains path-role/rule-only: OCR supplies the cue grid when
+  available, STT is reference/fallback, and both outputs retain the grid.
+- `DubbingReviewPanel` exposes Prepare AI handoff, Copy prompt and Open folder
+  inside Data & Handoff. Do not reintroduce fixed handoff filenames or make an
+  external IDE discover project/cache paths.
+
+## 2026-09-05 - Artifact commit must use prepared subtitle data
+
+- A manual STT/OCR/review/translation upload is staged with parsed subtitle
+  rows and any untimed mapping before controller commit. Never call the parser
+  again after cancelling the matching worker.
+- If an untimed input or translation no longer targets the same transcript
+  snapshot, reject it before cancellation; a timed manual STT/OCR artifact can
+  still replace only its matching route.
+- Regression `manualUntimedTranscriptIsPreparedBeforeMatchingWorkerCancellation`
+  injects an edit at the cancellation signal and must keep passing.
 
 ## 2026-08-29 - Subtitle OCR Colab Pillow patch-version compatibility
 

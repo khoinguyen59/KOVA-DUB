@@ -112,6 +112,49 @@ QString chatContent(const QJsonObject &root)
     return choice.value(QStringLiteral("message")).toObject().value(QStringLiteral("content")).toString();
 }
 
+// A queued cancel() cannot be relied upon while a runner is inside a nested
+// network event loop: it is queued to the same worker thread that is waiting
+// for the reply.  Every request that accepts a shared cancellation token must
+// therefore observe that token from the nested loop itself and abort its own
+// reply.  The grace timer is deliberately finite so application shutdown can
+// never wait forever for a broken tunnel to acknowledge an abort.
+bool waitForReplyWithCancellation(
+    QNetworkReply *reply, const std::shared_ptr<std::atomic_bool> &cancelToken)
+{
+    if (!reply || reply->isFinished()) return false;
+
+    QEventLoop eventLoop;
+    QTimer cancellationPoll;
+    QTimer cancellationGrace;
+    bool cancelled = cancelToken && cancelToken->load(std::memory_order_relaxed);
+
+    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+    cancellationPoll.setInterval(25);
+    QObject::connect(&cancellationPoll, &QTimer::timeout, &eventLoop, [&]() {
+        if (!cancelToken || !cancelToken->load(std::memory_order_relaxed)) return;
+        cancelled = true;
+        if (!reply->isFinished()) reply->abort();
+        cancellationGrace.start(1000);
+    });
+    cancellationGrace.setSingleShot(true);
+    QObject::connect(&cancellationGrace, &QTimer::timeout, &eventLoop, [&]() {
+        // QNetworkAccessManager owns the reply and will abort it during stack
+        // unwinding.  Leaving this local loop is safer than holding a worker
+        // thread hostage after cancellation has already been requested.
+        eventLoop.quit();
+    });
+
+    if (cancelled) {
+        reply->abort();
+    } else {
+        cancellationPoll.start();
+        eventLoop.exec();
+        cancellationPoll.stop();
+    }
+    cancellationGrace.stop();
+    return cancelled || (cancelToken && cancelToken->load(std::memory_order_relaxed));
+}
+
 } // namespace
 
 bool ColabWorkerClient::configure(const QUrl &workerUrl, const QString &bearerToken,
@@ -185,9 +228,7 @@ bool ColabWorkerClient::transcribeWav(const QByteArray &wavData, const QString &
     QNetworkReply *reply = manager.post(request, multipart);
     multipart->setParent(reply);
     m_activeReply = reply;
-    QEventLoop eventLoop;
-    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    const bool cancelled = waitForReplyWithCancellation(reply, cancelToken);
 
     const QByteArray body = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -196,7 +237,7 @@ bool ColabWorkerClient::transcribeWav(const QByteArray &wavData, const QString &
     m_activeReply = nullptr;
     reply->deleteLater();
 
-    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
+    if (cancelled) return false;
     if (networkError != QNetworkReply::NoError) {
         if (errorMessage) {
             *errorMessage = statusCode >= 400 ? responseError(body, statusCode)
@@ -469,9 +510,7 @@ bool ColabWorkerClient::synthesizeSpeech(const QString &text, const QString &mod
     request.setRawHeader("Accept", "audio/wav, application/octet-stream");
     QNetworkReply *reply = manager.post(request, QJsonDocument(payload).toJson(QJsonDocument::Compact));
     m_activeReply = reply;
-    QEventLoop eventLoop;
-    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    const bool cancelled = waitForReplyWithCancellation(reply, cancelToken);
     const QByteArray body = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QNetworkReply::NetworkError networkError = reply->error();
@@ -479,7 +518,7 @@ bool ColabWorkerClient::synthesizeSpeech(const QString &text, const QString &mod
     m_activeReply = nullptr;
     reply->deleteLater();
 
-    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
+    if (cancelled) return false;
     if (networkError != QNetworkReply::NoError) {
         if (errorMessage) {
             *errorMessage = statusCode >= 400 ? responseError(body, statusCode)
@@ -535,9 +574,7 @@ bool ColabWorkerClient::designVoice(const QString &text, const QString &model,
     request.setRawHeader("Accept", "audio/wav, application/octet-stream");
     QNetworkReply *reply = manager.post(request, QJsonDocument(payload).toJson(QJsonDocument::Compact));
     m_activeReply = reply;
-    QEventLoop eventLoop;
-    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    const bool cancelled = waitForReplyWithCancellation(reply, cancelToken);
     const QByteArray body = reply->readAll();
     const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QNetworkReply::NetworkError networkError = reply->error();
@@ -545,7 +582,7 @@ bool ColabWorkerClient::designVoice(const QString &text, const QString &model,
     m_activeReply = nullptr;
     reply->deleteLater();
 
-    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) return false;
+    if (cancelled) return false;
     if (networkError != QNetworkReply::NoError) {
         if (errorMessage) {
             *errorMessage = statusCode >= 400 ? responseError(body, statusCode)
@@ -617,11 +654,9 @@ bool ColabWorkerClient::alignAudioFile(const QString &audioPath, const QString &
     QNetworkReply *reply = manager.post(request, multipart);
     multipart->setParent(reply);
     m_activeReply = reply;
-    QEventLoop eventLoop;
-    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    const bool cancelled = waitForReplyWithCancellation(reply, cancelToken);
     m_activeReply = nullptr;
-    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) {
+    if (cancelled) {
         reply->deleteLater();
         return false;
     }
@@ -898,11 +933,9 @@ bool ColabWorkerClient::translateSegments(const QVariantList &segments, const QS
                               {QStringLiteral("segments"), QJsonArray::fromVariantList(segments)}};
     QNetworkReply *reply = manager.post(request, QJsonDocument(payload).toJson(QJsonDocument::Compact));
     m_activeReply = reply;
-    QEventLoop eventLoop;
-    QObject::connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-    eventLoop.exec();
+    const bool cancelled = waitForReplyWithCancellation(reply, cancelToken);
     m_activeReply = nullptr;
-    if (cancelToken && cancelToken->load(std::memory_order_relaxed)) {
+    if (cancelled) {
         reply->deleteLater();
         return false;
     }

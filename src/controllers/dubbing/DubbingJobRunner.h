@@ -98,6 +98,7 @@ public:
     // already-running worker.
     void setBusyError(const QString &message);
     void setBackgroundAudioPath(const QString &path) { m_backgroundAudioPath = path; }
+    void setSourceVocalsAudioPath(const QString &path) { m_sourceVocalsAudioPath = path; }
 
 signals:
     void stateChanged();
@@ -139,6 +140,7 @@ private:
     QVariantList m_activeSegments;
     QString m_projectPath;
     QString m_backgroundAudioPath;
+    QString m_sourceVocalsAudioPath;
 
     MediaIngestService *m_mediaIngest = nullptr;
     SourceSeparationService *m_sourceSeparation = nullptr;
@@ -149,7 +151,9 @@ private:
     DubbingTranslationFixService *m_autoTranslationFix = nullptr;
     QPointer<ColabSession> m_colabSeparationSession;
     ColabSeparationRunner *m_colabSeparationRunner = nullptr;
-    QThread m_colabSeparationThread;
+    // Deliberately heap-owned: shutdown can hand a non-cooperative network
+    // worker off to Qt instead of blocking the GUI or force-terminating it.
+    QThread *m_colabSeparationThread = nullptr;
     std::shared_ptr<std::atomic_bool> m_colabSeparationCancellation;
     QMetaObject::Connection m_colabSeparationSessionConnection;
     QVariantMap m_translationConfiguration;

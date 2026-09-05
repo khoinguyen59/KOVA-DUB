@@ -11,6 +11,7 @@
 #include <QList>
 #include <QMetaObject>
 #include <QSet>
+#include <QFutureWatcher>
 #include <QtQml/qqml.h>
 #include <memory>
 
@@ -56,6 +57,13 @@ class DubbingController : public QObject
     Q_PROPERTY(QVariantList speakers READ speakers NOTIFY projectChanged)
     Q_PROPERTY(QVariantList segments READ segments NOTIFY segmentsChanged)
     Q_PROPERTY(bool processing READ processing NOTIFY processingChanged)
+    // Manual workflow artifacts can be large. Validation and staging run off
+    // the GUI thread; this narrow state lets the upload card stay responsive
+    // while exactly one project mutation is pending.
+    Q_PROPERTY(bool workflowArtifactImportProcessing READ workflowArtifactImportProcessing
+               NOTIFY workflowArtifactImportChanged)
+    Q_PROPERTY(QString workflowArtifactImportNodeId READ workflowArtifactImportNodeId
+               NOTIFY workflowArtifactImportChanged)
     Q_PROPERTY(QString stage READ stage NOTIFY processingChanged)
     Q_PROPERTY(int progress READ progress NOTIFY processingChanged)
     Q_PROPERTY(bool progressAvailable READ progressAvailable NOTIFY processingChanged)
@@ -174,6 +182,12 @@ public:
     QVariantList speakers() const { return m_project.speakers; }
     QVariantList segments() const { return m_project.segments; }
     bool processing() const;
+    bool workflowArtifactImportProcessing() const {
+        return m_workflowArtifactImportWatcher.isRunning();
+    }
+    QString workflowArtifactImportNodeId() const {
+        return m_workflowArtifactImportNodeId;
+    }
     QString stage() const;
     int progress() const;
     bool progressAvailable() const;
@@ -340,6 +354,12 @@ public:
     // text rather than an invented progress value.
     Q_INVOKABLE QVariantMap workflowArtifactHandoffStatus(const QString &nodeId) const;
     Q_INVOKABLE bool importWorkflowArtifactFiles(const QString &nodeId,
+                                                  const QVariantList &paths);
+    // QML uses this non-blocking path. It validates content and stages files
+    // in a worker, then commits state on the controller thread only after the
+    // whole artifact set is known-good. The synchronous API above remains for
+    // C++ callers and tests that require an immediate result.
+    Q_INVOKABLE bool startWorkflowArtifactImport(const QString &nodeId,
                                                  const QVariantList &paths);
     // Creates/refreshes the project-scoped handoff scripts for an external
     // translation editor. It never calls an AI service and never stores a
@@ -359,6 +379,7 @@ public:
     Q_INVOKABLE bool undoTimingResolution();
     Q_INVOKABLE bool setIntentionalTimingOverlap(int segmentIndex, bool enabled);
     Q_INVOKABLE bool setAudioMixLevels(int originalPercent, int dubbedPercent);
+    Q_INVOKABLE bool setBackgroundAudioLevel(int backgroundPercent);
     Q_INVOKABLE bool exportPackage(const QString &directoryPath);
     Q_INVOKABLE bool exportCapCutDraft(const QString &directoryPath);
     Q_INVOKABLE bool openCapCutDraft();
@@ -471,6 +492,8 @@ signals:
     void colabSetupChanged();
     void timingResolutionChanged();
     void mediaQueueChanged();
+    void workflowArtifactImportChanged();
+    void workflowArtifactImportFinished(const QString &nodeId, bool success);
     void workflowSetupRequired(const QString &nodeId, const QString &setupKind,
                                const QString &message);
 
@@ -488,6 +511,9 @@ private:
     void setError(const QString &message);
     void setBusyError(const QString &message);
     void persistAfterEdit();
+    void invalidateSynthesisOutputs();
+    void invalidateDerivedAudioForChangedSegments(const QVariantList &previous,
+                                                  QVariantList *updated);
     void invalidateTimingOutputs();
     void setWorkflowMode(const QString &mode);
     void setCurrentStep(const QString &stepId);
@@ -548,7 +574,14 @@ private:
     void refreshColabSetupSnapshot(const QString &stageId, bool verified);
     QVariantMap effectiveTranscriptConfiguration(bool captureOcrSettings);
     bool importSubtitlesInternal(const QString &path, const QString &untimedStrategy,
-                                 bool allowIndependentTranscriptWorker);
+                                  bool allowIndependentTranscriptWorker);
+    bool validateWorkflowArtifactRequest(const QString &nodeId, const QVariantList &paths,
+                                         QVariantMap *request, QString *error) const;
+    // Applies a request only after its selected files were parsed/probed into
+    // `prepared` data.  A later parse or mapping failure must never cancel a
+    // live worker.
+    bool applyWorkflowArtifactFiles(const QVariantMap &request,
+                                    const QVariantMap &prepared);
     void applyStoredSubtitleOcrConfiguration();
     int mediaQueueIndex(const QString &itemId) const;
     void replaceMediaQueueItem(int index, const QVariantMap &item);
@@ -575,6 +608,8 @@ private:
     bool writeMediaQueueSubtitles(const QString &key, bool useTargetText);
 
     DubbingProject m_project;
+    QFutureWatcher<QVariantMap> m_workflowArtifactImportWatcher;
+    QString m_workflowArtifactImportNodeId;
     Settings *m_settings = nullptr;
     DubbingJobRunner *m_runner = nullptr;
     SubtitleOcrController *m_subtitleOcr = nullptr;

@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QTemporaryDir>
 #include <QtMath>
 
 #include <cmath>
@@ -28,6 +29,10 @@ constexpr float kSidechainRatio = 4.0f;
 constexpr float kMaximumDuckDb = 12.0f;
 constexpr float kAttackMs = 10.0f;
 constexpr float kReleaseMs = 120.0f;
+// Keep each FFmpeg invocation comfortably below Windows' CreateProcess command
+// length limit. Each cue can include a long project artifact path, so a large
+// timeline must be rendered as a reduction tree rather than one giant graph.
+constexpr int kMaximumTimelineInputsPerPass = 24;
 // FFmpeg's implicit stereo-to-mono matrix is -3 dB per channel.  The native
 // fallback averages channels, so use the same deterministic mono/stereo
 // mapping in the streaming path. FC keeps a mono source intact; FL/FR average
@@ -139,16 +144,15 @@ qint64 probeDurationMs(const QString &path, QAtomicInteger<bool> *cancel)
     return ok && duration > 0.0 ? qRound64(duration * 1000.0) : 0;
 }
 
-bool renderStreaming(const QList<TimedClip> &clips, qint64 durationMs,
-                     const QString &outputPath, const QString &backgroundPath,
-                     const QString &vocalOutputPath, float dubbedGain, float originalGain,
-                     QAtomicInteger<bool> *cancel, QString *error)
+bool renderTimelineClipBatch(const MediaRuntimePaths &runtime, const QList<TimedClip> &clips,
+                             qint64 durationMs, const QString &outputPath, float dubbedGain,
+                             QAtomicInteger<bool> *cancel, QString *error)
 {
-    const MediaRuntimePaths runtime = MediaRuntimeLocator::resolve();
-    if (!runtime.hasFfmpeg()) return false;
+    if (clips.isEmpty()) {
+        if (error) *error = QStringLiteral("Audio timeline batch has no clips.");
+        return false;
+    }
 
-    const QString temporaryVocal = vocalOutputPath.isEmpty()
-        ? outputPath + QStringLiteral(".voices.tmp.wav") : vocalOutputPath;
     QStringList inputs;
     QStringList filterParts;
     QStringList labels;
@@ -168,22 +172,147 @@ bool renderStreaming(const QList<TimedClip> &clips, qint64 durationMs,
     filterParts << QStringLiteral("%1amix=inputs=%2:normalize=0,apad=pad_dur=%3,atrim=duration=%3[voices]")
         .arg(labels.join(QString())).arg(clips.size()).arg(duration);
 
-    QStringList vocalArguments{QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
-                               QStringLiteral("-y")};
-    vocalArguments << inputs << QStringLiteral("-filter_complex") << filterParts.join(QLatin1Char(';'))
-                   << QStringLiteral("-map") << QStringLiteral("[voices]")
-                   << QStringLiteral("-ac") << QStringLiteral("1")
-                   << QStringLiteral("-ar") << QString::number(kOutputRate)
-                   << QStringLiteral("-c:a") << QStringLiteral("pcm_s16le")
-                   << QStringLiteral("-f") << QStringLiteral("wav") << temporaryVocal;
-    if (!runFfmpeg(runtime.ffmpeg, vocalArguments, cancel, error)) return false;
+    QStringList arguments{QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
+                          QStringLiteral("-y")};
+    arguments << inputs << QStringLiteral("-filter_complex") << filterParts.join(QLatin1Char(';'))
+              << QStringLiteral("-map") << QStringLiteral("[voices]")
+              << QStringLiteral("-ac") << QStringLiteral("1")
+              << QStringLiteral("-ar") << QString::number(kOutputRate)
+              << QStringLiteral("-c:a") << QStringLiteral("pcm_s16le")
+              << QStringLiteral("-f") << QStringLiteral("wav") << outputPath;
+    return runFfmpeg(runtime.ffmpeg, arguments, cancel, error);
+}
+
+bool combineTimelineBatches(const MediaRuntimePaths &runtime, const QStringList &inputPaths,
+                            qint64 durationMs, const QString &outputPath,
+                            QAtomicInteger<bool> *cancel, QString *error)
+{
+    if (inputPaths.isEmpty()) {
+        if (error) *error = QStringLiteral("Audio timeline reduction has no inputs.");
+        return false;
+    }
+    if (inputPaths.size() == 1) {
+        QFile::remove(outputPath);
+        if (QFile::copy(inputPaths.constFirst(), outputPath)) return true;
+        if (error) *error = QStringLiteral("Could not commit reduced audio timeline.");
+        return false;
+    }
+
+    const QString duration = seconds(durationMs);
+    QStringList arguments{QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
+                          QStringLiteral("-y")};
+    QStringList filterParts;
+    QStringList labels;
+    for (int index = 0; index < inputPaths.size(); ++index) {
+        arguments << QStringLiteral("-i") << inputPaths.at(index);
+        const QString label = QStringLiteral("b%1").arg(index);
+        labels << QStringLiteral("[%1]").arg(label);
+        filterParts << QStringLiteral("[%1:a]aresample=%2,atrim=duration=%3,apad=pad_dur=%3[%4]")
+            .arg(index).arg(kOutputRate).arg(duration).arg(label);
+    }
+    filterParts << QStringLiteral("%1amix=inputs=%2:normalize=0,atrim=duration=%3[out]")
+        .arg(labels.join(QString())).arg(labels.size()).arg(duration);
+    arguments << QStringLiteral("-filter_complex") << filterParts.join(QLatin1Char(';'))
+              << QStringLiteral("-map") << QStringLiteral("[out]")
+              << QStringLiteral("-ac") << QStringLiteral("1")
+              << QStringLiteral("-ar") << QString::number(kOutputRate)
+              << QStringLiteral("-c:a") << QStringLiteral("pcm_s16le")
+              << QStringLiteral("-f") << QStringLiteral("wav") << outputPath;
+    return runFfmpeg(runtime.ffmpeg, arguments, cancel, error);
+}
+
+bool renderBoundedVocalTimeline(const MediaRuntimePaths &runtime, const QList<TimedClip> &clips,
+                                qint64 durationMs, const QString &outputPath, float dubbedGain,
+                                QAtomicInteger<bool> *cancel, QString *error)
+{
+    if (clips.size() <= kMaximumTimelineInputsPerPass)
+        return renderTimelineClipBatch(runtime, clips, durationMs, outputPath, dubbedGain, cancel, error);
+
+    const QFileInfo outputInfo(outputPath);
+    QTemporaryDir workspace(outputInfo.dir().filePath(QStringLiteral(".timeline-batches-XXXXXX")));
+    if (!workspace.isValid()) {
+        if (error) *error = QStringLiteral("Could not create temporary audio-mix workspace.");
+        return false;
+    }
+
+    QStringList currentInputs;
+    int batchNumber = 0;
+    for (int offset = 0; offset < clips.size(); offset += kMaximumTimelineInputsPerPass) {
+        if (isCancelled(cancel)) {
+            if (error) *error = QStringLiteral("Audio mix cancelled.");
+            return false;
+        }
+        QList<TimedClip> batch;
+        const int end = qMin(offset + kMaximumTimelineInputsPerPass, clips.size());
+        for (int index = offset; index < end; ++index) batch.append(clips.at(index));
+        const QString batchPath = workspace.filePath(QStringLiteral("cue-%1.wav")
+                                                           .arg(batchNumber++, 4, 10, QLatin1Char('0')));
+        if (!renderTimelineClipBatch(runtime, batch, durationMs, batchPath, dubbedGain, cancel, error))
+            return false;
+        currentInputs.append(batchPath);
+    }
+
+    int reductionPass = 0;
+    while (currentInputs.size() > 1) {
+        QStringList nextInputs;
+        for (int offset = 0; offset < currentInputs.size(); offset += kMaximumTimelineInputsPerPass) {
+            if (isCancelled(cancel)) {
+                if (error) *error = QStringLiteral("Audio mix cancelled.");
+                return false;
+            }
+            const QStringList batch = currentInputs.mid(offset, kMaximumTimelineInputsPerPass);
+            const QString batchPath = workspace.filePath(QStringLiteral("reduce-%1-%2.wav")
+                                                               .arg(reductionPass, 3, 10, QLatin1Char('0'))
+                                                               .arg(nextInputs.size(), 4, 10, QLatin1Char('0')));
+            if (!combineTimelineBatches(runtime, batch, durationMs, batchPath, cancel, error))
+                return false;
+            nextInputs.append(batchPath);
+        }
+        currentInputs = nextInputs;
+        ++reductionPass;
+    }
+
+    QFile::remove(outputPath);
+    if (!QFile::copy(currentInputs.constFirst(), outputPath)) {
+        if (error) *error = QStringLiteral("Could not commit batched audio timeline.");
+        return false;
+    }
+    return true;
+}
+
+bool renderStreaming(const QList<TimedClip> &clips, qint64 durationMs,
+                     const QString &outputPath, const QString &backgroundPath,
+                     const QString &sourceVocalsPath, const QString &vocalOutputPath,
+                     float dubbedGain, float originalGain, float backgroundGain,
+                     QAtomicInteger<bool> *cancel, QString *error)
+{
+    const MediaRuntimePaths runtime = MediaRuntimeLocator::resolve();
+    if (!runtime.hasFfmpeg()) return false;
+
+    const QString temporaryVocal = vocalOutputPath.isEmpty()
+        ? outputPath + QStringLiteral(".voices.tmp.wav") : vocalOutputPath;
+    const QString duration = seconds(durationMs);
+    if (!renderBoundedVocalTimeline(runtime, clips, durationMs, temporaryVocal, dubbedGain, cancel, error))
+        return false;
     if (isCancelled(cancel)) {
         QFile::remove(temporaryVocal);
         if (error) *error = QStringLiteral("Audio mix cancelled.");
         return false;
     }
 
-    if (backgroundPath.isEmpty()) {
+    const bool hasBackground = !backgroundPath.isEmpty();
+    const bool hasSourceVocals = !sourceVocalsPath.isEmpty();
+    if (hasBackground && !QFileInfo(backgroundPath).isFile()) {
+        if (error) *error = QStringLiteral("Background audio is no longer available: %1").arg(backgroundPath);
+        if (vocalOutputPath.isEmpty()) QFile::remove(temporaryVocal);
+        return false;
+    }
+    if (hasSourceVocals && !QFileInfo(sourceVocalsPath).isFile()) {
+        if (error) *error = QStringLiteral("Original vocals are no longer available: %1").arg(sourceVocalsPath);
+        if (vocalOutputPath.isEmpty()) QFile::remove(temporaryVocal);
+        return false;
+    }
+    if (!hasBackground && !hasSourceVocals) {
         if (temporaryVocal != outputPath) {
             QFile::remove(outputPath);
             if (!QFile::copy(temporaryVocal, outputPath)) {
@@ -195,31 +324,59 @@ bool renderStreaming(const QList<TimedClip> &clips, qint64 durationMs,
         if (vocalOutputPath.isEmpty()) QFile::remove(temporaryVocal);
         return true;
     }
-    if (!QFileInfo(backgroundPath).isFile()) {
-        if (error) *error = QStringLiteral("Background audio is no longer available: %1").arg(backgroundPath);
-        if (vocalOutputPath.isEmpty()) QFile::remove(temporaryVocal);
-        return false;
+
+    // Build the final program from three independent buses: dubbed speech,
+    // separated BGM, and separated original vocals.  The source-voice level
+    // must never be reused as the BGM level.
+    QStringList mixArguments{QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
+                             QStringLiteral("-y"), QStringLiteral("-i"), temporaryVocal};
+    int nextInput = 1;
+    int backgroundInput = -1;
+    int originalVocalsInput = -1;
+    if (hasBackground) {
+        backgroundInput = nextInput++;
+        mixArguments << QStringLiteral("-i") << backgroundPath;
+    }
+    if (hasSourceVocals) {
+        originalVocalsInput = nextInput++;
+        mixArguments << QStringLiteral("-i") << sourceVocalsPath;
     }
 
-    const QString filter = QStringLiteral(
-        "[0:a]aresample=%1,%2,atrim=duration=%3,apad=pad_dur=%3,volume=%4[bg];"
-        "[1:a]aresample=%1,%2,atrim=duration=%3,apad=pad_dur=%3,asplit=2[voice][voice-sidechain];"
+    QStringList mixFilterParts;
+    QStringList finalLabels;
+    if (hasBackground) {
+        mixFilterParts << QStringLiteral("[%1:a]aresample=%2,%3,atrim=duration=%4,apad=pad_dur=%4,volume=%5[bg]")
+            .arg(backgroundInput).arg(kOutputRate).arg(QLatin1String(kExplicitMonoDownmix)).arg(duration)
+            .arg(QString::number(kBaseBackgroundGain * backgroundGain, 'f', 4));
+        mixFilterParts << QStringLiteral("[0:a]aresample=%1,%2,atrim=duration=%3,apad=pad_dur=%3,asplit=2[voice][voice-sidechain]")
+            .arg(kOutputRate).arg(QLatin1String(kExplicitMonoDownmix)).arg(duration);
         // The first sidechaincompress input is the program audio it emits;
-        // the second is only the detector.  Keep Background first, feed voice
-        // as the detector, and retain a separate voice branch for final mix.
-        // Reusing one labelled voice stream without asplit silently produced
-        // a doubled voice bed.
-        "[bg][voice-sidechain]sidechaincompress=threshold=0.0630957:ratio=4:attack=10:release=120[ducked];"
-        "[ducked][voice]amix=inputs=2:normalize=0,atrim=duration=%3[out]")
-        .arg(kOutputRate).arg(QLatin1String(kExplicitMonoDownmix)).arg(duration)
-        .arg(QString::number(kBaseBackgroundGain * originalGain, 'f', 4));
-    const QStringList mixArguments{QStringLiteral("-hide_banner"), QStringLiteral("-nostdin"),
-                                    QStringLiteral("-y"), QStringLiteral("-i"), backgroundPath,
-                                    QStringLiteral("-i"), temporaryVocal, QStringLiteral("-filter_complex"), filter,
-                                    QStringLiteral("-map"), QStringLiteral("[out]"), QStringLiteral("-ac"),
-                                    QStringLiteral("1"), QStringLiteral("-ar"), QString::number(kOutputRate),
-                                    QStringLiteral("-c:a"), QStringLiteral("pcm_s16le"), QStringLiteral("-f"),
-                                    QStringLiteral("wav"), outputPath};
+        // the second is only the detector. Keep a separate dubbed-voice
+        // branch so it is mixed exactly once after ducking the BGM.
+        mixFilterParts << QStringLiteral("[bg][voice-sidechain]sidechaincompress=threshold=0.0630957:ratio=4:attack=10:release=120[ducked]");
+        finalLabels << QStringLiteral("[ducked]") << QStringLiteral("[voice]");
+    } else {
+        mixFilterParts << QStringLiteral("[0:a]aresample=%1,%2,atrim=duration=%3,apad=pad_dur=%3[voice]")
+            .arg(kOutputRate).arg(QLatin1String(kExplicitMonoDownmix)).arg(duration);
+        finalLabels << QStringLiteral("[voice]");
+    }
+    if (hasSourceVocals) {
+        mixFilterParts << QStringLiteral("[%1:a]aresample=%2,%3,atrim=duration=%4,apad=pad_dur=%4,volume=%5[original-vocals]")
+            .arg(originalVocalsInput).arg(kOutputRate).arg(QLatin1String(kExplicitMonoDownmix)).arg(duration)
+            .arg(QString::number(originalGain, 'f', 4));
+        finalLabels << QStringLiteral("[original-vocals]");
+    }
+    const QString outputLabel = finalLabels.size() == 1 ? finalLabels.constFirst()
+        : QStringLiteral("[out]");
+    if (finalLabels.size() > 1) {
+        mixFilterParts << QStringLiteral("%1amix=inputs=%2:normalize=0,atrim=duration=%3[out]")
+            .arg(finalLabels.join(QString())).arg(finalLabels.size()).arg(duration);
+    }
+    mixArguments << QStringLiteral("-filter_complex") << mixFilterParts.join(QLatin1Char(';'))
+                 << QStringLiteral("-map") << outputLabel << QStringLiteral("-ac")
+                 << QStringLiteral("1") << QStringLiteral("-ar") << QString::number(kOutputRate)
+                 << QStringLiteral("-c:a") << QStringLiteral("pcm_s16le") << QStringLiteral("-f")
+                 << QStringLiteral("wav") << outputPath;
     const bool mixed = runFfmpeg(runtime.ffmpeg, mixArguments, cancel, error);
     if (vocalOutputPath.isEmpty()) QFile::remove(temporaryVocal);
     return mixed;
@@ -281,12 +438,26 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
     const float originalGain = qBound(0.0f,
                                       mixConfiguration.value(QStringLiteral("originalGainPercent"), 100).toFloat(),
                                       100.0f) / 100.0f;
+    const float backgroundGain = qBound(0.0f,
+                                        mixConfiguration.value(QStringLiteral("backgroundGainPercent"), 100).toFloat(),
+                                        100.0f) / 100.0f;
+    const QString sourceVocalsPath = mixConfiguration.value(
+        QStringLiteral("sourceVocalsPath")).toString().trimmed();
     const qint64 sourceDurationMs = qMax<qint64>(0,
         mixConfiguration.value(QStringLiteral("sourceDurationMs")).toLongLong());
     QList<TimedClip> clips;
     qint64 lastCueEndMs = 0;
     for (const QVariant &entry : segments) {
         const QVariantMap segment = entry.toMap();
+        // Skipping a cue is an explicit editorial decision.  Its old clip
+        // may remain on disk for audit/recovery, but must never be rendered
+        // into a new preview or export.
+        if (segment.value(QStringLiteral("skipped")).toBool()
+            || segment.value(QStringLiteral("skip")).toBool()
+            || segment.value(QStringLiteral("state")).toString().trimmed().toLower()
+                == QStringLiteral("skipped")) {
+            continue;
+        }
         const QString clipPath = segment.value(QStringLiteral("clipPath")).toString();
         const qint64 startMs = qMax<qint64>(0, segment.value(QStringLiteral("startMs")).toLongLong());
         qint64 endMs = qMax(startMs, segment.value(QStringLiteral("endMs")).toLongLong());
@@ -314,8 +485,8 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
 
     const MediaRuntimePaths runtime = MediaRuntimeLocator::resolve();
     if (runtime.hasFfmpeg()) {
-        return renderStreaming(clips, outputDurationMs, outputPath, backgroundPath, vocalOutputPath,
-                               dubbedGain, originalGain, cancel, error);
+        return renderStreaming(clips, outputDurationMs, outputPath, backgroundPath, sourceVocalsPath,
+                               vocalOutputPath, dubbedGain, originalGain, backgroundGain, cancel, error);
     }
 
     const qint64 outputSamples = outputDurationMs * kOutputRate / 1000;
@@ -378,7 +549,7 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
                 sum += background.samples.at(frame * background.channels + channel);
             mono[frame] = sum / static_cast<float>(background.channels);
         }
-        float backgroundGain = kBaseBackgroundGain * originalGain;
+        float currentBackgroundGain = kBaseBackgroundGain * backgroundGain;
         for (int index = 0; index < mix.size(); ++index) {
             if ((index & 0x3fff) == 0 && isCancelled(cancel)) {
                 if (error) *error = QStringLiteral("Audio mix cancelled.");
@@ -386,8 +557,40 @@ bool AudioTimelineMixer::mixSegments(const QVariantList &segments, const QString
             }
             const int source = qMin(mono.size() - 1,
                                     static_cast<int>(static_cast<double>(index) * background.sampleRate / kOutputRate));
-            backgroundGain = sidechainBackgroundGain(mix.at(index), backgroundGain, kOutputRate, originalGain);
-            mix[index] = qBound(-1.0f, mix.at(index) + mono.at(source) * backgroundGain, 1.0f);
+            currentBackgroundGain = sidechainBackgroundGain(mix.at(index), currentBackgroundGain,
+                                                            kOutputRate, backgroundGain);
+            mix[index] = qBound(-1.0f, mix.at(index) + mono.at(source) * currentBackgroundGain, 1.0f);
+        }
+    }
+    if (!sourceVocalsPath.isEmpty()) {
+        QString originalVocalsError;
+        const WavIO::WavData originalVocals = AudioFileDecoder::decode(sourceVocalsPath,
+                                                                         &originalVocalsError);
+        if (originalVocals.samples.isEmpty() || originalVocals.sampleRate <= 0
+            || originalVocals.channels <= 0) {
+            if (error) *error = originalVocalsError.isEmpty()
+                ? QStringLiteral("Original vocals could not be decoded for the final mix.")
+                : QStringLiteral("Original vocals could not be decoded for the final mix: %1")
+                      .arg(originalVocalsError);
+            return false;
+        }
+        const int frames = originalVocals.samples.size() / originalVocals.channels;
+        QVector<float> mono(frames);
+        for (int frame = 0; frame < frames; ++frame) {
+            float sum = 0.0f;
+            for (int channel = 0; channel < originalVocals.channels; ++channel)
+                sum += originalVocals.samples.at(frame * originalVocals.channels + channel);
+            mono[frame] = sum / static_cast<float>(originalVocals.channels);
+        }
+        for (int index = 0; index < mix.size(); ++index) {
+            if ((index & 0x3fff) == 0 && isCancelled(cancel)) {
+                if (error) *error = QStringLiteral("Audio mix cancelled.");
+                return false;
+            }
+            const int source = qMin(mono.size() - 1,
+                                    static_cast<int>(static_cast<double>(index)
+                                                     * originalVocals.sampleRate / kOutputRate));
+            mix[index] = qBound(-1.0f, mix.at(index) + mono.at(source) * originalGain, 1.0f);
         }
     }
     if (!WavIO::saveFloat(outputPath, mix.constData(), mix.size(), kOutputRate)) {

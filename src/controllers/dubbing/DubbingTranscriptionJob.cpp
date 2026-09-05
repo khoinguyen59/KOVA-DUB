@@ -3,6 +3,7 @@
 #include "SttSessionController.h"
 #include "alignment/ColabAlignmentRunner.h"
 #include "controllers/dubbing/DubbingColabModelRoutes.h"
+#include "core/utils/BoundedThreadShutdown.h"
 #include "core/utils/Logger.h"
 #include "dubbing/fusion/AlignmentRefinementService.h"
 #include "dubbing/fusion/DubbingSegmentNormalizer.h"
@@ -29,9 +30,10 @@ DubbingTranscriptionJob::DubbingTranscriptionJob(SttSessionController *stt,
     m_alignmentWatcher = new QFutureWatcher<QVariantMap>(this);
     connect(m_alignmentWatcher, &QFutureWatcher<QVariantMap>::finished,
             this, &DubbingTranscriptionJob::onAlignmentFinished);
+    m_colabAlignmentThread = new QThread;
     m_colabAlignmentRunner = new ColabAlignmentRunner;
-    m_colabAlignmentRunner->moveToThread(&m_colabAlignmentThread);
-    connect(&m_colabAlignmentThread, &QThread::finished,
+    m_colabAlignmentRunner->moveToThread(m_colabAlignmentThread);
+    connect(m_colabAlignmentThread, &QThread::finished,
             m_colabAlignmentRunner, &QObject::deleteLater);
     connect(m_colabAlignmentRunner, &ColabAlignmentRunner::progress,
             this, [this](int progress) {
@@ -42,7 +44,7 @@ DubbingTranscriptionJob::DubbingTranscriptionJob(SttSessionController *stt,
             this, &DubbingTranscriptionJob::onColabAlignmentFinished);
     connect(m_colabAlignmentRunner, &ColabAlignmentRunner::failed,
             this, &DubbingTranscriptionJob::onColabAlignmentFailed);
-    m_colabAlignmentThread.start();
+    m_colabAlignmentThread->start();
     if (!m_stt) return;
     connect(m_stt, &SttSessionController::transcriptionFinished,
             this, &DubbingTranscriptionJob::onTranscriptionFinished);
@@ -75,15 +77,14 @@ DubbingTranscriptionJob::~DubbingTranscriptionJob()
             Logger::warning(QStringLiteral("DubbingTranscriptionJob"),
                             QStringLiteral("Detached cancelled local alignment job during shutdown."));
     }
-    if (m_colabAlignmentRunner && m_colabAlignmentThread.isRunning())
+    if (m_colabAlignmentRunner && m_colabAlignmentThread
+        && m_colabAlignmentThread->isRunning())
         QMetaObject::invokeMethod(m_colabAlignmentRunner, "cancel", Qt::QueuedConnection);
-    m_colabAlignmentThread.quit();
-    if (!m_colabAlignmentThread.wait(5'000)) {
+    if (!stopOrDetachWorkerThread(m_colabAlignmentThread)) {
         Logger::warning(QStringLiteral("DubbingTranscriptionJob"),
-                        QStringLiteral("Colab alignment worker did not stop within 5 seconds; terminating it."));
-        m_colabAlignmentThread.terminate();
-        m_colabAlignmentThread.wait(1'000);
+                        QStringLiteral("Detached non-cooperative Colab alignment worker during shutdown."));
     }
+    m_colabAlignmentRunner = nullptr;
 }
 
 void DubbingTranscriptionJob::setAlignmentSession(ColabSession *session)
@@ -195,7 +196,8 @@ void DubbingTranscriptionJob::cancel()
     if (m_alignmentCancel) m_alignmentCancel->storeRelease(true);
     if (m_colabAlignmentCancel)
         m_colabAlignmentCancel->store(true, std::memory_order_relaxed);
-    if (m_colabAlignmentRunner && m_colabAlignmentThread.isRunning())
+    if (m_colabAlignmentRunner && m_colabAlignmentThread
+        && m_colabAlignmentThread->isRunning())
         QMetaObject::invokeMethod(m_colabAlignmentRunner, "cancel", Qt::QueuedConnection);
     m_pendingAlignmentSegments.clear();
     m_waitingForInput = false;

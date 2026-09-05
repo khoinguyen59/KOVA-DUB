@@ -385,13 +385,16 @@ void TestDubbingWorkspaceContract::aiTranscriptGuideIsImmediateAndProjectScoped(
 {
     const QString guide = readSourceFile(
         QStringLiteral("docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md"));
+    const QString reviewPanel = readSourceFile(
+        QStringLiteral("qml/components/dubbing/panels/DubbingReviewPanel.qml"));
     QVERIFY2(!guide.isEmpty(), "The single AI transcript/translation guide is missing.");
     QVERIFY2(guide.contains(QStringLiteral("STT input"))
                  && guide.contains(QStringLiteral("OCR input"))
-                 && guide.contains(QStringLiteral("Translation input"))
+                 && guide.contains(QStringLiteral("Canonical input"))
+                 && guide.contains(QStringLiteral("Merged output"))
                  && guide.contains(QStringLiteral("Translation output")),
-             "The AI guide must define the four app-supplied path roles.");
-    QVERIFY2(guide.contains(QStringLiteral("Prefer OCR text and OCR timing"))
+             "The AI guide must define every app-supplied input/output path role.");
+    QVERIFY2(guide.contains(QStringLiteral("Use OCR as the cue/timestamp grid"))
                  && guide.contains(QStringLiteral("Use STT as reference"))
                  && guide.contains(QStringLiteral("Match cues by timestamp overlap")),
              "The AI guide must define deterministic STT/OCR reconciliation.");
@@ -416,7 +419,11 @@ void TestDubbingWorkspaceContract::aiTranscriptGuideIsImmediateAndProjectScoped(
                  && !guide.contains(QStringLiteral("translated.srt"))
                  && !guide.contains(QStringLiteral("03-review"))
                  && !guide.contains(QStringLiteral("04-translation")),
-             "The guide must not prescribe fixed basenames or internal folders.");
+            "The guide must not prescribe fixed basenames or internal folders.");
+    QVERIFY2(reviewPanel.contains(QStringLiteral("prepareTranscriptAiHandoff()"))
+                 && reviewPanel.contains(QStringLiteral("dubbingCopyTranscriptAiPrompt"))
+                 && reviewPanel.contains(QStringLiteral("dubbingOpenTranscriptAiHandoffFolder")),
+             "The Data & Handoff panel must expose prepare, copy-prompt, and open-folder actions.");
 }
 
 void TestDubbingWorkspaceContract::projectSetupResolvesQmlVariantListLanguageDefaults()

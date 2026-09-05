@@ -71,7 +71,8 @@ public:
     // Persisted original/dubbed mix balance. Preview and final export read
     // the same values so a user never hears a different mix at export time.
     QVariantMap audioMixConfiguration = QVariantMap{{QStringLiteral("originalGainPercent"), 0},
-                                                     {QStringLiteral("dubbedGainPercent"), 100}};
+                                                     {QStringLiteral("dubbedGainPercent"), 100},
+                                                     {QStringLiteral("backgroundGainPercent"), 100}};
     QVariantMap customRewriteConfiguration;
     QVariantList speakers;
     QVariantList segments;

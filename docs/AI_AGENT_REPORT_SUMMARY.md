@@ -1,3 +1,22 @@
+# 2026-09-05 — Dubbing recheck theo từng đợt
+
+- Báo cáo hiện hành: phần 2026-09-05 “Recheck độc lập workflow Dubbing” trong `AI_AGENT_RESPONSE_REPORT.md`. Kết quả/lỗi được ghi ngay sau từng batch A–F.
+- CTest mới 41/41 PASS; QML lint PASS, production offscreen smoke 19 event; model bindings 31/31, notebooks 32/32, embedded/Unified validators PASS. Năm ca eSpeak skip ban đầu đã được staging runtime và chạy lại: 5 ca đều PASS.
+- **Chưa nghiệm thu toàn luồng**: các acceptance runtime còn lại là file picker/Direct Colab thật, copy media lớn trên ổ chậm, desktop UX/4K và CapCut thật. RC-01/03 đã được khóa ở controller transaction bởi G14; G17 thêm guard enqueue bất đồng bộ và mix thật 1.000 cue; G18 xác nhận lại toàn bộ **41/41 CTest** cùng QML lint/route smoke.
+- Chi tiết file/dòng, điều kiện kích hoạt, bằng chứng và cách fix nằm trong báo cáo. Logs: `out/audit-2026-09-05-dubbing/`. Không build/sửa EXE, không chạy Colab GPU hay quay desktop trong lần audit này.
+- `PRE_DELIVERY_CHECKLIST.md` đã thêm yêu cầu cập nhật ngay sau từng đợt nhỏ và các ca còn mở; các dấu PASS lịch sử không thay thế các phát hiện này.
+
+# 2026-09-05 — AI handoff snapshot và STT/OCR route isolation
+
+- STT và OCR có regression controller cho cả hai thứ tự chạy đồng thời, upload
+  route-scoped và fence chống callback artifact cũ ghi sang project mới.
+- Mỗi lần bấm AI handoff tạo snapshot UUID trong `.workflow-artifacts` của
+  chính project. App cung cấp prompt có path exact cho 3 input và 2 output;
+  guide duy nhất chỉ còn quy tắc merge/dịch. Panel Data & Handoff có Prepare,
+  Copy prompt và Open folder.
+- Focused controller/workspace tests đều xanh. Nghiệm thu EXE với Direct Colab
+  và một AI IDE vẫn là điều kiện release thủ công, không được suy ra từ test.
+
 # 2026-09-03 - Canonical STT/OCR merge and translation guide
 
 - Rewrote the single guide `docs/AI_AGENT_TRANSCRIPT_RECONCILIATION_GUIDE.md`

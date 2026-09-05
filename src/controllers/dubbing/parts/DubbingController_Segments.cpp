@@ -38,6 +38,7 @@ bool DubbingController::replaceTranscriptSegments(const QVariantList &ocrSegment
         replacement.append(segment);
     }
 
+    invalidateDerivedAudioForChangedSegments(m_project.segments, &replacement);
     m_project.segments = replacement;
     clearError();
     emit segmentsChanged();
@@ -313,6 +314,17 @@ void DubbingController::updateSegment(int index, const QVariantMap &patch)
             segment.remove(QStringLiteral("candidateSelectionMetric"));
         }
     }
+    const bool audioInputChanged = sourceTextChanged || targetTextChanged || speakerChanged
+        || timingChanged;
+    if (audioInputChanged) {
+        // `state=stale` alone is not sufficient: preview/mix historically
+        // accepted any existing clipPath.  Remove every derived cue field so
+        // a changed script, timing, or voice can never reuse old speech.
+        segment.remove(QStringLiteral("clipPath"));
+        segment.remove(QStringLiteral("cacheFingerprint"));
+        segment.remove(QStringLiteral("waveformSamples"));
+        segment.remove(QStringLiteral("clipDurationMs"));
+    }
     m_project.segments[index] = segment;
     if (timingChanged) {
         m_timingResolutionPreview.clear();
@@ -320,6 +332,7 @@ void DubbingController::updateSegment(int index, const QVariantMap &patch)
         invalidateTimingOutputs();
         emit timingResolutionChanged();
     }
+    if (audioInputChanged) invalidateSynthesisOutputs();
     emit segmentsChanged();
     emit workflowChanged();
     persistAfterEdit();
@@ -355,8 +368,26 @@ void DubbingController::setSpeakerVoice(int speakerIndex, const QVariantMap &voi
 {
     if (speakerIndex < 0 || speakerIndex >= m_project.speakers.size()) return;
     QVariantMap speaker = m_project.speakers.at(speakerIndex).toMap();
+    if (speaker.value(QStringLiteral("voice")) == voice) return;
     speaker.insert(QStringLiteral("voice"), voice);
     m_project.speakers[speakerIndex] = speaker;
+    const QString speakerId = speaker.value(QStringLiteral("id")).toString();
+    bool changedCue = false;
+    for (int index = 0; index < m_project.segments.size(); ++index) {
+        QVariantMap segment = m_project.segments.at(index).toMap();
+        if (segment.value(QStringLiteral("speakerId")).toString() != speakerId) continue;
+        segment.insert(QStringLiteral("state"), QStringLiteral("stale"));
+        segment.remove(QStringLiteral("clipPath"));
+        segment.remove(QStringLiteral("cacheFingerprint"));
+        segment.remove(QStringLiteral("waveformSamples"));
+        segment.remove(QStringLiteral("clipDurationMs"));
+        m_project.segments[index] = segment;
+        changedCue = true;
+    }
+    if (changedCue) {
+        invalidateSynthesisOutputs();
+        emit segmentsChanged();
+    }
     emit projectChanged();
     emit workflowChanged();
     persistAfterEdit();
@@ -384,6 +415,46 @@ void DubbingController::setBusyError(const QString &message)
 void DubbingController::persistAfterEdit()
 {
     if (!m_project.projectPath.isEmpty()) saveProject();
+}
+
+void DubbingController::invalidateSynthesisOutputs()
+{
+    m_stepOutputs.remove(QStringLiteral("synthesize"));
+    m_stepOutputs.remove(QStringLiteral("fit-timing"));
+    if (m_runner) m_runner->setDubbedVocalPath(QString());
+    invalidateTimingOutputs();
+}
+
+void DubbingController::invalidateDerivedAudioForChangedSegments(
+    const QVariantList &previous, QVariantList *updated)
+{
+    if (!updated) return;
+    bool invalidated = previous.size() != updated->size();
+    const QStringList audioInputKeys{
+        QStringLiteral("id"), QStringLiteral("sourceText"), QStringLiteral("targetText"),
+        QStringLiteral("speakerId"), QStringLiteral("startMs"), QStringLiteral("endMs"),
+        QStringLiteral("voiceId"), QStringLiteral("voiceProfileId"), QStringLiteral("speed")};
+    for (int index = 0; index < updated->size(); ++index) {
+        QVariantMap segment = updated->at(index).toMap();
+        const QVariantMap before = index < previous.size() ? previous.at(index).toMap()
+                                                            : QVariantMap();
+        bool changed = before.isEmpty();
+        for (const QString &key : audioInputKeys) {
+            if (before.value(key) != segment.value(key)) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) continue;
+        segment.insert(QStringLiteral("state"), QStringLiteral("stale"));
+        segment.remove(QStringLiteral("clipPath"));
+        segment.remove(QStringLiteral("cacheFingerprint"));
+        segment.remove(QStringLiteral("waveformSamples"));
+        segment.remove(QStringLiteral("clipDurationMs"));
+        (*updated)[index] = segment;
+        invalidated = true;
+    }
+    if (invalidated) invalidateSynthesisOutputs();
 }
 
 void DubbingController::invalidateTimingOutputs()

@@ -19,6 +19,7 @@
 #include "separation/runners/ColabSeparationRunner.h"
 #include "separation/io/SeparationTypes.h"
 #include "core/storage/PathUtils.h"
+#include "core/utils/BoundedThreadShutdown.h"
 #include "core/utils/Logger.h"
 #include "core/models/ModelManager.h"
 #include "core/models/RuntimeManager.h"
@@ -106,9 +107,10 @@ DubbingJobRunner::DubbingJobRunner(SttSessionController *sttSession, TtsEngine *
     connect(m_sourceSeparation, &SourceSeparationService::finished, this, &DubbingJobRunner::onSourceSeparationFinished);
     qRegisterMetaType<ColabSeparationRequest>("ColabSeparationRequest");
     qRegisterMetaType<ColabSeparationResult>("ColabSeparationResult");
+    m_colabSeparationThread = new QThread;
     m_colabSeparationRunner = new ColabSeparationRunner;
-    m_colabSeparationRunner->moveToThread(&m_colabSeparationThread);
-    connect(&m_colabSeparationThread, &QThread::finished,
+    m_colabSeparationRunner->moveToThread(m_colabSeparationThread);
+    connect(m_colabSeparationThread, &QThread::finished,
             m_colabSeparationRunner, &QObject::deleteLater);
     connect(m_colabSeparationRunner, &ColabSeparationRunner::progress, this,
             [this](int progress) {
@@ -175,7 +177,7 @@ DubbingJobRunner::DubbingJobRunner(SttSessionController *sttSession, TtsEngine *
             setError(message);
         }
     });
-    m_colabSeparationThread.start();
+    m_colabSeparationThread->start();
 
     m_transcriptionJob = new DubbingTranscriptionJob(m_sttSession, m_models, m_runtimes, this);
     connect(m_transcriptionJob, &DubbingTranscriptionJob::progressChanged, this, [this](int progress) {
@@ -508,18 +510,14 @@ DubbingJobRunner::~DubbingJobRunner()
     cancel();
     if (m_colabSeparationCancellation)
         m_colabSeparationCancellation->store(true, std::memory_order_relaxed);
-    if (m_colabSeparationRunner && m_colabSeparationThread.isRunning())
+    if (m_colabSeparationRunner && m_colabSeparationThread
+        && m_colabSeparationThread->isRunning())
         QMetaObject::invokeMethod(m_colabSeparationRunner, "cancel", Qt::QueuedConnection);
-    m_colabSeparationThread.quit();
-    if (!m_colabSeparationThread.wait(5'000)) {
-        // The request watchdogs should normally make this path unnecessary.
-        // Keep application shutdown bounded if a third-party network backend
-        // ignores abort(), and never wait forever while the window is closing.
+    if (!stopOrDetachWorkerThread(m_colabSeparationThread)) {
         Logger::warning(QStringLiteral("DubbingPipeline"), QStringLiteral(
-            "Direct Colab worker did not stop within 5 seconds during shutdown; terminating the worker thread."));
-        m_colabSeparationThread.terminate();
-        m_colabSeparationThread.wait(2'000);
+            "Detached non-cooperative Direct Colab separation worker during shutdown."));
     }
+    m_colabSeparationRunner = nullptr;
     if (m_timingWatcher) {
         if (m_timingCancel) m_timingCancel->storeRelease(true);
         m_timingWatcher->cancel();
@@ -879,19 +877,13 @@ bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString
     m_run.ensureRun();
     m_run.beginNode();
     QVariantList mixSegments = segments;
-    bool hasSegmentClip = false;
-    for (const QVariant &entry : segments) {
-        const QString clipPath = entry.toMap().value(QStringLiteral("clipPath")).toString();
-        if (!clipPath.isEmpty() && QFileInfo::exists(clipPath)) {
-            hasSegmentClip = true;
-            break;
-        }
-    }
     // Manual TTS/alignment handoff is a complete timed voice bed, not a
-    // fabricated per-segment bundle. Convert it to one explicit timeline clip
-    // only for the real mixer, so the next Export/Output task can continue.
+    // fabricated per-segment bundle. It is an explicit editorial replacement,
+    // so it must win over old per-segment cache files that may still exist on
+    // disk. Convert it to one explicit timeline clip only for the real mixer,
+    // so the next Export/Output task can continue.
     const QFileInfo uploadedVoiceInfo(m_dubbedVocalPath);
-    if (!hasSegmentClip && uploadedVoiceInfo.isFile()) {
+    if (uploadedVoiceInfo.isFile()) {
         // The uploaded voice bed already represents the full programme. Do
         // not synchronously decode an entire FLAC/MP3/WAV on the controller
         // thread merely to derive its duration; the streaming renderer reads
@@ -907,8 +899,11 @@ bool DubbingJobRunner::renderPreview(const QVariantList &segments, const QString
                      .arg(m_run.runId()).arg(m_run.nodeRunId()).arg(mixSegments.size())
                      .arg(m_backgroundAudioPath));
     setProcessing(true, QStringLiteral("mix"), 0);
+    QVariantMap renderConfiguration = mixConfiguration;
+    if (!m_sourceVocalsAudioPath.isEmpty())
+        renderConfiguration.insert(QStringLiteral("sourceVocalsPath"), m_sourceVocalsAudioPath);
     return m_exportJob && m_exportJob->renderPreview(mixSegments, projectPath, m_backgroundAudioPath, path,
-                                                     mixConfiguration);
+                                                     renderConfiguration);
 }
 
 bool DubbingJobRunner::startExport(const QString &sourceMediaPath, const QString &outputPath)

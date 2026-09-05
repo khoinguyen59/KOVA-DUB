@@ -147,6 +147,30 @@ Rectangle {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.paddingSmall
+
+            Text {
+                text: qsTr("Background %1%").arg(backgroundAudioSlider.value)
+                color: Theme.textSecondary
+                font.pixelSize: Theme.fontSmall
+                Layout.preferredWidth: 94
+            }
+            Slider {
+                id: backgroundAudioSlider
+                objectName: "dubbingBackgroundAudioLevelSlider"
+                Layout.fillWidth: true
+                from: 0
+                to: 100
+                stepSize: 5
+                value: root.dubbing.audioMixConfiguration
+                       && root.dubbing.audioMixConfiguration.backgroundGainPercent !== undefined
+                       ? root.dubbing.audioMixConfiguration.backgroundGainPercent : 100
+                onMoved: root.dubbing.setBackgroundAudioLevel(Math.round(value))
+            }
+        }
+
         PrimaryButton {
             objectName: "dubbingRunAlignmentButton"
             Layout.fillWidth: true

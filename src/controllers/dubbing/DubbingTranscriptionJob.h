@@ -63,7 +63,9 @@ private:
     std::shared_ptr<QAtomicInteger<bool>> m_alignmentCancel;
     QPointer<ColabSession> m_alignmentSession;
     ColabAlignmentRunner *m_colabAlignmentRunner = nullptr;
-    QThread m_colabAlignmentThread;
+    // Deliberately heap-owned: shutdown can hand a non-cooperative network
+    // worker off to Qt instead of blocking the GUI or force-terminating it.
+    QThread *m_colabAlignmentThread = nullptr;
     std::shared_ptr<std::atomic_bool> m_colabAlignmentCancel;
     QVariantList m_pendingAlignmentSegments;
     QString m_audioPath;

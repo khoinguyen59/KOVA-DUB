@@ -3,6 +3,7 @@
 #include "controllers/dubbing/DubbingColabModelRoutes.h"
 #include "audio/io/WavIO.h"
 #include "core/utils/Logger.h"
+#include "core/utils/BoundedThreadShutdown.h"
 #include "core/storage/Settings.h"
 #include "dubbing/timing/DubbingTimingService.h"
 #include "remote/colab/ColabSession.h"
@@ -82,13 +83,14 @@ DubbingSynthesisJob::DubbingSynthesisJob(TtsEngine *tts, QObject *parent)
     m_gatewayRunner = new GatewayTtsRunner;
     m_colabRunner = new ColabTtsRunner;
     m_colabVoiceCloneRunner = new ColabVoiceCloneRunner;
-    m_gatewayRunner->moveToThread(&m_remoteThread);
-    m_colabRunner->moveToThread(&m_remoteThread);
-    m_colabVoiceCloneRunner->moveToThread(&m_remoteThread);
-    connect(&m_remoteThread, &QThread::finished, m_gatewayRunner, &QObject::deleteLater);
-    connect(&m_remoteThread, &QThread::finished, m_colabRunner, &QObject::deleteLater);
-    connect(&m_remoteThread, &QThread::finished, m_colabVoiceCloneRunner, &QObject::deleteLater);
-    m_remoteThread.start();
+    m_remoteThread = new QThread(this);
+    m_gatewayRunner->moveToThread(m_remoteThread);
+    m_colabRunner->moveToThread(m_remoteThread);
+    m_colabVoiceCloneRunner->moveToThread(m_remoteThread);
+    connect(m_remoteThread, &QThread::finished, m_gatewayRunner, &QObject::deleteLater);
+    connect(m_remoteThread, &QThread::finished, m_colabRunner, &QObject::deleteLater);
+    connect(m_remoteThread, &QThread::finished, m_colabVoiceCloneRunner, &QObject::deleteLater);
+    m_remoteThread->start();
 
     if (m_tts) {
         connect(m_tts, &TtsEngine::synthesisFinished,
@@ -115,14 +117,19 @@ DubbingSynthesisJob::DubbingSynthesisJob(TtsEngine *tts, QObject *parent)
 DubbingSynthesisJob::~DubbingSynthesisJob()
 {
     cancel();
-    if (m_gatewayRunner && m_remoteThread.isRunning())
+    if (m_gatewayRunner && m_remoteThread && m_remoteThread->isRunning())
         QMetaObject::invokeMethod(m_gatewayRunner, "cancel", Qt::QueuedConnection);
-    if (m_colabRunner && m_remoteThread.isRunning())
+    if (m_colabRunner && m_remoteThread && m_remoteThread->isRunning())
         QMetaObject::invokeMethod(m_colabRunner, "cancel", Qt::QueuedConnection);
-    if (m_colabVoiceCloneRunner && m_remoteThread.isRunning())
+    if (m_colabVoiceCloneRunner && m_remoteThread && m_remoteThread->isRunning())
         QMetaObject::invokeMethod(m_colabVoiceCloneRunner, "cancel", Qt::QueuedConnection);
-    m_remoteThread.quit();
-    m_remoteThread.wait();
+    if (!stopOrDetachWorkerThread(m_remoteThread)) {
+        Logger::warning(QStringLiteral("DubbingSynthesis"), QStringLiteral(
+            "Remote synthesis worker did not stop within 2 seconds; detached it to keep application shutdown responsive."));
+    }
+    m_gatewayRunner = nullptr;
+    m_colabRunner = nullptr;
+    m_colabVoiceCloneRunner = nullptr;
 }
 
 void DubbingSynthesisJob::setRemoteServices(Settings *settings, ColabSession *ttsSession,

@@ -261,7 +261,10 @@ bool DubbingProject::fromJson(const QJsonObject &json, DubbingProject &project, 
     }
     if (project.audioMixConfiguration.isEmpty()) {
         project.audioMixConfiguration = QVariantMap{{QStringLiteral("originalGainPercent"), 0},
-                                                     {QStringLiteral("dubbedGainPercent"), 100}};
+                                                     {QStringLiteral("dubbedGainPercent"), 100},
+                                                     {QStringLiteral("backgroundGainPercent"), 100}};
+    } else if (!project.audioMixConfiguration.contains(QStringLiteral("backgroundGainPercent"))) {
+        project.audioMixConfiguration.insert(QStringLiteral("backgroundGainPercent"), 100);
     }
     project.speakers = json.value(QStringLiteral("speakers")).toArray().toVariantList();
     project.segments = json.value(QStringLiteral("segments")).toArray().toVariantList();

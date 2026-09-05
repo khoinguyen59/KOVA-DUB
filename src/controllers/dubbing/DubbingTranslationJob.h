@@ -69,7 +69,7 @@ private:
     QPointer<TranslationEngineInstance> m_instance;
     GatewayTranslationRunner *m_gatewayRunner = nullptr;
     ColabTranslationRunner *m_colabRunner = nullptr;
-    QThread m_remoteThread;
+    QThread *m_remoteThread = nullptr;
     QVariantList m_inputSegments;
     QVariantList m_result;
     TranslationInferenceRequest m_pendingRequest;

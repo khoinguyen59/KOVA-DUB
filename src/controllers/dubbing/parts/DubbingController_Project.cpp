@@ -83,7 +83,8 @@ bool DubbingController::newProject(const QString &path)
     m_project.transcriptConfiguration = {{QStringLiteral("transcriptSource"), QStringLiteral("stt")},
                                          {QStringLiteral("fusionPolicy"), QStringLiteral("prefer-ocr")}};
     m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
-                                       {QStringLiteral("dubbedGainPercent"), 100}};
+                                       {QStringLiteral("dubbedGainPercent"), 100},
+                                       {QStringLiteral("backgroundGainPercent"), 100}};
     m_timingResolutionPreview.clear();
     m_timingUndoSegments.clear();
     m_workflowNodeConfigurations.clear();
@@ -153,7 +154,8 @@ bool DubbingController::openProject(const QString &path)
     }
     if (m_project.audioMixConfiguration.isEmpty()) {
         m_project.audioMixConfiguration = {{QStringLiteral("originalGainPercent"), 0},
-                                           {QStringLiteral("dubbedGainPercent"), 100}};
+                                           {QStringLiteral("dubbedGainPercent"), 100},
+                                           {QStringLiteral("backgroundGainPercent"), 100}};
     }
     m_timingResolutionPreview.clear();
     m_timingUndoSegments.clear();
@@ -235,10 +237,17 @@ bool DubbingController::openProject(const QString &path)
     if (previewPath.isEmpty())
         previewPath = outputPath(QStringLiteral("mix"),
                                  {QStringLiteral("audio"), QStringLiteral("path")});
+    // A sibling `preview.wav` cannot be attributed safely when several
+    // projects share one directory.  Preserve the legacy migration only for
+    // a directory with exactly one LA Studio project; all new previews are
+    // project-scoped and persisted above.
     if (previewPath.isEmpty()) {
-        const QString legacyPreview = QDir(QFileInfo(m_project.projectPath).absolutePath())
-            .filePath(QStringLiteral("preview.wav"));
-        if (QFileInfo(legacyPreview).isFile()) previewPath = legacyPreview;
+        const QDir projectDirectory(QFileInfo(m_project.projectPath).absolutePath());
+        const QStringList projects = projectDirectory.entryList(
+            {QStringLiteral("*.ladub.json")}, QDir::Files | QDir::NoSymLinks);
+        const QString legacyPreview = projectDirectory.filePath(QStringLiteral("preview.wav"));
+        if (projects.size() == 1 && QFileInfo(legacyPreview).isFile())
+            previewPath = legacyPreview;
     }
     QString dubbedVocalPath = m_project.dubbedVocalAudioPath.trimmed();
     if (dubbedVocalPath.isEmpty())
@@ -252,6 +261,7 @@ bool DubbingController::openProject(const QString &path)
         exportPath = outputPath(QStringLiteral("export"),
                                 {QStringLiteral("media"), QStringLiteral("path")});
     m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+    m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
     m_runner->setPreviewPath(previewPath);
     m_runner->setDubbedVocalPath(dubbedVocalPath);
     m_runner->setExportPath(exportPath);
@@ -640,6 +650,7 @@ bool DubbingController::importMedia(const QString &pathOrUrl)
     m_stepOutputs.clear();
     m_lastCompletedStepId.clear();
     m_runner->setBackgroundAudioPath(QString());
+    m_runner->setSourceVocalsAudioPath(QString());
     m_runner->setPreviewPath(QString());
     m_runner->setExportPath(QString());
     setWorkflowMode(QStringLiteral("idle"));

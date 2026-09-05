@@ -600,6 +600,7 @@ void DubbingController::startNextMediaQueueItem()
         m_stepOutputs.clear();
         m_lastCompletedStepId.clear();
         m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+        m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
         m_runner->setPreviewPath(QString());
         m_runner->setExportPath(QString());
         item.insert(QStringLiteral("processState"), QStringLiteral("running"));
@@ -674,6 +675,7 @@ void DubbingController::startNextMediaQueueStageItem()
         m_stepOutputs.clear();
         m_lastCompletedStepId.clear();
         m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+        m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
         m_runner->setPreviewPath(QString());
         m_runner->setExportPath(QString());
         item.insert(QStringLiteral("processState"), QStringLiteral("running"));
@@ -888,6 +890,7 @@ void DubbingController::finishMediaQueueRun(const QString &message)
         m_project = m_mediaQueueOriginalProject;
         m_workflowNodeConfigurations = m_mediaQueueOriginalNodeConfigurations;
         m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+        m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
         m_runner->setPreviewPath(m_mediaQueueOriginalPreviewPath);
         m_runner->setExportPath(m_mediaQueueOriginalExportPath);
     }
@@ -936,6 +939,7 @@ bool DubbingController::promoteSingleImportedMediaQueueProject()
     m_project = std::move(importedProject);
     m_workflowNodeConfigurations = m_project.workflowNodeConfigurations;
     m_runner->setBackgroundAudioPath(m_project.backgroundAudioPath);
+    m_runner->setSourceVocalsAudioPath(m_project.vocalsAudioPath);
     m_runner->setPreviewPath(QString());
     m_runner->setExportPath(QString());
     m_currentStepId = QStringLiteral("import");

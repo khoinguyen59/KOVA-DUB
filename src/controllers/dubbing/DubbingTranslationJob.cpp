@@ -6,6 +6,7 @@
 #include "core/models/RuntimeManager.h"
 #include "core/utils/Logger.h"
 #include "core/storage/Settings.h"
+#include "core/utils/BoundedThreadShutdown.h"
 #include "dubbing/timing/DubbingDuration.h"
 #include "dubbing/project/DubbingProject.h"
 #include "dubbing/timing/DubbingTimingProfile.h"
@@ -31,22 +32,27 @@ DubbingTranslationJob::DubbingTranslationJob(TranslationEngine *translation,
     qRegisterMetaType<TranslationInferenceRequest>("TranslationInferenceRequest");
     m_gatewayRunner = new GatewayTranslationRunner;
     m_colabRunner = new ColabTranslationRunner;
-    m_gatewayRunner->moveToThread(&m_remoteThread);
-    m_colabRunner->moveToThread(&m_remoteThread);
-    connect(&m_remoteThread, &QThread::finished, m_gatewayRunner, &QObject::deleteLater);
-    connect(&m_remoteThread, &QThread::finished, m_colabRunner, &QObject::deleteLater);
-    m_remoteThread.start();
+    m_remoteThread = new QThread(this);
+    m_gatewayRunner->moveToThread(m_remoteThread);
+    m_colabRunner->moveToThread(m_remoteThread);
+    connect(m_remoteThread, &QThread::finished, m_gatewayRunner, &QObject::deleteLater);
+    connect(m_remoteThread, &QThread::finished, m_colabRunner, &QObject::deleteLater);
+    m_remoteThread->start();
 }
 
 DubbingTranslationJob::~DubbingTranslationJob()
 {
     cancel();
-    if (m_gatewayRunner && m_remoteThread.isRunning())
+    if (m_gatewayRunner && m_remoteThread && m_remoteThread->isRunning())
         QMetaObject::invokeMethod(m_gatewayRunner, "cancel", Qt::QueuedConnection);
-    if (m_colabRunner && m_remoteThread.isRunning())
+    if (m_colabRunner && m_remoteThread && m_remoteThread->isRunning())
         QMetaObject::invokeMethod(m_colabRunner, "cancel", Qt::QueuedConnection);
-    m_remoteThread.quit();
-    m_remoteThread.wait();
+    if (!stopOrDetachWorkerThread(m_remoteThread)) {
+        Logger::warning(QStringLiteral("DubbingTranslation"), QStringLiteral(
+            "Remote translation worker did not stop within 2 seconds; detached it to keep application shutdown responsive."));
+    }
+    m_gatewayRunner = nullptr;
+    m_colabRunner = nullptr;
 }
 
 void DubbingTranslationJob::setRemoteServices(Settings *settings, ColabSession *colabSession)

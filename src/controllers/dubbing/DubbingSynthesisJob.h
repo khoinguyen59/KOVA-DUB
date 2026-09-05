@@ -66,7 +66,7 @@ private:
     GatewayTtsRunner *m_gatewayRunner = nullptr;
     ColabTtsRunner *m_colabRunner = nullptr;
     ColabVoiceCloneRunner *m_colabVoiceCloneRunner = nullptr;
-    QThread m_remoteThread;
+    QThread *m_remoteThread = nullptr;
     bool m_running = false;
     bool m_waitingForModel = false;
     QVariantList m_pendingSegments;

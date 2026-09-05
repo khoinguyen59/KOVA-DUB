@@ -30,6 +30,9 @@ Rectangle {
     property string selectedVocalsPath: ""
     property string selectedBackgroundPath: ""
     readonly property bool isIsolation: (artifactSpec.nodeId || "") === "source-separate"
+    readonly property bool importInProgress: root.dubbing
+                                          && root.dubbing.workflowArtifactImportProcessing
+                                          && root.dubbing.workflowArtifactImportNodeId === root.nodeId
     // `processing` and `currentStepId` make this binding refresh whenever the
     // active worker changes.  The controller remains the authority on whether
     // this task, and only this task, may replace the running worker output.
@@ -44,8 +47,8 @@ Rectangle {
         // prerequisite for selecting an already-saved local artifact.
         var aggregateBusy = root.dubbing ? root.dubbing.processing : false
         if (!root.dubbing) return false
-        return !aggregateBusy
-            || root.dubbing.canImportWorkflowArtifactNow(root.nodeId)
+        return !root.importInProgress && (!aggregateBusy
+            || root.dubbing.canImportWorkflowArtifactNow(root.nodeId))
     }
 
     // The parent Repeater is created only from a validated non-empty artifact
@@ -73,14 +76,27 @@ Rectangle {
     }
 
     function acceptOutput(paths) {
-        if (root.dubbing.importWorkflowArtifactFiles(root.nodeId, paths)) {
-            root.uploadStatus = qsTr("Accepted. The automatic transfer for this task was stopped and the next task is ready.")
-            root.selectedOutputPath = ""
-            root.selectedVocalsPath = ""
-            root.selectedBackgroundPath = ""
-            root.artifactAccepted()
+        if (root.dubbing.startWorkflowArtifactImport(root.nodeId, paths)) {
+            root.uploadStatus = qsTr("Validating and copying the selected file in the background…")
         } else {
             root.uploadStatus = root.dubbing.lastError
+        }
+    }
+
+    Connections {
+        target: root.dubbing
+        function onWorkflowArtifactImportFinished(importNodeId, success) {
+            if (importNodeId !== root.nodeId)
+                return
+            if (success) {
+                root.uploadStatus = qsTr("Accepted. The next task is ready.")
+                root.selectedOutputPath = ""
+                root.selectedVocalsPath = ""
+                root.selectedBackgroundPath = ""
+                root.artifactAccepted()
+            } else {
+                root.uploadStatus = root.dubbing.lastError
+            }
         }
     }
 
